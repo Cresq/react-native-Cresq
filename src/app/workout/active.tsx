@@ -1,0 +1,368 @@
+import { useEffect, useState } from "react";
+import { Pressable, TextInput, View } from "react-native";
+import { useRouter } from "expo-router";
+import Svg, { Circle } from "react-native-svg";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTheme } from "@/theme/ThemeProvider";
+import { fmtKg, fmtTime, sessionStats, useWorkout } from "@/store/workout";
+import type { ExerciseEntry, SetEntry, SetType } from "@/data/mock";
+import { Screen, Row, Header } from "@/components/ui/Screen";
+import { Txt } from "@/components/ui/Text";
+import { IconButton } from "@/components/ui/IconButton";
+import { Card, Divider } from "@/components/ui/Card";
+import { Icon } from "@/components/ui/Icon";
+import { Chip } from "@/components/ui/Chip";
+import { Button } from "@/components/ui/Button";
+import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { fontFamily } from "../../../constants/theme";
+
+const setLabel = (s: SetEntry, workingIndex: number) => (s.type === "warmup" ? "W" : s.type === "drop" ? "D" : s.type === "failure" ? "F" : String(workingIndex));
+
+/**
+ * Active workout. Built for one-handed input between sets:
+ * the current exercise is the only surface; done and upcoming exercises are
+ * plain rows above and below it; the rest timer docks at the bottom.
+ */
+export default function ActiveWorkout() {
+  const { colors, radius, shadow } = useTheme();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const w = useWorkout();
+  const { session, rest } = w;
+  const [, force] = useState(0);
+  const [sheet, setSheet] = useState<null | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry }>(null);
+
+  useEffect(() => {
+    const t = setInterval(() => force((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  if (!session) {
+    return (
+      <Screen>
+        <Txt variant="displayL">No session running</Txt>
+        <Button label="Back" variant="secondary" onPress={() => router.back()} />
+      </Screen>
+    );
+  }
+
+  const stats = sessionStats(session);
+  const current = session.exercises[session.currentIndex];
+  const before = session.exercises.slice(0, session.currentIndex);
+  const after = session.exercises.slice(session.currentIndex + 1);
+  let working = 0;
+
+  const finish = () => {
+    w.finish();
+    router.replace("/workout/summary");
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg.ground }}>
+      <Screen bottom={rest ? 110 : 20} contentStyle={{ gap: 20 }}>
+        <Header
+          left={<IconButton name="chevronDown" onPress={() => router.back()} accessibilityLabel="Minimise" />}
+          title={session.planName}
+          subtitle={`Exercise ${session.currentIndex + 1} of ${session.exercises.length}`}
+          right={<Button label="Finish" variant="inverse" size="S" full={false} onPress={finish} />}
+        />
+
+        <Row gap={0}>
+          <Strip label="Elapsed" value={stats.elapsed} />
+          <Strip label="Volume" value={fmtKg(stats.volume)} unit="kg" />
+          <Strip label="Sets" value={String(stats.setsDone)} unit={`of ${stats.setsTotal}`} />
+        </Row>
+
+        {before.length ? (
+          <View>
+            {before.map((e, i) => (
+              <View key={e.id}>
+                {i > 0 ? <Divider inset={42} /> : null}
+                <CollapsedExercise ex={e} index={i} onPress={() => w.setCurrent(i)} onMore={() => setSheet({ kind: "exercise", ex: e })} />
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        <Card padding={16} gap={6}>
+          <Row gap={10} align="flex-start">
+            <View style={{ flex: 1, gap: 4 }}>
+              <Txt variant="displayM">{current.name}</Txt>
+              {current.note ? (
+                <Txt variant="bodyS" tone="secondary" italic>
+                  {current.note}
+                </Txt>
+              ) : null}
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel="Rest timer" onPress={() => setSheet({ kind: "rest", ex: current })} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingLeft: 10, paddingRight: 8, height: 34, borderRadius: radius.pill, backgroundColor: colors.bg.raised }}>
+              <Icon name="timer" size={14} color={colors.text.secondary} strokeWidth={1.9} />
+              <Txt variant="labelM">{fmtTime(current.restSeconds)}</Txt>
+              <Icon name="chevronDown" size={12} color={colors.text.tertiary} strokeWidth={2.2} />
+            </Pressable>
+            <IconButton name="moreHorizontal" size={34} iconSize={18} tone="raised" onPress={() => setSheet({ kind: "exercise", ex: current })} accessibilityLabel="Exercise options" />
+          </Row>
+
+          <Row gap={8} style={{ paddingHorizontal: 6, paddingTop: 10 }}>
+            <Txt variant="labelS" tone="tertiary" style={{ width: 28 }}>
+              Set
+            </Txt>
+            <Txt variant="labelS" tone="tertiary" style={{ width: 72 }} align="center">
+              Previous
+            </Txt>
+            <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} align="center">
+              kg
+            </Txt>
+            <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} align="center">
+              Reps
+            </Txt>
+            <View style={{ width: 40 }} />
+          </Row>
+
+          <View style={{ gap: 4 }}>
+            {current.sets.map((s, i) => {
+              if (s.type === "working") working++;
+              const label = setLabel(s, working);
+              const isCurrent = !s.done && current.sets.findIndex((x) => !x.done) === i;
+              return <SetRow key={s.id} set={s} label={label} isCurrent={isCurrent} onType={() => setSheet({ kind: "set", ex: current, set: s, index: i })} onChange={(patch) => w.updateSet(current.id, s.id, patch)} onDone={() => w.completeSet(current.id, s.id)} />;
+            })}
+          </View>
+
+          <Pressable accessibilityRole="button" onPress={() => w.addSet(current.id)} hitSlop={6} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 10, paddingHorizontal: 6 }}>
+            <Icon name="addPlus" size={14} color={colors.text.secondary} strokeWidth={2.2} />
+            <Txt variant="labelM" tone="secondary">
+              Add set
+            </Txt>
+          </Pressable>
+        </Card>
+
+        <View>
+          {groupSupersets(after, session.currentIndex + 1).map((g, gi) => (
+            <View key={g[0].ex.id}>
+              {gi > 0 ? <Divider inset={42} /> : null}
+              {g.length === 1 ? (
+                <CollapsedExercise ex={g[0].ex} index={g[0].index} upNext={g[0].index === session.currentIndex + 1} onPress={() => w.setCurrent(g[0].index)} onMore={() => setSheet({ kind: "exercise", ex: g[0].ex })} />
+              ) : (
+                <View style={{ borderLeftWidth: 2, borderLeftColor: colors.border.strong, paddingLeft: 12, marginLeft: 6, marginVertical: 6 }}>
+                  <Row gap={6} style={{ paddingTop: 4, paddingBottom: 2 }}>
+                    <Icon name="link" size={13} color={colors.text.tertiary} strokeWidth={1.8} />
+                    <Txt variant="labelS" tone="tertiary">
+                      Superset · no rest between
+                    </Txt>
+                  </Row>
+                  {g.map((it, ii) => (
+                    <View key={it.ex.id}>
+                      {ii > 0 ? <Divider inset={42} /> : null}
+                      <CollapsedExercise ex={it.ex} index={it.index} upNext={it.index === session.currentIndex + 1} onPress={() => w.setCurrent(it.index)} onMore={() => setSheet({ kind: "exercise", ex: it.ex })} />
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          ))}
+          <Divider inset={42} />
+          <Pressable accessibilityRole="button" accessibilityLabel="Add exercise" style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14 }}>
+            <View style={{ width: 28, alignItems: "center" }}>
+              <Icon name="addPlus" size={16} color={colors.text.secondary} strokeWidth={2} />
+            </View>
+            <Txt variant="labelM" tone="secondary">
+              Add exercise
+            </Txt>
+          </Pressable>
+        </View>
+      </Screen>
+
+      {rest ? (
+        <View style={{ position: "absolute", left: 16, right: 16, bottom: Math.max(insets.bottom, 16) + 8 }}>
+          <View style={[{ flexDirection: "row", alignItems: "center", gap: 12, padding: 12, paddingLeft: 14, borderRadius: radius.bar, backgroundColor: colors.bg.raised }, shadow.floating]}>
+            <RestRing progress={rest.left / rest.total} />
+            <View style={{ flex: 1, gap: 1 }}>
+              <Row gap={6} align="baseline">
+                <Txt variant="numberL" tabular>
+                  {fmtTime(rest.left)}
+                </Txt>
+                <Txt variant="labelM" tone="secondary">
+                  rest
+                </Txt>
+              </Row>
+              <Txt variant="bodyS" tone="tertiary" numberOfLines={1}>
+                {rest.nextLabel}
+              </Txt>
+            </View>
+            <SmallPill label="−15" onPress={() => w.adjustRest(-15)} />
+            <SmallPill label="+15" onPress={() => w.adjustRest(15)} />
+            <SmallPill label="Skip" inverse onPress={w.skipRest} />
+          </View>
+        </View>
+      ) : null}
+
+      <BottomSheet visible={sheet?.kind === "exercise"} onClose={() => setSheet(null)} title={sheet?.kind === "exercise" ? sheet.ex.name : ""} subtitle={sheet?.kind === "exercise" ? `Exercise ${session.exercises.indexOf(sheet.ex) + 1} of ${session.exercises.length}` : undefined}>
+        {sheet?.kind === "exercise" ? (
+          <>
+            <SheetOption icon="dragVertical" label="Move up" sub="Do this exercise earlier" onPress={() => { w.moveExercise(sheet.ex.id, -1); setSheet(null); }} />
+            <SheetOption icon="dragVertical" label="Move down" sub="Do this exercise later" onPress={() => { w.moveExercise(sheet.ex.id, 1); setSheet(null); }} />
+            <SheetOption icon="reload" label="Swap exercise" sub="Keep the sets, change the movement" onPress={() => setSheet(null)} />
+            <SheetOption icon="link" label="Add to superset" sub="Pair with the next exercise, no rest between" onPress={() => setSheet(null)} />
+            <SheetOption icon="noteEdit" label="Add a note" sub="Cues for next time" onPress={() => setSheet(null)} />
+            <SheetOption icon="timer" label="Rest timer" sub={`${fmtTime(sheet.ex.restSeconds)} after each set`} onPress={() => setSheet({ kind: "rest", ex: sheet.ex })} />
+            <SheetOption icon="trash" label="Remove from workout" sub="You can restore it from the summary" danger onPress={() => { w.removeExercise(sheet.ex.id); setSheet(null); }} />
+          </>
+        ) : null}
+      </BottomSheet>
+
+      <BottomSheet visible={sheet?.kind === "set"} onClose={() => setSheet(null)} title={sheet?.kind === "set" ? `Set ${sheet.index + 1}` : ""} subtitle={sheet?.kind === "set" ? `${sheet.ex.name} · ${sheet.set.kg} kg × ${sheet.set.reps}` : undefined}>
+        {sheet?.kind === "set" ? (
+          <>
+            {(
+              [
+                ["warmup", "sun", "Warm-up", "Lighter weight, not counted in volume"],
+                ["working", "circleCheck", "Working set", "Counts toward volume and records"],
+                ["drop", "chevronDown", "Drop set", "Lower the weight and keep going"],
+                ["failure", "star", "Failure set", "Reps until you can't do another"],
+              ] as const
+            ).map(([type, icon, label, sub]) => (
+              <SheetOption key={type} icon={icon} label={label} sub={sub} selected={sheet.set.type === type} onPress={() => { w.setSetType(sheet.ex.id, sheet.set.id, type as SetType); setSheet(null); }} />
+            ))}
+            <SheetOption icon="trash" label="Remove set" sub="Removes only this set" danger onPress={() => { w.removeSet(sheet.ex.id, sheet.set.id); setSheet(null); }} />
+          </>
+        ) : null}
+      </BottomSheet>
+
+      <BottomSheet visible={sheet?.kind === "rest"} onClose={() => setSheet(null)} title="Rest timer" subtitle={sheet?.kind === "rest" ? `After each set of ${sheet.ex.name}` : undefined}>
+        {sheet?.kind === "rest" ? (
+          <Row gap={8} style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
+            {[60, 90, 120, 150, 180].map((s) => (
+              <Chip key={s} label={fmtTime(s)} selected={sheet.ex.restSeconds === s} onPress={() => { w.setRestSeconds(sheet.ex.id, s); setSheet(null); }} style={{ flex: 1, justifyContent: "center" }} />
+            ))}
+          </Row>
+        ) : null}
+      </BottomSheet>
+    </View>
+  );
+}
+
+function Strip({ label, value, unit }: { label: string; value: string; unit?: string }) {
+  return (
+    <View style={{ flex: 1, gap: 2 }}>
+      <Txt variant="labelS" tone="tertiary">
+        {label}
+      </Txt>
+      <Row gap={3} align="baseline">
+        <Txt variant="numberM" tabular>
+          {value}
+        </Txt>
+        {unit ? (
+          <Txt variant="labelS" tone="secondary">
+            {unit}
+          </Txt>
+        ) : null}
+      </Row>
+    </View>
+  );
+}
+
+function SetRow({ set, label, isCurrent, onType, onChange, onDone }: { set: SetEntry; label: string; isCurrent: boolean; onType: () => void; onChange: (p: Partial<Pick<SetEntry, "kg" | "reps">>) => void; onDone: () => void }) {
+  const { colors, radius } = useTheme();
+  const dim = !set.done && !isCurrent;
+  const boxBg = isCurrent ? colors.bg.ground : colors.bg.raised;
+  const prev = set.prevKg === null ? "—" : `${set.prevKg || "BW"} × ${set.prevReps}`;
+  const inputStyle = { width: "100%" as const, textAlign: "center" as const, color: dim ? colors.text.tertiary : colors.text.primary, fontFamily: fontFamily.displaySemi, fontSize: 20, paddingVertical: 0 };
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4, paddingHorizontal: 6, borderRadius: radius.setRow, backgroundColor: isCurrent ? colors.accent.soft : "transparent", opacity: dim ? 0.6 : 1 }}>
+      <Pressable accessibilityRole="button" onPress={onType} hitSlop={6} style={{ width: 28 }} accessibilityLabel="Set type">
+        <Txt variant="labelL" tone={isCurrent ? "ember" : set.type === "warmup" ? "tertiary" : "primary"}>
+          {label}
+        </Txt>
+      </Pressable>
+      <Txt variant="bodyM" tone="secondary" style={{ width: 72 }} align="center" tabular>
+        {prev}
+      </Txt>
+      <View style={{ flex: 1, height: 40, borderRadius: radius.input, backgroundColor: boxBg, justifyContent: "center" }}>
+        <TextInput value={String(set.kg)} onChangeText={(t) => onChange({ kg: Number(t.replace(",", ".")) || 0 })} keyboardType="decimal-pad" selectTextOnFocus style={inputStyle} />
+      </View>
+      <View style={{ flex: 1, height: 40, borderRadius: radius.input, backgroundColor: boxBg, justifyContent: "center" }}>
+        <TextInput value={String(set.reps)} onChangeText={(t) => onChange({ reps: Number(t) || 0 })} keyboardType="number-pad" selectTextOnFocus style={inputStyle} />
+      </View>
+      <Pressable
+        onPress={onDone}
+        accessibilityRole="button"
+        accessibilityLabel={set.done ? "Undo set" : "Complete set"}
+        style={{ width: 40, height: 40, borderRadius: radius.input, alignItems: "center", justifyContent: "center", backgroundColor: set.done ? colors.status.success : isCurrent ? colors.accent.ember : colors.bg.raised }}
+      >
+        {set.done || isCurrent ? <Icon name="check" size={18} color={colors.accent.on} strokeWidth={2.6} /> : null}
+      </Pressable>
+    </View>
+  );
+}
+
+function CollapsedExercise({ ex, index, upNext, onPress, onMore }: { ex: ExerciseEntry; index: number; upNext?: boolean; onPress: () => void; onMore: () => void }) {
+  const { colors } = useTheme();
+  const done = ex.sets.length > 0 && ex.sets.every((s) => s.done);
+  const detail = `${ex.sets.length} × ${ex.sets[0]?.reps ?? 0}${ex.sets[0]?.kg ? ` · ${ex.sets[0].kg} kg` : " · bodyweight"}`;
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 14, opacity: done ? 0.6 : 1 }}>
+      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Go to ${ex.name}`} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
+        <View style={{ width: 28, height: 28, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: done ? colors.status.success : colors.bg.surface }}>
+          {done ? (
+            <Icon name="check" size={15} color={colors.accent.on} strokeWidth={2.4} />
+          ) : (
+            <Txt variant="labelM" tone="secondary">
+              {index + 1}
+            </Txt>
+          )}
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Row gap={8}>
+            <Txt variant="labelL" tone={done ? "secondary" : "primary"}>
+              {ex.name}
+            </Txt>
+            {upNext ? (
+              <Txt variant="labelS" tone="ember">
+                Up next
+              </Txt>
+            ) : null}
+          </Row>
+          <Txt variant="bodyS" tone="tertiary">
+            {done ? "Done" : detail}
+          </Txt>
+        </View>
+      </Pressable>
+      <Pressable accessibilityRole="button" onPress={onMore} hitSlop={10} accessibilityLabel="Options" style={{ paddingVertical: 12 }}>
+        <Icon name="moreHorizontal" size={18} color={colors.text.tertiary} />
+      </Pressable>
+    </View>
+  );
+}
+
+function groupSupersets(list: ExerciseEntry[], offset: number) {
+  const groups: { ex: ExerciseEntry; index: number }[][] = [];
+  list.forEach((ex, i) => {
+    const item = { ex, index: offset + i };
+    const last = groups[groups.length - 1];
+    if (ex.supersetGroup && last && last[0].ex.supersetGroup === ex.supersetGroup) last.push(item);
+    else groups.push([item]);
+  });
+  return groups;
+}
+
+function RestRing({ progress }: { progress: number }) {
+  const { colors } = useTheme();
+  const r = 22;
+  const c = 2 * Math.PI * r;
+  return (
+    <Svg width={52} height={52} viewBox="0 0 52 52">
+      <Circle cx={26} cy={26} r={r} stroke={colors.border.strong} strokeWidth={5} fill="none" />
+      <Circle cx={26} cy={26} r={r} stroke={colors.accent.ember} strokeWidth={5} fill="none" strokeLinecap="round" strokeDasharray={`${c} ${c}`} strokeDashoffset={c * (1 - progress)} transform="rotate(-90 26 26)" />
+    </Svg>
+  );
+}
+
+function SmallPill({ label, onPress, inverse }: { label: string; onPress: () => void; inverse?: boolean }) {
+  const { colors, radius } = useTheme();
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ paddingHorizontal: 12, height: 40, justifyContent: "center", borderRadius: radius.pill, backgroundColor: inverse ? colors.bg.inverse : pressed ? colors.border.strong : colors.bg.surface })}>
+      <Txt variant="buttonM" tone={inverse ? "inverse" : "primary"}>
+        {label}
+      </Txt>
+    </Pressable>
+  );
+}
