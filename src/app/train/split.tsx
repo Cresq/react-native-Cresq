@@ -3,7 +3,9 @@ import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useSplit } from "@/store/split";
-import { splitTemplates, type SplitDay } from "@/data/mock";
+import { useDb } from "@/db/DbProvider";
+import { splitTemplates as templatesFor } from "@/db/seed";
+import type { SplitDay } from "@/db/types";
 import { Screen, Row, Section, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
@@ -20,6 +22,8 @@ export default function SplitEditor() {
   const { colors } = useTheme();
   const router = useRouter();
   const { split, nextDay, addDay, removeDay, moveDay, setNext } = useSplit();
+  const { db } = useDb();
+  const splitTemplates = templatesFor(db.plans);
   const [sheet, setSheet] = useState<null | { kind: "day"; day: SplitDay } | { kind: "add" }>(null);
   const training = split.days.filter((d) => !d.rest).length;
 

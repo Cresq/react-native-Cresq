@@ -18,7 +18,7 @@ export default function SignUp() {
 
   const go = () => {
     signIn();
-    router.replace("/(tabs)");
+    router.replace("/onboarding");
   };
 
   return (

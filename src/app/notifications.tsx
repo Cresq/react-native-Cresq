@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { notifications as data, type Notification } from "@/data/mock";
 import { Screen, Row, Section, Header } from "@/components/ui/Screen";
+// Data is still mock: reactions and follows need the social backend.
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
 import { Divider } from "@/components/ui/Card";

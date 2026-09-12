@@ -1,60 +1,42 @@
-import { createContext, useCallback, useContext, useMemo, useState, type PropsWithChildren } from "react";
-import { defaultSplit, type SplitDay } from "@/data/mock";
+import { useCallback, useMemo } from "react";
+import { useDb } from "@/db/DbProvider";
+import type { SplitDay } from "@/db/types";
+import { uid } from "@/db/storage";
 
 /**
- * A split is the order you train in: Push > Pull > Legs > Chest & Back > Arms & Shoulders.
- * `nextIndex` points at the day you do next; finishing a session advances it.
+ * A split is the order you train in. `nextIndex` points at the day you do next;
+ * finishing a session for that day advances it, and the split repeats.
  */
-export type Split = { name: string; days: SplitDay[]; nextIndex: number };
+export function useSplit() {
+  const { db, update } = useDb();
+  const split = db.split;
+  const set = useCallback((fn: (s: typeof split) => typeof split) => update((d) => ({ ...d, split: fn(d.split) })), [update]);
 
-type SplitState = {
-  split: Split;
-  nextDay: SplitDay;
-  rename: (name: string) => void;
-  addDay: (day: Omit<SplitDay, "id">) => void;
-  removeDay: (id: string) => void;
-  moveDay: (id: string, direction: -1 | 1) => void;
-  setNext: (id: string) => void;
-  advance: () => void;
-};
-
-const SplitContext = createContext<SplitState | null>(null);
-
-export function SplitProvider({ children }: PropsWithChildren) {
-  const [split, setSplit] = useState<Split>(defaultSplit);
-
-  const rename = useCallback((name: string) => setSplit((s) => ({ ...s, name })), []);
-  const addDay = useCallback((day: Omit<SplitDay, "id">) => setSplit((s) => ({ ...s, days: [...s.days, { ...day, id: `d${Date.now()}` }] })), []);
+  const rename = useCallback((name: string) => set((s) => ({ ...s, name })), [set]);
+  const addDay = useCallback((day: Omit<SplitDay, "id">) => set((s) => ({ ...s, days: [...s.days, { ...day, id: uid() }] })), [set]);
   const removeDay = useCallback(
     (id: string) =>
-      setSplit((s) => {
+      set((s) => {
         const days = s.days.filter((d) => d.id !== id);
         return { ...s, days, nextIndex: Math.min(s.nextIndex, Math.max(0, days.length - 1)) };
       }),
-    [],
+    [set],
   );
   const moveDay = useCallback(
     (id: string, direction: -1 | 1) =>
-      setSplit((s) => {
+      set((s) => {
         const i = s.days.findIndex((d) => d.id === id);
         const j = i + direction;
         if (i < 0 || j < 0 || j >= s.days.length) return s;
         const days = [...s.days];
         [days[i], days[j]] = [days[j], days[i]];
-        const nextIndex = s.nextIndex === i ? j : s.nextIndex === j ? i : s.nextIndex;
-        return { ...s, days, nextIndex };
+        return { ...s, days, nextIndex: s.nextIndex === i ? j : s.nextIndex === j ? i : s.nextIndex };
       }),
-    [],
+    [set],
   );
-  const setNext = useCallback((id: string) => setSplit((s) => ({ ...s, nextIndex: Math.max(0, s.days.findIndex((d) => d.id === id)) })), []);
-  const advance = useCallback(() => setSplit((s) => ({ ...s, nextIndex: s.days.length ? (s.nextIndex + 1) % s.days.length : 0 })), []);
+  const setNext = useCallback((id: string) => set((s) => ({ ...s, nextIndex: Math.max(0, s.days.findIndex((d) => d.id === id)) })), [set]);
+  const advance = useCallback(() => set((s) => ({ ...s, nextIndex: s.days.length ? (s.nextIndex + 1) % s.days.length : 0 })), [set]);
 
-  const value = useMemo<SplitState>(() => ({ split, nextDay: split.days[split.nextIndex] ?? split.days[0], rename, addDay, removeDay, moveDay, setNext, advance }), [split, rename, addDay, removeDay, moveDay, setNext, advance]);
-  return <SplitContext.Provider value={value}>{children}</SplitContext.Provider>;
-}
-
-export function useSplit() {
-  const ctx = useContext(SplitContext);
-  if (!ctx) throw new Error("useSplit must be used inside SplitProvider");
-  return ctx;
+  const nextDay = split.days[split.nextIndex] ?? split.days[0];
+  return useMemo(() => ({ split, nextDay, rename, addDay, removeDay, moveDay, setNext, advance }), [split, nextDay, rename, addDay, removeDay, moveDay, setNext, advance]);
 }

@@ -2,23 +2,26 @@ import { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
-import { fmtKg, sessionStats, useWorkout } from "@/store/workout";
-import { photos, user } from "@/data/mock";
+import { useDb } from "@/db/DbProvider";
+import { useWorkout } from "@/store/workout";
+import { fmtKg, newRecords, sessionStats } from "@/db/derive";
+import { photos, social } from "@/data/mock";
 import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { PostCard } from "@/components/PostCard";
-import { findRecord } from "./summary";
 
+/** Posted. The session is filed as shared when you leave; Undo returns to the summary with nothing filed yet. */
 export default function Posted() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { session, discard } = useWorkout();
+  const { db } = useDb();
+  const { session, file } = useWorkout();
   const [left, setLeft] = useState(60);
   const stats = sessionStats(session);
-  const record = session ? findRecord(session.exercises) : null;
+  const record = session ? newRecords(session, db.sessions).sort((a, b) => b.kg - a.kg)[0] : null;
 
   useEffect(() => {
     const t = setInterval(() => setLeft((n) => Math.max(0, n - 1)), 1000);
@@ -26,7 +29,7 @@ export default function Posted() {
   }, []);
 
   const done = () => {
-    discard();
+    file(true);
     router.replace("/(tabs)/feed");
   };
 
@@ -58,7 +61,7 @@ export default function Posted() {
         </View>
         <Txt variant="displayL">Posted to your feed</Txt>
         <Txt variant="bodyM" tone="secondary">
-          Visible to {user.followers} followers
+          Visible to {social.followers} followers
         </Txt>
       </View>
 
@@ -66,13 +69,13 @@ export default function Posted() {
         preview
         post={{
           id: "new",
-          name: user.name,
-          meta: `${session?.planName ?? "Session"} · just now · ${user.city}`,
+          name: db.profile.name,
+          meta: `${session?.planName ?? "Session"} · just now · ${db.profile.city}`,
           avatar: photos.selfie,
           photo: photos.gym1,
           photoHeight: 210,
           record: record ? `New record · ${record.name} ${record.kg} kg` : undefined,
-          caption: record ? "Two weeks ahead of the forecast. 100 on the bar." : `${session?.planName ?? "Session"} done. Every set counted.`,
+          caption: record ? `${record.name} ${record.kg} kg. Up ${record.previous ? Math.round((record.kg - record.previous) * 10) / 10 : record.kg} kg.` : `${session?.planName ?? "Session"} done. Every set counted.`,
           stats: [
             { value: String(stats.minutes), unit: "min" },
             { value: fmtKg(stats.volume), unit: "kg" },

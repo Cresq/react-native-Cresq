@@ -1,0 +1,111 @@
+import { useState } from "react";
+import { Pressable, View } from "react-native";
+import { useRouter } from "expo-router";
+import { useTheme } from "@/theme/ThemeProvider";
+import { useDb } from "@/db/DbProvider";
+import { useAuth } from "@/store/auth";
+import { Screen, Row, Section, Header } from "@/components/ui/Screen";
+import { Txt } from "@/components/ui/Text";
+import { IconButton } from "@/components/ui/IconButton";
+import { Card, Divider } from "@/components/ui/Card";
+import { Icon, type IconName } from "@/components/ui/Icon";
+import { Segmented } from "@/components/ui/Segmented";
+import { Button } from "@/components/ui/Button";
+import { BottomSheet } from "@/components/ui/BottomSheet";
+
+/** Settings. Small on purpose: what the app needs today, nothing speculative. */
+export default function Settings() {
+  const { colors } = useTheme();
+  const router = useRouter();
+  const { db, update, reset } = useDb();
+  const { signOut } = useAuth();
+  const [confirm, setConfirm] = useState<null | "samples" | "reset">(null);
+  const samples = db.sessions.filter((s) => s.sample).length;
+
+  const rows: { icon: IconName; label: string; sub: string; onPress: () => void }[] = [
+    { icon: "watch", label: "Connected devices", sub: "Apple Health, Apple Watch, Garmin", onPress: () => router.push("/settings/devices") },
+    { icon: "flag", label: "Goals and limitations", sub: "Answers from onboarding", onPress: () => router.push("/onboarding?edit=1") },
+    { icon: "bell", label: "Notifications", sub: "Reminders, records, reactions", onPress: () => router.push("/notifications") },
+  ];
+
+  return (
+    <Screen>
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title="Settings" />
+
+      <Card padding={6} gap={0}>
+        {rows.map((r, i) => (
+          <View key={r.label}>
+            {i > 0 ? <Divider inset={52} /> : null}
+            <Pressable accessibilityRole="button" onPress={r.onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, paddingHorizontal: 10, borderRadius: 16, backgroundColor: pressed ? colors.bg.raised : "transparent" })}>
+              <Icon name={r.icon} size={20} color={colors.text.secondary} strokeWidth={1.8} />
+              <View style={{ flex: 1, gap: 1 }}>
+                <Txt variant="labelL">{r.label}</Txt>
+                <Txt variant="bodyS" tone="tertiary">
+                  {r.sub}
+                </Txt>
+              </View>
+              <Icon name="chevronRight" size={18} color={colors.text.tertiary} />
+            </Pressable>
+          </View>
+        ))}
+      </Card>
+
+      <Section title="Units">
+        <Segmented size="M" value={db.profile.units} onChange={(u) => update((d) => ({ ...d, profile: { ...d.profile, units: u as "kg" | "lb" } }))} segments={[{ key: "kg", label: "Kilograms" }, { key: "lb", label: "Pounds" }]} />
+        <Txt variant="bodyS" tone="tertiary">
+          Pounds are shown converted; the log stays in kilograms underneath.
+        </Txt>
+      </Section>
+
+      <Section title="Language">
+        <Segmented size="M" value="en" onChange={() => {}} segments={[{ key: "en", label: "English" }, { key: "nl", label: "Nederlands · soon" }]} />
+      </Section>
+
+      <Section title="Data" gap={0}>
+        <Row style={{ paddingVertical: 12 }}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Txt variant="labelL">Sample sessions</Txt>
+            <Txt variant="bodyS" tone="tertiary">
+              {samples ? `${samples} generated sessions fill the charts until you have your own.` : "Removed. Everything you see is yours."}
+            </Txt>
+          </View>
+          <Button label="Remove" variant="secondary" size="S" full={false} disabled={!samples} onPress={() => setConfirm("samples")} />
+        </Row>
+        <Divider />
+        <Row style={{ paddingVertical: 12 }}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Txt variant="labelL">Reset app</Txt>
+            <Txt variant="bodyS" tone="tertiary">
+              Deletes all sessions, plans and settings on this device.
+            </Txt>
+          </View>
+          <Button label="Reset" variant="secondary" size="S" full={false} onPress={() => setConfirm("reset")} />
+        </Row>
+      </Section>
+
+      <Button
+        label="Sign out"
+        variant="tertiary"
+        size="M"
+        onPress={() => {
+          signOut();
+          router.replace("/(auth)/sign-in");
+        }}
+      />
+      <Txt variant="labelS" tone="tertiary" align="center">
+        CresQ 1.0 · Icons by coolicons, CC BY 4.0
+      </Txt>
+
+      <BottomSheet visible={confirm === "samples"} onClose={() => setConfirm(null)} title="Remove sample sessions?" subtitle="Your own logged sessions stay. Charts will be empty until you train.">
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
+          <Button label={`Remove ${samples} sessions`} variant="danger" size="M" onPress={() => { update((d) => ({ ...d, sessions: d.sessions.filter((s) => !s.sample) })); setConfirm(null); }} />
+        </View>
+      </BottomSheet>
+      <BottomSheet visible={confirm === "reset"} onClose={() => setConfirm(null)} title="Reset everything?" subtitle="This cannot be undone. You will be signed out.">
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
+          <Button label="Reset app" variant="danger" size="M" onPress={async () => { setConfirm(null); await reset(); router.replace("/"); }} />
+        </View>
+      </BottomSheet>
+    </Screen>
+  );
+}

@@ -1,8 +1,10 @@
+import { useMemo } from "react";
 import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
-import { useAuth } from "@/store/auth";
-import { photos, recentWorkouts, user } from "@/data/mock";
+import { useDb } from "@/db/DbProvider";
+import { finished, fmtKg, liftTrend, newRecords, records, sessionStats, streakWeeks } from "@/db/derive";
+import { photos, social } from "@/data/mock";
 import { Screen, Row, Section } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
@@ -10,20 +12,24 @@ import { Avatar, PhotoSlot } from "@/components/ui/PhotoSlot";
 import { Chip } from "@/components/ui/Chip";
 import { Card, Divider } from "@/components/ui/Card";
 import { Icon, type IconName } from "@/components/ui/Icon";
-import { Button } from "@/components/ui/Button";
 import { Stat, StatDivider } from "@/components/StatCard";
 
 /** Profile. Identity and figures on the ground, one surface for the shortcuts, then plain lists. */
 export default function Profile() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { db } = useDb();
+  const done = useMemo(() => finished(db.sessions), [db.sessions]);
+  const streak = useMemo(() => streakWeeks(db.sessions), [db.sessions]);
+  const allRecords = useMemo(() => records(db.sessions, db.exercises), [db.sessions, db.exercises]);
+  const bench = useMemo(() => liftTrend(db.sessions, "bench"), [db.sessions]);
+  const recent = useMemo(() => [...done].reverse().slice(0, 3).map((s) => ({ s, stats: sessionStats(s), prs: newRecords(s, db.sessions.filter((x) => x.startedAt < s.startedAt)).length })), [done, db.sessions]);
 
   const shortcuts: { icon: IconName; label: string; sub: string; onPress?: () => void }[] = [
-    { icon: "trendingUp", label: "Progress", sub: "Bench 97.5 kg · +7.5", onPress: () => router.push("/progress/bench-press") },
-    { icon: "trophy", label: "Records", sub: "38 personal records", onPress: () => router.push("/progress/bench-press") },
-    { icon: "flag", label: "Goals and limitations", sub: "Feeds your AI plans" },
-    { icon: "sliders", label: "Settings", sub: "Devices, units, language", onPress: () => router.push("/settings/devices") },
+    { icon: "trendingUp", label: "Progress", sub: bench.length ? `Bench ${bench[bench.length - 1].value} kg estimated max` : "Trends for every lift", onPress: () => router.push("/progress") },
+    { icon: "trophy", label: "Records", sub: `${allRecords.length} personal records`, onPress: () => router.push("/progress") },
+    { icon: "flag", label: "Goals and limitations", sub: db.profile.goal ? `${goalLabel(db.profile.goal)} · ${db.profile.daysPerWeek ?? 3} days a week` : "Feeds your plans", onPress: () => router.push("/onboarding?edit=1") },
+    { icon: "sliders", label: "Settings", sub: "Devices, units, language", onPress: () => router.push("/settings") },
   ];
 
   return (
@@ -39,24 +45,24 @@ export default function Profile() {
         <Row gap={16}>
           <Avatar source={photos.selfie} size={84} />
           <View style={{ flex: 1, gap: 4 }}>
-            <Txt variant="displayL">{user.name}</Txt>
+            <Txt variant="displayL">{db.profile.name}</Txt>
             <Txt variant="bodyS" tone="secondary">
-              {user.handle} · {user.city} · since {user.since}
+              {db.profile.handle} · {db.profile.city} · since {db.profile.since}
             </Txt>
             <Row gap={5}>
-              <Icon name="trendingUp" size={12} color={colors.accent.ember} strokeWidth={2.2} />
-              <Txt variant="labelS" tone="ember">
-                {user.streakWeeks}-week streak
+              <Icon name="trendingUp" size={12} color={streak ? colors.accent.ember : colors.text.tertiary} strokeWidth={2.2} />
+              <Txt variant="labelS" tone={streak ? "ember" : "tertiary"}>
+                {streak ? `${streak}-week streak` : "Start a streak this week"}
               </Txt>
             </Row>
           </View>
         </Row>
         <Row gap={12} align="stretch">
-          <Stat label="Sessions" value={String(user.sessions)} size="M" />
+          <Stat label="Sessions" value={String(done.length)} size="M" />
           <StatDivider />
-          <Stat label="Followers" value={user.followers} size="M" />
+          <Stat label="Followers" value={social.followers} size="M" />
           <StatDivider />
-          <Stat label="Following" value={String(user.following)} size="M" />
+          <Stat label="Following" value={String(social.following)} size="M" />
         </Row>
       </View>
 
@@ -78,32 +84,44 @@ export default function Profile() {
         ))}
       </Card>
 
-      <Section title="Recent workouts" action={`See all ${user.sessions}`} onAction={() => {}} gap={0}>
-        {recentWorkouts.map((w, i) => (
-          <View key={w.day + w.name}>
-            {i > 0 ? <Divider /> : null}
-            <Pressable accessibilityRole="button" onPress={() => {}} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
-              <View style={{ width: 40, alignItems: "center" }}>
-                <Txt variant="numberM" tabular>
-                  {w.day}
-                </Txt>
-                <Txt variant="labelS" tone="tertiary">
-                  {w.month}
-                </Txt>
+      <Section title="Recent workouts" action={done.length ? `See all ${done.length}` : undefined} onAction={() => router.push("/progress")} gap={0}>
+        {recent.length === 0 ? (
+          <Txt variant="bodyM" tone="secondary">
+            Your finished sessions will show up here.
+          </Txt>
+        ) : null}
+        {recent.map(({ s, stats, prs }, i) => {
+          const d = new Date(s.startedAt);
+          return (
+            <View key={s.id}>
+              {i > 0 ? <Divider /> : null}
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12 }}>
+                <View style={{ width: 40, alignItems: "center" }}>
+                  <Txt variant="numberM" tabular>
+                    {d.getDate()}
+                  </Txt>
+                  <Txt variant="labelS" tone="tertiary">
+                    {d.toLocaleDateString("en-GB", { month: "short" })}
+                  </Txt>
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Row gap={8}>
+                    <Txt variant="labelL">{s.planName}</Txt>
+                    {prs ? <Chip label={prs === 1 ? "PR" : `${prs} PRs`} icon="trophy" tone="gold" size="S" /> : null}
+                    {s.sample ? (
+                      <Txt variant="labelS" tone="tertiary">
+                        sample
+                      </Txt>
+                    ) : null}
+                  </Row>
+                  <Txt variant="bodyS" tone="tertiary">
+                    {stats.minutes} min · {fmtKg(stats.volume)} kg · {stats.setsDone} sets
+                  </Txt>
+                </View>
               </View>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Row gap={8}>
-                  <Txt variant="labelL">{w.name}</Txt>
-                  {w.pr ? <Chip label="PR" icon="trophy" tone="gold" size="S" /> : null}
-                </Row>
-                <Txt variant="bodyS" tone="tertiary">
-                  {w.meta}
-                </Txt>
-              </View>
-              <Icon name="chevronRight" size={18} color={colors.text.tertiary} />
-            </Pressable>
-          </View>
-        ))}
+            </View>
+          );
+        })}
       </Section>
 
       <Section title="Photos" action="See all" onAction={() => {}}>
@@ -113,16 +131,8 @@ export default function Profile() {
           ))}
         </Row>
       </Section>
-
-      <Button
-        label="Sign out"
-        variant="tertiary"
-        size="M"
-        onPress={() => {
-          signOut();
-          router.replace("/(auth)/sign-in");
-        }}
-      />
     </Screen>
   );
 }
+
+export const goalLabel = (g: string) => ({ strength: "Get stronger", muscle: "Build muscle", health: "Stay healthy" })[g] ?? g;

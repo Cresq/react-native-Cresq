@@ -15,11 +15,11 @@ export default function SignIn() {
 
   const go = () => {
     signIn();
-    router.replace("/(tabs)");
+    router.replace("/");
   };
 
   return (
-    <AuthLayout title="Welcome back" subtitle="Push A is waiting for you." footerCopy="New to CresQ?" footerAction="Create an account" onFooter={() => router.push("/(auth)/sign-up")} onSocial={go}>
+    <AuthLayout title="Welcome back" subtitle="Your next session is waiting." footerCopy="New to CresQ?" footerAction="Create an account" onFooter={() => router.push("/(auth)/sign-up")} onSocial={go}>
       <Field label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="you@example.com" />
       <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry placeholder="Your password" icon="lock" />
       <Pressable accessibilityRole="button" onPress={() => {}} hitSlop={8} style={{ alignSelf: "flex-end", paddingVertical: 4 }}>

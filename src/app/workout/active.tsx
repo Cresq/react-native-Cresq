@@ -5,7 +5,7 @@ import Svg, { Circle } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
 import { fmtKg, fmtTime, sessionStats, useWorkout } from "@/store/workout";
-import type { ExerciseEntry, SetEntry, SetType } from "@/data/mock";
+import type { ExerciseEntry, SetEntry, SetType } from "@/db/types";
 import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
@@ -48,6 +48,18 @@ export default function ActiveWorkout() {
 
   const stats = sessionStats(session);
   const current = session.exercises[session.currentIndex];
+  if (!current) {
+    return (
+      <Screen>
+        <Header left={<IconButton name="chevronDown" onPress={() => router.back()} accessibilityLabel="Minimise" />} title={session.planName} subtitle="Empty session" />
+        <Txt variant="bodyM" tone="secondary">
+          Add an exercise from the library to start logging.
+        </Txt>
+        <Button label="Add exercise" icon="addPlus" onPress={() => router.push("/exercises?session=1")} />
+        <Button label="Discard session" variant="tertiary" size="M" onPress={() => { w.discard(); router.back(); }} />
+      </Screen>
+    );
+  }
   const before = session.exercises.slice(0, session.currentIndex);
   const after = session.exercises.slice(session.currentIndex + 1);
   let working = 0;
@@ -159,8 +171,8 @@ export default function ActiveWorkout() {
               )}
             </View>
           ))}
-          <Divider inset={42} />
-          <Pressable accessibilityRole="button" accessibilityLabel="Add exercise" style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14 }}>
+          {after.length ? <Divider inset={42} /> : null}
+          <Pressable accessibilityRole="button" accessibilityLabel="Add exercise" onPress={() => router.push("/exercises?session=1")} style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14 }}>
             <View style={{ width: 28, alignItems: "center" }}>
               <Icon name="addPlus" size={16} color={colors.text.secondary} strokeWidth={2} />
             </View>
@@ -297,7 +309,9 @@ function SetRow({ set, label, isCurrent, onType, onChange, onDone }: { set: SetE
 function CollapsedExercise({ ex, index, upNext, onPress, onMore }: { ex: ExerciseEntry; index: number; upNext?: boolean; onPress: () => void; onMore: () => void }) {
   const { colors } = useTheme();
   const done = ex.sets.length > 0 && ex.sets.every((s) => s.done);
-  const detail = `${ex.sets.length} × ${ex.sets[0]?.reps ?? 0}${ex.sets[0]?.kg ? ` · ${ex.sets[0].kg} kg` : " · bodyweight"}`;
+  const working = ex.sets.filter((s) => s.type !== "warmup");
+  const top = working[0] ?? ex.sets[0];
+  const detail = `${working.length || ex.sets.length} × ${top?.reps ?? 0}${top?.kg ? ` · ${top.kg} kg` : " · bodyweight"}`;
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 14, opacity: done ? 0.6 : 1 }}>
       <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Go to ${ex.name}`} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>

@@ -1,7 +1,10 @@
+import { useMemo } from "react";
 import { View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
-import { fmtKg, sessionStats, useWorkout } from "@/store/workout";
+import { useDb } from "@/db/DbProvider";
+import { useWorkout } from "@/store/workout";
+import { compareToLast, fmtKg, longDate, newRecords, sessionStats, shortDate } from "@/db/derive";
 import { Screen, Row, Section, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
@@ -11,14 +14,6 @@ import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
 import { Stat, StatDivider } from "@/components/StatCard";
 
-/** Personal record detection for v1: bench press with a completed working set at or above 100 kg. */
-export function findRecord(exercises: { name: string; sets: { type: string; kg: number; reps: number; done: boolean }[] }[]) {
-  const bench = exercises.find((e) => e.name === "Bench press");
-  const top = bench?.sets.filter((s) => s.done && s.type !== "warmup").sort((a, b) => b.kg - a.kg)[0];
-  if (top && top.kg >= 100) return { name: "Bench press", kg: top.kg, reps: top.reps, previous: 95 };
-  return null;
-}
-
 /**
  * Session complete. The hero is typographic: the record, or the plain fact that
  * the session counted. Figures follow on the ground; the one surface is the
@@ -27,13 +22,15 @@ export function findRecord(exercises: { name: string; sets: { type: string; kg: 
 export default function Summary() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { session, discard } = useWorkout();
+  const { db } = useDb();
+  const { session, file } = useWorkout();
   const stats = sessionStats(session);
-  const record = session ? findRecord(session.exercises) : null;
-  const date = new Date(session?.startedAt ?? Date.now()).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  const recs = useMemo(() => (session ? newRecords(session, db.sessions).sort((a, b) => b.kg - a.kg) : []), [session, db.sessions]);
+  const record = recs[0] ?? null;
+  const cmp = useMemo(() => (session ? compareToLast(session, db.sessions) : { previous: null, rows: [] }), [session, db.sessions]);
 
   const savePrivately = () => {
-    discard();
+    file(false);
     router.replace("/(tabs)");
   };
 
@@ -52,24 +49,26 @@ export default function Summary() {
 
   return (
     <Screen bottom={170} footer={footer}>
-      <Header left={<IconButton name="close" onPress={savePrivately} accessibilityLabel="Close" />} title="Session complete" subtitle={`${session?.planName ?? "Session"} · ${date}`} />
+      <Header left={<IconButton name="close" onPress={savePrivately} accessibilityLabel="Close" />} title="Session complete" subtitle={`${session?.planName ?? "Session"} · ${longDate(session?.startedAt ?? Date.now())}`} />
 
       <View style={{ gap: 10, paddingTop: 8 }}>
         {record ? (
           <>
-            <Chip label="New personal record" icon="trophy" tone="gold" size="S" style={{ alignSelf: "flex-start" }} />
+            <Chip label={recs.length > 1 ? `${recs.length} new personal records` : "New personal record"} icon="trophy" tone="gold" size="S" style={{ alignSelf: "flex-start" }} />
             <Txt variant="displayXL">
               {record.name} {record.kg} kg
             </Txt>
             <Txt variant="bodyM" tone="secondary">
-              1 × {record.reps} at {record.kg} kg, up {record.kg - record.previous} kg on your previous best. Your forecast said 26 September. You are two weeks early.
+              {record.reps > 1 ? `${record.reps} reps at ${record.kg} kg` : `1 × ${record.reps} at ${record.kg} kg`}
+              {record.previous ? `, up ${Math.round((record.kg - record.previous) * 10) / 10} kg on your previous best.` : ", your first logged best for this lift."}
+              {recs.length > 1 ? ` Also ${recs.slice(1).map((r) => `${r.name.toLowerCase()} ${r.kg} kg`).join(", ")}.` : ""}
             </Txt>
           </>
         ) : (
           <>
             <Txt variant="displayXL">Logged and counted</Txt>
             <Txt variant="bodyM" tone="secondary">
-              Every set is in your history. Your next record estimate updates tonight.
+              Every set is in your history. Your estimates update from this session.
             </Txt>
           </>
         )}
@@ -113,29 +112,23 @@ export default function Summary() {
             ))}
           </Row>
           <Txt variant="labelS" tone="tertiary">
-            Zones 1 to 5: 4 · 12 · 28 · 9 · 1 min. Sample until a watch is connected.
+            Sample until a watch is connected.
           </Txt>
         </View>
       </Card>
 
-      <Section title={`Compared to last ${session?.planName ?? "session"}`} meta="8 Sep" gap={0}>
-        {[
-          ["Bench press", "3 × 5 · 100 kg", "+5 kg", "ember"],
-          ["Incline dumbbell press", "4 × 10 · 32.5 kg", "+2.5 kg", "ember"],
-          ["Dips", "3 × 12", "+1 rep", "ember"],
-          ["Lateral raise", "3 × 15 · 10 kg", "same", "neutral"],
-          ["Overhead press", "3 × 8 · 50 kg", "-1 rep", "warning"],
-        ].map(([name, detail, delta, tone], i) => (
-          <View key={name}>
+      <Section title={cmp.previous ? `Compared to last ${session?.planName}` : "This session"} meta={cmp.previous ? shortDate(cmp.previous.startedAt) : "first of its kind"} gap={0}>
+        {cmp.rows.map((r, i) => (
+          <View key={r.name + i}>
             {i > 0 ? <Divider /> : null}
             <Row style={{ paddingVertical: 12 }}>
               <View style={{ flex: 1, gap: 2 }}>
-                <Txt variant="labelL">{name}</Txt>
+                <Txt variant="labelL">{r.name}</Txt>
                 <Txt variant="bodyS" tone="tertiary">
-                  {detail}
+                  {r.detail}
                 </Txt>
               </View>
-              <Chip label={delta} icon={tone === "ember" ? "trendingUp" : undefined} tone={tone as "ember" | "neutral" | "warning"} size="S" />
+              <Chip label={r.delta} icon={r.tone === "ember" ? "trendingUp" : undefined} tone={r.tone} size="S" />
             </Row>
           </View>
         ))}

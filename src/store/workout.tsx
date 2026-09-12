@@ -1,32 +1,48 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from "react";
-import { planPushA, type ExerciseEntry, type SetEntry, type SetType } from "@/data/mock";
+import { useDb } from "@/db/DbProvider";
+import type { Exercise, ExerciseEntry, Session, SetEntry, SetType } from "@/db/types";
+import { sessionFromPlan } from "@/db/derive";
+import { uid } from "@/db/storage";
 
-export type Session = { planName: string; startedAt: number; exercises: ExerciseEntry[]; currentIndex: number; finishedAt?: number };
+export { fmtKg, fmtTime, sessionStats } from "@/db/derive";
+export type { Session };
+
+type Rest = { total: number; left: number; nextLabel: string } | null;
 
 type WorkoutState = {
   session: Session | null;
-  rest: { total: number; left: number; nextLabel: string } | null;
-  start: (planName?: string) => void;
+  rest: Rest;
+  /** Start from a plan id, or a quick empty session with a name. */
+  start: (planId?: string, name?: string) => void;
   finish: () => void;
   discard: () => void;
+  /** Mark the finished session as shared to the feed (or not) and file it. */
+  file: (shared: boolean) => void;
   setCurrent: (index: number) => void;
   updateSet: (exerciseId: string, setId: string, patch: Partial<Pick<SetEntry, "kg" | "reps">>) => void;
   completeSet: (exerciseId: string, setId: string) => void;
   setSetType: (exerciseId: string, setId: string, type: SetType) => void;
   removeSet: (exerciseId: string, setId: string) => void;
   addSet: (exerciseId: string) => void;
+  addExercise: (exercise: Exercise) => void;
   removeExercise: (exerciseId: string) => void;
   moveExercise: (exerciseId: string, direction: -1 | 1) => void;
   setRestSeconds: (exerciseId: string, seconds: number) => void;
+  setNote: (exerciseId: string, note: string) => void;
   adjustRest: (delta: number) => void;
   skipRest: () => void;
 };
 
 const WorkoutContext = createContext<WorkoutState | null>(null);
 
+/**
+ * The running session is stored in the database document (`activeSession`) so a
+ * crash or restart mid-workout loses nothing. Finishing moves it into `sessions`.
+ */
 export function WorkoutProvider({ children }: PropsWithChildren) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [rest, setRest] = useState<WorkoutState["rest"]>(null);
+  const { db, update } = useDb();
+  const session = db.activeSession;
+  const [rest, setRest] = useState<Rest>(null);
   const tick = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionRef = useRef<Session | null>(null);
   useEffect(() => {
@@ -40,34 +56,49 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
       return;
     }
     if (tick.current) return;
-    tick.current = setInterval(() => {
-      setRest((r) => {
-        if (!r) return r;
-        if (r.left <= 1) return null;
-        return { ...r, left: r.left - 1 };
-      });
-    }, 1000);
+    tick.current = setInterval(() => setRest((r) => (!r ? r : r.left <= 1 ? null : { ...r, left: r.left - 1 })), 1000);
     return () => {
       if (tick.current) clearInterval(tick.current);
       tick.current = null;
     };
   }, [rest]);
 
-  const mutate = useCallback((fn: (s: Session) => Session) => setSession((s) => (s ? fn(s) : s)), []);
+  const mutate = useCallback((fn: (s: Session) => Session) => update((d) => (d.activeSession ? { ...d, activeSession: fn(d.activeSession) } : d)), [update]);
   const mapEx = (s: Session, exerciseId: string, fn: (e: ExerciseEntry) => ExerciseEntry): Session => ({ ...s, exercises: s.exercises.map((e) => (e.id === exerciseId ? fn(e) : e)) });
 
-  const start = useCallback((planName = "Push A") => {
-    setSession({ planName, startedAt: Date.now(), exercises: planPushA(), currentIndex: 1 });
-    setRest(null);
-  }, []);
+  const start = useCallback(
+    (planId?: string, name?: string) =>
+      update((d) => {
+        const plan = d.plans.find((p) => p.id === planId) ?? (name ? d.plans.find((p) => p.name.toLowerCase() === name.toLowerCase()) : undefined);
+        const fresh = plan ? sessionFromPlan(plan, d.exercises, d.sessions) : { id: uid(), planName: name ?? "Quick session", startedAt: Date.now(), exercises: [], currentIndex: 0 };
+        return { ...d, activeSession: fresh };
+      }),
+    [update],
+  );
   const finish = useCallback(() => {
     setRest(null);
     mutate((s) => ({ ...s, finishedAt: Date.now() }));
   }, [mutate]);
   const discard = useCallback(() => {
-    setSession(null);
     setRest(null);
-  }, []);
+    update((d) => ({ ...d, activeSession: null }));
+  }, [update]);
+  const file = useCallback(
+    (shared: boolean) => {
+      setRest(null);
+      update((d) => {
+        const s = d.activeSession;
+        if (!s) return d;
+        const done = { ...s, finishedAt: s.finishedAt ?? Date.now(), shared };
+        const hasWork = done.exercises.some((e) => e.sets.some((x) => x.done));
+        const sessions = hasWork ? [...d.sessions, done] : d.sessions;
+        const dayIdx = d.split.days.findIndex((x) => x.planId === done.planId || x.name === done.planName);
+        const split = hasWork && dayIdx === d.split.nextIndex ? { ...d.split, nextIndex: d.split.days.length ? (d.split.nextIndex + 1) % d.split.days.length : 0 } : d.split;
+        return { ...d, sessions, split, activeSession: null };
+      });
+    },
+    [update],
+  );
   const setCurrent = useCallback((index: number) => mutate((s) => ({ ...s, currentIndex: Math.max(0, Math.min(index, s.exercises.length - 1)) })), [mutate]);
   const updateSet = useCallback((exerciseId: string, setId: string, patch: Partial<Pick<SetEntry, "kg" | "reps">>) => mutate((s) => mapEx(s, exerciseId, (e) => ({ ...e, sets: e.sets.map((x) => (x.id === setId ? { ...x, ...patch } : x)) }))), [mutate]);
   const completeSet = useCallback(
@@ -92,12 +123,20 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
       mutate((s) =>
         mapEx(s, exerciseId, (e) => {
           const last = e.sets[e.sets.length - 1];
-          return { ...e, sets: [...e.sets, { id: `s${Date.now()}`, type: "working", prevKg: last?.kg ?? null, prevReps: last?.reps ?? null, kg: last?.kg ?? 0, reps: last?.reps ?? 8, done: false }] };
+          return { ...e, sets: [...e.sets, { id: uid(), type: "working", prevKg: last?.kg ?? null, prevReps: last?.reps ?? null, kg: last?.kg ?? 0, reps: last?.reps ?? 8, done: false }] };
         }),
       ),
     [mutate],
   );
-  const removeExercise = useCallback((exerciseId: string) => mutate((s) => ({ ...s, exercises: s.exercises.filter((e) => e.id !== exerciseId), currentIndex: Math.min(s.currentIndex, s.exercises.length - 2) })), [mutate]);
+  const addExercise = useCallback(
+    (exercise: Exercise) =>
+      mutate((s) => ({
+        ...s,
+        exercises: [...s.exercises, { id: uid(), exerciseId: exercise.id, name: exercise.name, restSeconds: 90, sets: Array.from({ length: 3 }, () => ({ id: uid(), type: "working" as const, prevKg: null, prevReps: null, kg: exercise.bodyweight ? 0 : 20, reps: 10, done: false })) }],
+      })),
+    [mutate],
+  );
+  const removeExercise = useCallback((exerciseId: string) => mutate((s) => ({ ...s, exercises: s.exercises.filter((e) => e.id !== exerciseId), currentIndex: Math.max(0, Math.min(s.currentIndex, s.exercises.length - 2)) })), [mutate]);
   const moveExercise = useCallback(
     (exerciseId: string, direction: -1 | 1) =>
       mutate((s) => {
@@ -111,12 +150,13 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
     [mutate],
   );
   const setRestSeconds = useCallback((exerciseId: string, seconds: number) => mutate((s) => mapEx(s, exerciseId, (e) => ({ ...e, restSeconds: seconds }))), [mutate]);
+  const setNote = useCallback((exerciseId: string, note: string) => mutate((s) => mapEx(s, exerciseId, (e) => ({ ...e, note }))), [mutate]);
   const adjustRest = useCallback((delta: number) => setRest((r) => (r ? { ...r, left: Math.max(1, r.left + delta), total: Math.max(r.total, r.left + delta) } : r)), []);
   const skipRest = useCallback(() => setRest(null), []);
 
   const value = useMemo<WorkoutState>(
-    () => ({ session, rest, start, finish, discard, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, removeExercise, moveExercise, setRestSeconds, adjustRest, skipRest }),
-    [session, rest, start, finish, discard, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, removeExercise, moveExercise, setRestSeconds, adjustRest, skipRest],
+    () => ({ session, rest, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, adjustRest, skipRest }),
+    [session, rest, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, adjustRest, skipRest],
   );
   return <WorkoutContext.Provider value={value}>{children}</WorkoutContext.Provider>;
 }
@@ -126,28 +166,3 @@ export function useWorkout() {
   if (!ctx) throw new Error("useWorkout must be used inside WorkoutProvider");
   return ctx;
 }
-
-/** Derived numbers used by the strip, summary and post. */
-export function sessionStats(session: Session | null) {
-  if (!session) return { volume: 0, setsDone: 0, setsTotal: 0, minutes: 0, elapsed: "0:00" };
-  let volume = 0;
-  let setsDone = 0;
-  let setsTotal = 0;
-  for (const e of session.exercises) {
-    for (const s of e.sets) {
-      setsTotal++;
-      if (s.done) {
-        setsDone++;
-        if (s.type !== "warmup") volume += s.kg * s.reps;
-      }
-    }
-  }
-  const ms = (session.finishedAt ?? Date.now()) - session.startedAt;
-  const minutes = Math.max(1, Math.round(ms / 60000));
-  const totalSec = Math.floor(ms / 1000);
-  const elapsed = `${Math.floor(totalSec / 60)}:${String(totalSec % 60).padStart(2, "0")}`;
-  return { volume, setsDone, setsTotal, minutes, elapsed };
-}
-
-export const fmtKg = (kg: number) => (kg >= 1000 ? `${(kg / 1000).toFixed(1)}k` : `${kg}`);
-export const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;

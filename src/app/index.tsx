@@ -2,22 +2,29 @@ import { useEffect, useRef } from "react";
 import { Animated, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
-import { useAuth } from "@/store/auth";
+import { useDb } from "@/db/DbProvider";
 import { Lockup, Mark } from "@/components/Brand";
 import { Txt } from "@/components/ui/Text";
 
-/** Splash. Shows the brand for a beat, then routes to auth or the tabs. */
+/** Splash. Shows the brand while the database loads, then routes to auth, onboarding or the tabs. */
 export default function Splash() {
   const { colors } = useTheme();
-  const { signedIn } = useAuth();
+  const { db, ready } = useDb();
   const router = useRouter();
   const progress = useRef(new Animated.Value(0)).current;
+  const shownAt = useRef(Date.now());
 
   useEffect(() => {
     Animated.timing(progress, { toValue: 1, duration: 1200, useNativeDriver: false }).start();
-    const t = setTimeout(() => router.replace(signedIn ? "/(tabs)" : "/(auth)/sign-in"), 1400);
+  }, [progress]);
+
+  useEffect(() => {
+    if (!ready) return;
+    const target = !db.auth.signedIn ? "/(auth)/sign-in" : !db.profile.onboarded ? "/onboarding" : "/(tabs)";
+    const wait = Math.max(0, 1300 - (Date.now() - shownAt.current));
+    const t = setTimeout(() => router.replace(target), wait);
     return () => clearTimeout(t);
-  }, [progress, router, signedIn]);
+  }, [ready, db.auth.signedIn, db.profile.onboarded, router]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg.ground, alignItems: "center", justifyContent: "center" }}>

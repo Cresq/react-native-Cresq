@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
-import { lifts } from "@/data/mock";
+import { useDb } from "@/db/DbProvider";
+import { exerciseHistory, fmtKg, forecast, liftTrend, records, shortDate } from "@/db/derive";
 import { Screen, Row, Section, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
@@ -11,97 +12,163 @@ import { Icon } from "@/components/ui/Icon";
 import { Segmented } from "@/components/ui/Segmented";
 import { LineChart } from "@/components/LineChart";
 
-/** Lift detail. The number is the hero, the chart is the one surface, the forecast reads as a note under it. */
+const RANGES: Record<string, number> = { "1m": 30, "3m": 91, "6m": 182, "1y": 365, all: 100000 };
+
+/** One exercise. The number is the hero, the chart is the one surface, the forecast reads as a note, then records and history. */
 export default function LiftDetail() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { lift: slug } = useLocalSearchParams<{ lift: string }>();
-  const lift = lifts.find((l) => l.slug === slug) ?? lifts[0];
+  const { db } = useDb();
+  const { lift: id } = useLocalSearchParams<{ lift: string }>();
+  const exercise = db.exercises.find((e) => e.id === id) ?? db.exercises[0];
   const [range, setRange] = useState("3m");
+
+  const all = useMemo(() => liftTrend(db.sessions, exercise.id), [db.sessions, exercise.id]);
+  const since = Date.now() - RANGES[range] * 86400000;
+  const points = all.filter((p) => p.date >= since);
+  const shown = points.length >= 2 ? points : all;
+  const fc = useMemo(() => forecast(all), [all]);
+  const recs = useMemo(() => records(db.sessions, [exercise]), [db.sessions, exercise]);
+  const history = useMemo(() => exerciseHistory(db.sessions, exercise.id), [db.sessions, exercise.id]);
+  const current = all.length ? all[all.length - 1].value : 0;
+  const first = shown.length ? shown[0].value : current;
+  const delta = Math.round((current - first) * 2) / 2;
+  const weeks = shown.length ? Math.max(1, Math.round((shown[shown.length - 1].date - shown[0].date) / (7 * 86400000))) : 0;
+  const bestRecords = useMemo(() => {
+    const out: { kg: number; reps: number; date: number }[] = [];
+    let best = 0;
+    for (const h of [...history].reverse()) if (h.top && h.top.kg > best) { best = h.top.kg; out.push({ kg: h.top.kg, reps: h.top.reps, date: h.date }); }
+    return out.reverse();
+  }, [history]);
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title={lift.name} right={<IconButton name="share" />} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title={exercise.name} subtitle={`${exercise.muscles} · ${exercise.equipment}`} right={<IconButton name="share" />} />
 
-      <View style={{ gap: 4, paddingTop: 8 }}>
-        <Txt variant="labelM" tone="tertiary">
-          Estimated one-rep max
-        </Txt>
-        <Row gap={6} align="baseline">
-          <Txt variant="numberXL" tabular>
-            {lift.e1rm}
-          </Txt>
-          <Txt variant="displayS" tone="secondary">
-            kg
-          </Txt>
-        </Row>
-        <Row gap={6}>
-          <Icon name="trendingUp" size={13} color={colors.accent.ember} strokeWidth={2.2} />
-          <Txt variant="labelM" tone="ember">
-            +{lift.deltaKg} kg
-          </Txt>
-          <Txt variant="bodyS" tone="secondary">
-            in the last {lift.weeks} weeks
-          </Txt>
-        </Row>
-      </View>
-
-      <View style={{ gap: 12 }}>
-        <Segmented size="M" value={range} onChange={setRange} segments={[{ key: "1m", label: "1M" }, { key: "3m", label: "3M" }, { key: "6m", label: "6M" }, { key: "1y", label: "1Y" }, { key: "all", label: "All" }]} />
-        <Card padding={18} gap={12}>
-          <Row gap={14}>
-            <Legend color={colors.accent.ember} label="Estimated 1RM" />
-            <Legend color={colors.pr.gold} label="Record" />
-            <Legend color={colors.fuel.sage} label="Forecast" />
-          </Row>
-          <LineChart points={lift.points} forecast={lift.forecast} target={lift.target} height={170} labels={lift.labels} />
-        </Card>
-      </View>
-
-      <Row gap={14} align="flex-start">
-        <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: colors.bg.surface, alignItems: "center", justifyContent: "center" }}>
-          <Icon name="sun" size={18} color={colors.pr.gold} strokeWidth={2} />
-        </View>
-        <View style={{ flex: 1, gap: 6 }}>
-          <Txt variant="displayS">{lift.target} kg is close</Txt>
+      {all.length === 0 ? (
+        <View style={{ gap: 6, paddingTop: 8 }}>
+          <Txt variant="displayL">No sessions yet</Txt>
           <Txt variant="bodyM" tone="secondary">
-            Your estimated max has risen about {(lift.deltaKg / lift.weeks).toFixed(1)} kg a week over 12 sessions. Keep three {lift.name.toLowerCase()} sessions in the next two weeks and you are likely to reach {lift.target} kg around {lift.labels[lift.labels.length - 1]}.
+            Log {exercise.name.toLowerCase()} in a session and the trend, records and forecast appear here.
           </Txt>
-          <Pressable accessibilityRole="button" hitSlop={8}>
-            <Row gap={4}>
-              <Txt variant="labelM" tone="secondary">
-                How this is calculated
-              </Txt>
-              <Icon name="chevronRight" size={14} color={colors.text.secondary} strokeWidth={2} />
-            </Row>
-          </Pressable>
         </View>
-      </Row>
-
-      <Section title="Records" action="See all" onAction={() => {}} gap={0}>
-        {lift.records.map((r, i) => (
-          <View key={r.date}>
-            {i > 0 ? <Divider /> : null}
-            <Pressable accessibilityRole="button" onPress={() => {}} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
-              <Icon name="trophy" size={20} color={r.latest ? colors.pr.gold : colors.text.tertiary} strokeWidth={1.9} />
-              <View style={{ flex: 1, gap: 1 }}>
-                <Row gap={6} align="baseline">
-                  <Txt variant="numberM" tabular>
-                    {r.kg}
-                  </Txt>
-                  <Txt variant="labelS" tone="secondary">
-                    {r.reps}
-                  </Txt>
-                </Row>
-                <Txt variant="bodyS" tone="tertiary">
-                  {r.latest ? `Current record · ${r.date}` : r.date}
-                </Txt>
-              </View>
-              <Icon name="chevronRight" size={18} color={colors.text.tertiary} />
-            </Pressable>
+      ) : (
+        <>
+          <View style={{ gap: 4, paddingTop: 8 }}>
+            <Txt variant="labelM" tone="tertiary">
+              Estimated one-rep max
+            </Txt>
+            <Row gap={6} align="baseline">
+              <Txt variant="numberXL" tabular>
+                {current}
+              </Txt>
+              <Txt variant="displayS" tone="secondary">
+                kg
+              </Txt>
+            </Row>
+            <Row gap={6}>
+              <Icon name="trendingUp" size={13} color={delta >= 0 ? colors.accent.ember : colors.status.warning} strokeWidth={2.2} />
+              <Txt variant="labelM" tone={delta >= 0 ? "ember" : "warning"}>
+                {delta >= 0 ? "+" : ""}
+                {delta} kg
+              </Txt>
+              <Txt variant="bodyS" tone="secondary">
+                over {shown.length} sessions in {weeks} week{weeks === 1 ? "" : "s"}
+              </Txt>
+            </Row>
           </View>
-        ))}
-      </Section>
+
+          <View style={{ gap: 12 }}>
+            <Segmented size="M" value={range} onChange={setRange} segments={[{ key: "1m", label: "1M" }, { key: "3m", label: "3M" }, { key: "6m", label: "6M" }, { key: "1y", label: "1Y" }, { key: "all", label: "All" }]} />
+            <Card padding={18} gap={12}>
+              <Row gap={14}>
+                <Legend color={colors.accent.ember} label="Estimated 1RM" />
+                <Legend color={colors.pr.gold} label="Record" />
+                {fc ? <Legend color={colors.fuel.sage} label="Forecast" /> : null}
+              </Row>
+              <LineChart points={shown} forecast={fc?.values} target={fc?.target} height={170} labels={[shortDate(shown[0].date), "", "", "Now", fc ? `${fc.target} kg` : ""]} />
+            </Card>
+          </View>
+
+          <Row gap={14} align="flex-start">
+            <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: colors.bg.surface, alignItems: "center", justifyContent: "center" }}>
+              <Icon name="sun" size={18} color={colors.pr.gold} strokeWidth={2} />
+            </View>
+            <View style={{ flex: 1, gap: 6 }}>
+              {fc && fc.weeksToTarget ? (
+                <>
+                  <Txt variant="displayS">{fc.target} kg is close</Txt>
+                  <Txt variant="bodyM" tone="secondary">
+                    Your estimated max has risen about {Math.round(fc.slopePerWeek * 10) / 10} kg a week over the last {Math.min(6, all.length)} sessions. Keep the same frequency and you are likely to reach {fc.target} kg in about {fc.weeksToTarget} week{fc.weeksToTarget === 1 ? "" : "s"}.
+                  </Txt>
+                </>
+              ) : (
+                <>
+                  <Txt variant="displayS">Holding steady</Txt>
+                  <Txt variant="bodyM" tone="secondary">
+                    {all.length < 3 ? "Three sessions are needed before a forecast is worth showing." : "The last sessions moved less than a kilo a week. A small jump in weight or an extra rep on the top set is usually enough to get the line moving."}
+                  </Txt>
+                </>
+              )}
+              <Pressable accessibilityRole="button" hitSlop={8}>
+                <Row gap={4}>
+                  <Txt variant="labelM" tone="secondary">
+                    How this is calculated
+                  </Txt>
+                  <Icon name="chevronRight" size={14} color={colors.text.secondary} strokeWidth={2} />
+                </Row>
+              </Pressable>
+            </View>
+          </Row>
+
+          <Section title="Records" gap={0}>
+            {bestRecords.slice(0, 4).map((r, i) => (
+              <View key={r.date}>
+                {i > 0 ? <Divider /> : null}
+                <Row gap={14} style={{ paddingVertical: 12 }}>
+                  <Icon name="trophy" size={20} color={i === 0 ? colors.pr.gold : colors.text.tertiary} strokeWidth={1.9} />
+                  <View style={{ flex: 1, gap: 1 }}>
+                    <Row gap={6} align="baseline">
+                      <Txt variant="numberM" tabular>
+                        {r.kg} kg
+                      </Txt>
+                      <Txt variant="labelS" tone="secondary">
+                        × {r.reps}
+                      </Txt>
+                    </Row>
+                    <Txt variant="bodyS" tone="tertiary">
+                      {i === 0 ? `Current record · ${shortDate(r.date)}` : shortDate(r.date)}
+                    </Txt>
+                  </View>
+                </Row>
+              </View>
+            ))}
+            {recs.length === 0 ? (
+              <Txt variant="bodyS" tone="tertiary">
+                No weighted sets logged yet.
+              </Txt>
+            ) : null}
+          </Section>
+
+          <Section title="History" meta={`${history.length} sessions`} gap={0}>
+            {history.slice(0, 8).map((h, i) => (
+              <View key={h.sessionId}>
+                {i > 0 ? <Divider /> : null}
+                <Row gap={14} style={{ paddingVertical: 12 }}>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Txt variant="labelL">
+                      {h.top ? `${h.top.kg ? `${h.top.kg} kg × ` : ""}${h.top.reps}` : "no working sets"}
+                    </Txt>
+                    <Txt variant="bodyS" tone="tertiary">
+                      {shortDate(h.date)} · {h.planName} · {h.sets} sets · {fmtKg(h.volume)} kg
+                    </Txt>
+                  </View>
+                </Row>
+              </View>
+            ))}
+          </Section>
+        </>
+      )}
     </Screen>
   );
 }
