@@ -317,7 +317,7 @@ function SetRow({ set, label, isCurrent, error, onType, onChange, onDone }: { se
   const { colors, radius } = useTheme();
   const dim = !set.done && !isCurrent;
   const boxBg = isCurrent ? colors.bg.ground : colors.bg.raised;
-  const prev = set.prevKg === null ? "—" : `${set.prevKg || "BW"} × ${set.prevReps}`;
+  const prev = set.prevKg === null ? "–" : `${set.prevKg || "BW"} × ${set.prevReps}`;
   const inputStyle = { width: "100%" as const, textAlign: "center" as const, color: dim ? colors.text.tertiary : colors.text.primary, fontFamily: fontFamily.displaySemi, fontSize: 20, paddingVertical: 0 };
   return (
     <View>

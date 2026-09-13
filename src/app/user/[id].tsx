@@ -61,7 +61,7 @@ export default function UserProfile() {
       </Row>
 
       <Row gap={0} align="stretch">
-        <Count label="Workouts" value={p.recent.length * 9} />
+        <Count label="Workouts" value={p.recent.length} />
         <Count label="Followers" value={followers.length} onPress={() => router.push(`/followers?user=${p.id}&tab=followers`)} />
         <Count label="Following" value={p.following.length} onPress={() => router.push(`/followers?user=${p.id}&tab=following`)} />
       </Row>
