@@ -3,18 +3,22 @@ import { Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
-import { exerciseHistory, fmtKg, forecast, liftTrend, records, shortDate } from "@/db/derive";
-import { Screen, Row, Section, Header } from "@/components/ui/Screen";
+import { exerciseHistory, fmtKg, forecast, liftTrend, shortDate } from "@/db/derive";
+import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
 import { Card, Divider } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Segmented } from "@/components/ui/Segmented";
+import { Tabs } from "@/components/ui/Tabs";
 import { LineChart } from "@/components/LineChart";
 
 const RANGES: Record<string, number> = { "1m": 30, "3m": 91, "6m": 182, "1y": 365, all: 100000 };
 
-/** One exercise. The number is the hero, the chart is the one surface, the forecast reads as a note, then records and history. */
+/**
+ * One exercise. The number is the hero everyone shares; below it three
+ * chapters: the trend with its forecast, the records, and every session.
+ */
 export default function LiftDetail() {
   const { colors } = useTheme();
   const router = useRouter();
@@ -22,13 +26,13 @@ export default function LiftDetail() {
   const { lift: id } = useLocalSearchParams<{ lift: string }>();
   const exercise = db.exercises.find((e) => e.id === id) ?? db.exercises[0];
   const [range, setRange] = useState("3m");
+  const [tab, setTab] = useState("trend");
 
   const all = useMemo(() => liftTrend(db.sessions, exercise.id), [db.sessions, exercise.id]);
   const since = Date.now() - RANGES[range] * 86400000;
   const points = all.filter((p) => p.date >= since);
   const shown = points.length >= 2 ? points : all;
   const fc = useMemo(() => forecast(all), [all]);
-  const recs = useMemo(() => records(db.sessions, [exercise]), [db.sessions, exercise]);
   const history = useMemo(() => exerciseHistory(db.sessions, exercise.id), [db.sessions, exercise.id]);
   const current = all.length ? all[all.length - 1].value : 0;
   const first = shown.length ? shown[0].value : current;
@@ -78,95 +82,113 @@ export default function LiftDetail() {
             </Row>
           </View>
 
-          <View style={{ gap: 12 }}>
-            <Segmented size="M" value={range} onChange={setRange} segments={[{ key: "1m", label: "1M" }, { key: "3m", label: "3M" }, { key: "6m", label: "6M" }, { key: "1y", label: "1Y" }, { key: "all", label: "All" }]} />
-            <Card padding={18} gap={12}>
-              <Row gap={14}>
-                <Legend color={colors.accent.ember} label="Estimated 1RM" />
-                <Legend color={colors.pr.gold} label="Record" />
-                {fc ? <Legend color={colors.fuel.sage} label="Forecast" /> : null}
-              </Row>
-              <LineChart points={shown} forecast={fc?.values} target={fc?.target} height={170} labels={[shortDate(shown[0].date), "", "", "Now", fc ? `${fc.target} kg` : ""]} />
-            </Card>
-          </View>
+          <View style={{ gap: 16 }}>
+            <Tabs
+              value={tab}
+              onChange={setTab}
+              tabs={[
+                { key: "trend", label: "Trend" },
+                { key: "records", label: "Records", count: bestRecords.length },
+                { key: "history", label: "History", count: history.length },
+              ]}
+            />
 
-          <Row gap={14} align="flex-start">
-            <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: colors.bg.surface, alignItems: "center", justifyContent: "center" }}>
-              <Icon name="sun" size={18} color={colors.pr.gold} strokeWidth={2} />
-            </View>
-            <View style={{ flex: 1, gap: 6 }}>
-              {fc && fc.weeksToTarget ? (
-                <>
-                  <Txt variant="displayS">{fc.target} kg is close</Txt>
-                  <Txt variant="bodyM" tone="secondary">
-                    Your estimated max has risen about {Math.round(fc.slopePerWeek * 10) / 10} kg a week over the last {Math.min(6, all.length)} sessions. Keep the same frequency and you are likely to reach {fc.target} kg in about {fc.weeksToTarget} week{fc.weeksToTarget === 1 ? "" : "s"}.
-                  </Txt>
-                </>
-              ) : (
-                <>
-                  <Txt variant="displayS">Holding steady</Txt>
-                  <Txt variant="bodyM" tone="secondary">
-                    {all.length < 3 ? "Three sessions are needed before a forecast is worth showing." : "The last sessions moved less than a kilo a week. A small jump in weight or an extra rep on the top set is usually enough to get the line moving."}
-                  </Txt>
-                </>
-              )}
-              <Pressable accessibilityRole="button" hitSlop={8}>
-                <Row gap={4}>
-                  <Txt variant="labelM" tone="secondary">
-                    How this is calculated
-                  </Txt>
-                  <Icon name="chevronRight" size={14} color={colors.text.secondary} strokeWidth={2} />
-                </Row>
-              </Pressable>
-            </View>
-          </Row>
-
-          <Section title="Records" gap={0}>
-            {bestRecords.slice(0, 4).map((r, i) => (
-              <View key={r.date}>
-                {i > 0 ? <Divider /> : null}
-                <Row gap={14} style={{ paddingVertical: 12 }}>
-                  <Icon name="trophy" size={20} color={i === 0 ? colors.pr.gold : colors.text.tertiary} strokeWidth={1.9} />
-                  <View style={{ flex: 1, gap: 1 }}>
-                    <Row gap={6} align="baseline">
-                      <Txt variant="numberM" tabular>
-                        {r.kg} kg
-                      </Txt>
-                      <Txt variant="labelS" tone="secondary">
-                        × {r.reps}
-                      </Txt>
+            {tab === "trend" ? (
+              <View style={{ gap: 20 }}>
+                <View style={{ gap: 12 }}>
+                  <Segmented size="M" value={range} onChange={setRange} segments={[{ key: "1m", label: "1M" }, { key: "3m", label: "3M" }, { key: "6m", label: "6M" }, { key: "1y", label: "1Y" }, { key: "all", label: "All" }]} />
+                  <Card padding={18} gap={12}>
+                    <Row gap={14}>
+                      <Legend color={colors.accent.ember} label="Estimated 1RM" />
+                      <Legend color={colors.pr.gold} label="Record" />
+                      {fc ? <Legend color={colors.fuel.sage} label="Forecast" /> : null}
                     </Row>
-                    <Txt variant="bodyS" tone="tertiary">
-                      {i === 0 ? `Current record · ${shortDate(r.date)}` : shortDate(r.date)}
-                    </Txt>
-                  </View>
-                </Row>
-              </View>
-            ))}
-            {recs.length === 0 ? (
-              <Txt variant="bodyS" tone="tertiary">
-                No weighted sets logged yet.
-              </Txt>
-            ) : null}
-          </Section>
+                    <LineChart points={shown} forecast={fc?.values} target={fc?.target} height={170} labels={[shortDate(shown[0].date), "", "", "Now", fc ? `${fc.target} kg` : ""]} />
+                  </Card>
+                </View>
 
-          <Section title="History" meta={`${history.length} sessions`} gap={0}>
-            {history.slice(0, 8).map((h, i) => (
-              <View key={h.sessionId}>
-                {i > 0 ? <Divider /> : null}
-                <Row gap={14} style={{ paddingVertical: 12 }}>
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Txt variant="labelL">
-                      {h.top ? `${h.top.kg ? `${h.top.kg} kg × ` : ""}${h.top.reps}` : "no working sets"}
-                    </Txt>
-                    <Txt variant="bodyS" tone="tertiary">
-                      {shortDate(h.date)} · {h.planName} · {h.sets} sets · {fmtKg(h.volume)} kg
-                    </Txt>
+                <Row gap={14} align="flex-start">
+                  <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: colors.bg.surface, alignItems: "center", justifyContent: "center" }}>
+                    <Icon name="sun" size={18} color={colors.pr.gold} strokeWidth={2} />
+                  </View>
+                  <View style={{ flex: 1, gap: 6 }}>
+                    {fc && fc.weeksToTarget ? (
+                      <>
+                        <Txt variant="displayS">{fc.target} kg is close</Txt>
+                        <Txt variant="bodyM" tone="secondary">
+                          Your estimated max has risen about {Math.round(fc.slopePerWeek * 10) / 10} kg a week over the last {Math.min(6, all.length)} sessions. Keep the same frequency and you are likely to reach {fc.target} kg in about {fc.weeksToTarget} week{fc.weeksToTarget === 1 ? "" : "s"}.
+                        </Txt>
+                      </>
+                    ) : (
+                      <>
+                        <Txt variant="displayS">Holding steady</Txt>
+                        <Txt variant="bodyM" tone="secondary">
+                          {all.length < 3 ? "Three sessions are needed before a forecast is worth showing." : "The last sessions moved less than a kilo a week. A small jump in weight or an extra rep on the top set is usually enough to get the line moving."}
+                        </Txt>
+                      </>
+                    )}
+                    <Pressable accessibilityRole="button" hitSlop={8}>
+                      <Row gap={4}>
+                        <Txt variant="labelM" tone="secondary">
+                          How this is calculated
+                        </Txt>
+                        <Icon name="chevronRight" size={14} color={colors.text.secondary} strokeWidth={2} />
+                      </Row>
+                    </Pressable>
                   </View>
                 </Row>
               </View>
-            ))}
-          </Section>
+            ) : null}
+
+            {tab === "records" ? (
+              <View>
+                {bestRecords.map((r, i) => (
+                  <View key={r.date}>
+                    {i > 0 ? <Divider /> : null}
+                    <Row gap={14} style={{ paddingVertical: 12 }}>
+                      <Icon name="trophy" size={20} color={i === 0 ? colors.pr.gold : colors.text.tertiary} strokeWidth={1.9} />
+                      <View style={{ flex: 1, gap: 1 }}>
+                        <Row gap={6} align="baseline">
+                          <Txt variant="numberM" tabular>
+                            {r.kg} kg
+                          </Txt>
+                          <Txt variant="labelS" tone="secondary">
+                            × {r.reps}
+                          </Txt>
+                        </Row>
+                        <Txt variant="bodyS" tone="tertiary">
+                          {i === 0 ? `Current record · ${shortDate(r.date)}` : shortDate(r.date)}
+                        </Txt>
+                      </View>
+                    </Row>
+                  </View>
+                ))}
+                {bestRecords.length === 0 ? (
+                  <Txt variant="bodyS" tone="tertiary">
+                    No weighted sets logged yet.
+                  </Txt>
+                ) : null}
+              </View>
+            ) : null}
+
+            {tab === "history" ? (
+              <View>
+                {history.map((h, i) => (
+                  <View key={h.sessionId}>
+                    {i > 0 ? <Divider /> : null}
+                    <Row gap={14} style={{ paddingVertical: 12 }}>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Txt variant="labelL">{h.top ? `${h.top.kg ? `${h.top.kg} kg × ` : ""}${h.top.reps}` : "no working sets"}</Txt>
+                        <Txt variant="bodyS" tone="tertiary">
+                          {shortDate(h.date)} · {h.planName} · {h.sets} sets · {fmtKg(h.volume)} kg
+                        </Txt>
+                      </View>
+                    </Row>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </View>
         </>
       )}
     </Screen>

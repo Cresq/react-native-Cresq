@@ -23,7 +23,7 @@ SplashScreen.preventAutoHideAsync();
  *   /workout/active       Running session (full-screen modal over the tabs)
  *   /workout/summary      Session complete
  *   /workout/posted       Posted to feed, with undo
- *   /progress             Lifts overview (from Profile › Progress and Records)
+ *   /progress             Redirects to Profile › Lifts (old links)
  *   /progress/[lift]      One exercise: trend, forecast, records, history
  *   /settings             Units, language, sample data, reset, sign out
  *   /settings/devices     Connected devices and Health permissions

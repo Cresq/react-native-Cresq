@@ -1,29 +1,31 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useWorkout } from "@/store/workout";
 import { compareToLast, fmtKg, longDate, newRecords, sessionStats, shortDate } from "@/db/derive";
-import { Screen, Row, Section, Header } from "@/components/ui/Screen";
+import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
-import { Card, Divider } from "@/components/ui/Card";
+import { Divider } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
+import { Tabs } from "@/components/ui/Tabs";
 import { Stat, StatDivider } from "@/components/StatCard";
 
 /**
- * Session complete. The hero is typographic: the record, or the plain fact that
- * the session counted. Figures follow on the ground; the one surface is the
- * heart-rate block; the comparison is a list. Actions are pinned below.
+ * Session complete. The hero is typographic: the record, or the plain fact
+ * that the session counted. Figures follow; then two chapters, the
+ * exercises against last time and the heart-rate data. Actions are pinned.
  */
 export default function Summary() {
   const { colors } = useTheme();
   const router = useRouter();
   const { db } = useDb();
   const { session, file } = useWorkout();
+  const [tab, setTab] = useState("exercises");
   const stats = sessionStats(session);
   const recs = useMemo(() => (session ? newRecords(session, db.sessions).sort((a, b) => b.kg - a.kg) : []), [session, db.sessions]);
   const record = recs[0] ?? null;
@@ -82,57 +84,70 @@ export default function Summary() {
         <Stat label="Sets" value={String(stats.setsDone)} unit={`of ${stats.setsTotal}`} />
       </Row>
 
-      <Card padding={18} gap={14}>
-        <Row justify="space-between">
-          <Txt variant="displayS">Heart rate and energy</Txt>
-          <Row gap={5}>
-            <Icon name="watch" size={13} color={colors.text.tertiary} strokeWidth={1.8} />
-            <Txt variant="labelS" tone="tertiary">
-              Apple Watch
-            </Txt>
-          </Row>
-        </Row>
-        <Row gap={16} align="stretch">
-          <HR icon="heart" label="Average" value="126" unit="bpm" color={colors.status.danger} />
-          <HR icon="pulse" label="Max" value="158" unit="bpm" color={colors.text.secondary} />
-          <HR icon="flame" label="Energy" value="412" unit="kcal" color={colors.accent.ember} />
-        </Row>
-        <View style={{ gap: 6 }}>
-          <Row gap={3}>
-            {(
-              [
-                [4, colors.border.strong],
-                [12, colors.fuel.sage],
-                [28, colors.accent.ember],
-                [9, colors.status.warning],
-                [1, colors.status.danger],
-              ] as const
-            ).map(([minutes, color], i) => (
-              <View key={i} style={{ flex: minutes, height: 6, borderRadius: 3, backgroundColor: color, minWidth: 6 }} />
-            ))}
-          </Row>
-          <Txt variant="labelS" tone="tertiary">
-            Sample until a watch is connected.
-          </Txt>
-        </View>
-      </Card>
+      <View style={{ gap: 4 }}>
+        <Tabs
+          value={tab}
+          onChange={setTab}
+          tabs={[
+            { key: "exercises", label: "Exercises", count: cmp.rows.length },
+            { key: "heart", label: "Heart rate" },
+          ]}
+        />
 
-      <Section title={cmp.previous ? `Compared to last ${session?.planName}` : "This session"} meta={cmp.previous ? shortDate(cmp.previous.startedAt) : "first of its kind"} gap={0}>
-        {cmp.rows.map((r, i) => (
-          <View key={r.name + i}>
-            {i > 0 ? <Divider /> : null}
-            <Row style={{ paddingVertical: 12 }}>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Txt variant="labelL">{r.name}</Txt>
-                <Txt variant="bodyS" tone="tertiary">
-                  {r.detail}
-                </Txt>
+        {tab === "exercises" ? (
+          <View>
+            <Txt variant="labelS" tone="tertiary" style={{ paddingTop: 12, paddingBottom: 4 }}>
+              {cmp.previous ? `Compared to last ${session?.planName} · ${shortDate(cmp.previous.startedAt)}` : "First session of its kind, nothing to compare yet"}
+            </Txt>
+            {cmp.rows.map((r, i) => (
+              <View key={r.name + i}>
+                {i > 0 ? <Divider /> : null}
+                <Row style={{ paddingVertical: 12 }}>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Txt variant="labelL">{r.name}</Txt>
+                    <Txt variant="bodyS" tone="tertiary">
+                      {r.detail}
+                    </Txt>
+                  </View>
+                  <Chip label={r.delta} icon={r.tone === "ember" ? "trendingUp" : undefined} tone={r.tone} size="S" />
+                </Row>
               </View>
-              <Chip label={r.delta} icon={r.tone === "ember" ? "trendingUp" : undefined} tone={r.tone} size="S" />
+            ))}
+          </View>
+        ) : (
+          <View style={{ gap: 16, paddingTop: 16 }}>
+            <Row gap={16} align="stretch">
+              <HR icon="heart" label="Average" value="126" unit="bpm" color={colors.status.danger} />
+              <HR icon="pulse" label="Max" value="158" unit="bpm" color={colors.text.secondary} />
+              <HR icon="flame" label="Energy" value="412" unit="kcal" color={colors.accent.ember} />
+            </Row>
+            <View style={{ gap: 8 }}>
+              <Row gap={3}>
+                {(
+                  [
+                    [4, colors.border.strong],
+                    [12, colors.fuel.sage],
+                    [28, colors.accent.ember],
+                    [9, colors.status.warning],
+                    [1, colors.status.danger],
+                  ] as const
+                ).map(([minutes, color], i) => (
+                  <View key={i} style={{ flex: minutes, height: 6, borderRadius: 3, backgroundColor: color, minWidth: 6 }} />
+                ))}
+              </Row>
+              <Txt variant="labelS" tone="tertiary">
+                Minutes per zone, easy to hard.
+              </Txt>
+            </View>
+            <Row gap={6}>
+              <Icon name="watch" size={13} color={colors.text.tertiary} strokeWidth={1.8} />
+              <Txt variant="labelS" tone="tertiary">
+                Sample data until a watch is connected.
+              </Txt>
             </Row>
           </View>
-        ))}
-      </Section>
+        )}
+      </View>
     </Screen>
   );
 }

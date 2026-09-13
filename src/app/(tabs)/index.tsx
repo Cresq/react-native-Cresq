@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useWorkout } from "@/store/workout";
 import { useSplit } from "@/store/split";
-import { finished, fmtKg, forecast, liftTrend, relativeDay, shortDate, weekDays, weeklyVolume } from "@/db/derive";
+import { finished, fmtKg, forecast, liftTrend, relativeDay, weekDays, weeklyVolume } from "@/db/derive";
 import { estimateMinutes } from "@/db/seed";
 import { photos } from "@/data/mock";
 import { Screen, Row, Section } from "@/components/ui/Screen";
@@ -15,11 +15,9 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Avatar } from "@/components/ui/PhotoSlot";
 import { Segmented } from "@/components/ui/Segmented";
 import { WeekStrip } from "@/components/WeekStrip";
-import { Card } from "@/components/ui/Card";
-import { Chip } from "@/components/ui/Chip";
+import { Card, Divider } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Stat, StatDivider } from "@/components/StatCard";
-import { LineChart } from "@/components/LineChart";
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -28,8 +26,8 @@ const greeting = () => {
 const MAIN_LIFTS = ["bench", "squat", "deadlift", "ohp"];
 
 /**
- * Home. One anchor: the next session from your split. Below it, this week's
- * figures and the lifts, all computed from what you have logged.
+ * Home is one glance: the week so far, the next session, two figures, and
+ * the three lifts that matter as a short list. Charts live in Profile › Lifts.
  */
 export default function Home() {
   const { colors } = useTheme();
@@ -47,12 +45,14 @@ export default function Home() {
   const lastSame = [...done].reverse().find((s) => s.planName === (plan?.name ?? nextDay?.name));
 
   const lifts = useMemo(
-    () => db.exercises.map((ex) => ({ ex, points: liftTrend(db.sessions, ex.id) })).filter((l) => l.points.length >= 2).sort((a, b) => (MAIN_LIFTS.indexOf(a.ex.id) + 1 || 99) - (MAIN_LIFTS.indexOf(b.ex.id) + 1 || 99) || b.points.length - a.points.length),
+    () =>
+      db.exercises
+        .map((ex) => ({ ex, points: liftTrend(db.sessions, ex.id) }))
+        .filter((l) => l.points.length >= 2)
+        .sort((a, b) => (MAIN_LIFTS.indexOf(a.ex.id) + 1 || 99) - (MAIN_LIFTS.indexOf(b.ex.id) + 1 || 99) || b.points.length - a.points.length)
+        .map((l) => ({ ...l, current: l.points[l.points.length - 1].value, delta: Math.round((l.points[l.points.length - 1].value - l.points[0].value) * 2) / 2 })),
     [db.exercises, db.sessions],
   );
-  const [liftId, setLiftId] = useState<string | null>(null);
-  const lift = lifts.find((l) => l.ex.id === liftId) ?? lifts[0];
-  const liftFc = lift ? forecast(lift.points) : null;
   const nextRecord = useMemo(() => {
     const cands = lifts.filter((l) => MAIN_LIFTS.includes(l.ex.id)).map((l) => ({ l, fc: forecast(l.points) })).filter((c) => c.fc && c.fc.weeksToTarget !== null);
     cands.sort((a, b) => (a.fc!.weeksToTarget ?? 99) - (b.fc!.weeksToTarget ?? 99));
@@ -129,56 +129,41 @@ export default function Home() {
             )}
           </Row>
 
-          {lift ? (
-            <Section title="Lifts" action="All lifts" onAction={() => router.push("/progress")}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }} style={{ marginHorizontal: -20, paddingHorizontal: 20 }}>
-                {lifts.map((l) => (
-                  <Chip key={l.ex.id} label={l.ex.name} selected={l.ex.id === lift.ex.id} onPress={() => setLiftId(l.ex.id)} />
-                ))}
-                <Chip label="Add" icon="addPlus" onPress={() => router.push("/exercises")} />
-              </ScrollView>
-
-              <Pressable accessibilityRole="button" onPress={() => router.push(`/progress/${lift.ex.id}`)} style={{ gap: 12, paddingTop: 4 }}>
-                <Row justify="space-between" align="flex-end">
-                  <View style={{ gap: 2 }}>
-                    <Row gap={4}>
-                      <Txt variant="displayM">{lift.ex.name}</Txt>
-                      <Icon name="chevronRight" size={16} color={colors.text.tertiary} strokeWidth={2} />
-                    </Row>
-                    <Txt variant="labelS" tone="tertiary">
-                      Estimated 1RM · {lift.points.length} sessions
-                    </Txt>
-                  </View>
-                  <View style={{ alignItems: "flex-end", gap: 2 }}>
-                    <Row gap={4} align="baseline">
-                      <Txt variant="numberL" tabular>
-                        {lift.points[lift.points.length - 1].value}
-                      </Txt>
-                      <Txt variant="labelM" tone="secondary">
-                        kg
-                      </Txt>
-                    </Row>
-                    <Txt variant="labelS" tone={lift.points[lift.points.length - 1].value >= lift.points[0].value ? "ember" : "warning"}>
-                      {lift.points[lift.points.length - 1].value >= lift.points[0].value ? "+" : ""}
-                      {Math.round((lift.points[lift.points.length - 1].value - lift.points[0].value) * 2) / 2} kg
-                    </Txt>
-                  </View>
-                </Row>
-                <LineChart points={lift.points.slice(-8)} labels={lift.points.slice(-8).map((p, i, a) => (i === a.length - 1 ? "Now" : shortDate(p.date)))} height={110} />
-                {liftFc?.weeksToTarget ? (
-                  <Txt variant="labelS" tone="tertiary">
-                    {liftFc.target} kg likely in {liftFc.weeksToTarget} week{liftFc.weeksToTarget === 1 ? "" : "s"} at this pace
-                  </Txt>
-                ) : null}
-              </Pressable>
-            </Section>
-          ) : (
-            <Section title="Lifts">
+          <Section title="Lifts" action="All lifts" onAction={() => router.push("/(tabs)/profile?tab=lifts")} gap={0}>
+            {lifts.length === 0 ? (
               <Txt variant="bodyM" tone="secondary">
                 Your lifts appear here after two sessions with the same exercise.
               </Txt>
-            </Section>
-          )}
+            ) : null}
+            {lifts.slice(0, 3).map((l, i) => (
+              <View key={l.ex.id}>
+                {i > 0 ? <Divider /> : null}
+                <Pressable accessibilityRole="button" onPress={() => router.push(`/progress/${l.ex.id}`)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Txt variant="labelL">{l.ex.name}</Txt>
+                    <Txt variant="bodyS" tone="tertiary">
+                      Estimated 1RM · {l.points.length} sessions
+                    </Txt>
+                  </View>
+                  <View style={{ alignItems: "flex-end", gap: 1 }}>
+                    <Row gap={3} align="baseline">
+                      <Txt variant="numberM" tabular>
+                        {l.current}
+                      </Txt>
+                      <Txt variant="labelS" tone="secondary">
+                        kg
+                      </Txt>
+                    </Row>
+                    <Txt variant="labelS" tone={l.delta >= 0 ? "ember" : "warning"}>
+                      {l.delta >= 0 ? "+" : ""}
+                      {l.delta} kg
+                    </Txt>
+                  </View>
+                  <Icon name="chevronRight" size={18} color={colors.text.tertiary} />
+                </Pressable>
+              </View>
+            ))}
+          </Section>
         </>
       )}
     </Screen>
