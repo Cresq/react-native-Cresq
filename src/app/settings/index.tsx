@@ -23,6 +23,7 @@ export default function Settings() {
   const samples = db.sessions.filter((s) => s.sample).length;
 
   const rows: { icon: IconName; label: string; sub: string; onPress: () => void }[] = [
+    { icon: "user", label: "Account and privacy", sub: "Profile, what we may collect, your data", onPress: () => router.push("/settings/account") },
     { icon: "watch", label: "Connected devices", sub: "Apple Health, Apple Watch, Garmin", onPress: () => router.push("/settings/devices") },
     { icon: "flag", label: "Goals and limitations", sub: "Answers from onboarding", onPress: () => router.push("/onboarding?edit=1") },
     { icon: "bell", label: "Notifications", sub: "Reminders, records, reactions", onPress: () => router.push("/notifications") },
@@ -92,6 +93,15 @@ export default function Settings() {
           router.replace("/(auth)/sign-in");
         }}
       />
+      <Row gap={14} justify="center">
+        {[["privacy", "Privacy"], ["terms", "Terms"], ["licences", "Licences"]].map(([k, l]) => (
+          <Pressable key={k} accessibilityRole="link" onPress={() => router.push(`/legal/${k}`)} hitSlop={8}>
+            <Txt variant="labelS" tone="secondary">
+              {l}
+            </Txt>
+          </Pressable>
+        ))}
+      </Row>
       <Txt variant="labelS" tone="tertiary" align="center">
         CresQ 1.0 · Icons by coolicons, CC BY 4.0
       </Txt>

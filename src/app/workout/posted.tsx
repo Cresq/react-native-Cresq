@@ -5,7 +5,8 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useWorkout } from "@/store/workout";
 import { fmtKg, newRecords, sessionStats } from "@/db/derive";
-import { photos, social } from "@/data/mock";
+import { photos } from "@/data/mock";
+import { useSocial } from "@/store/social";
 import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
@@ -17,6 +18,7 @@ import { PostCard } from "@/components/PostCard";
 export default function Posted() {
   const { colors } = useTheme();
   const router = useRouter();
+  const { followers } = useSocial();
   const { db } = useDb();
   const { session, file } = useWorkout();
   const [left, setLeft] = useState(60);
@@ -61,7 +63,7 @@ export default function Posted() {
         </View>
         <Txt variant="displayL">Posted to your feed</Txt>
         <Txt variant="bodyM" tone="secondary">
-          Visible to {social.followers} followers
+          Visible to {followers.length} followers
         </Txt>
       </View>
 

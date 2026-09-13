@@ -46,11 +46,30 @@ export type Profile = {
   experience?: "new" | "some" | "years";
   daysPerWeek?: number;
   limitations?: string[];
-  /** Exercise ids charted on Home and listed under Profile › Favourites. Defaults to the four compound lifts. */
+  /** Exercise ids charted on Home and listed under Profile › Lifts. Defaults to the four compound lifts. */
   favourites?: string[];
+  bio?: string;
+  /** Year only, never the full date: enough for the 16+ check and for age bands, nothing more. */
+  birthYear?: number;
+  privateAccount?: boolean;
+  showCity?: boolean;
+};
+
+/**
+ * What the user has agreed to. Nothing here is on by default: no analytics,
+ * no age statistics, no email, until the user turns it on. Terms acceptance
+ * is stamped at sign-up and is required to hold an account.
+ */
+export type Consent = {
+  termsAcceptedAt?: number;
+  ageConfirmedAt?: number;
+  analytics: boolean;
+  ageStats: boolean;
+  marketing: boolean;
 };
 
 export const DEFAULT_FAVOURITES = ["bench", "squat", "deadlift", "ohp"];
+export const MIN_AGE = 16;
 
 export type Db = {
   version: number;
@@ -62,6 +81,9 @@ export type Db = {
   sessions: Session[];
   activeSession: Session | null;
   split: Split;
+  consent: Consent;
+  /** Ids of people the user follows (mock directory until there is a server). */
+  following: string[];
 };
 
 /** Bump when the seed or shape changes in a way that should discard stored data during development. */

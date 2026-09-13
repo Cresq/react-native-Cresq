@@ -3,7 +3,7 @@ import { Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
-import type { Profile } from "@/db/types";
+import { MIN_AGE, type Consent, type Profile } from "@/db/types";
 import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
@@ -11,21 +11,27 @@ import { Icon, type IconName } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Chip } from "@/components/ui/Chip";
+import { Field } from "@/components/ui/Field";
+import { Toggle } from "@/components/ui/Toggle";
+import { Divider } from "@/components/ui/Card";
 
-type Answers = Pick<Profile, "goal" | "experience" | "daysPerWeek" | "limitations">;
+type Answers = Pick<Profile, "goal" | "experience" | "daysPerWeek" | "limitations" | "birthYear">;
+type Choices = Pick<Consent, "analytics" | "ageStats">;
 
 const STEPS = [
+  { key: "birth", title: "What year were you born?", sub: `CresQ is for people aged ${MIN_AGE} and over. We only ask the year, and only for this check.` },
   { key: "goal", title: "What are you here for?", sub: "One answer. It sets the default rep ranges and rest." },
   { key: "experience", title: "How long have you trained?", sub: "This decides how fast your plans progress." },
   { key: "days", title: "How many days a week?", sub: "Your split will match it. You can change it any time." },
   { key: "limits", title: "Anything to work around?", sub: "Plans and the AI builder avoid movements that load these." },
+  { key: "data", title: "What may we collect?", sub: "Both are off. Your log stays on your device either way. Change this any time in Account and privacy." },
 ] as const;
 
 const LIMITS = ["Shoulder", "Knee", "Lower back", "Wrist", "Elbow", "Hip"];
 
 /**
- * Onboarding. Four questions, one per screen, answered by tapping. The bar
- * starts filled because signing up already counts as progress.
+ * Onboarding. Six short screens: the age check first, four training
+ * questions, and one honest screen about data, with everything off by default.
  */
 export default function Onboarding() {
   const { colors } = useTheme();
@@ -33,12 +39,16 @@ export default function Onboarding() {
   const { db, update } = useDb();
   const { edit } = useLocalSearchParams<{ edit?: string }>();
   const [i, setI] = useState(0);
-  const [a, setA] = useState<Answers>({ goal: db.profile.goal, experience: db.profile.experience, daysPerWeek: db.profile.daysPerWeek, limitations: db.profile.limitations ?? [] });
+  const [a, setA] = useState<Answers>({ goal: db.profile.goal, experience: db.profile.experience, daysPerWeek: db.profile.daysPerWeek, limitations: db.profile.limitations ?? [], birthYear: db.profile.birthYear });
+  const [c, setC] = useState<Choices>({ analytics: db.consent.analytics, ageStats: db.consent.ageStats });
+  const [yearText, setYearText] = useState(db.profile.birthYear ? String(db.profile.birthYear) : "");
   const step = STEPS[i];
-  const can = step.key === "goal" ? !!a.goal : step.key === "experience" ? !!a.experience : step.key === "days" ? !!a.daysPerWeek : true;
+  const year = new Date().getFullYear();
+  const tooYoung = !!a.birthYear && a.birthYear > year - MIN_AGE;
+  const can = step.key === "birth" ? !!a.birthYear && !tooYoung && a.birthYear > year - 120 : step.key === "goal" ? !!a.goal : step.key === "experience" ? !!a.experience : step.key === "days" ? !!a.daysPerWeek : true;
 
   const finish = () => {
-    update((d) => ({ ...d, profile: { ...d.profile, ...a, onboarded: true } }));
+    update((d) => ({ ...d, profile: { ...d.profile, ...a, onboarded: true }, consent: { ...d.consent, ...c, ageStats: c.ageStats && !!a.birthYear } }));
     if (edit) router.back();
     else router.replace("/(tabs)");
   };
@@ -56,6 +66,19 @@ export default function Onboarding() {
         </Txt>
       </View>
 
+      {step.key === "birth" ? (
+        <View style={{ gap: 10 }}>
+          <Field label="Year of birth" value={yearText} onChangeText={(t) => { const v = t.replace(/\D/g, "").slice(0, 4); setYearText(v); setA({ ...a, birthYear: v.length === 4 ? Number(v) : undefined }); }} keyboardType="number-pad" maxLength={4} placeholder="1998" autoFocus />
+          {tooYoung ? (
+            <Row gap={8} align="flex-start">
+              <Icon name="info" size={16} color={colors.status.warning} strokeWidth={2} />
+              <Txt variant="bodyS" tone="warning" style={{ flex: 1 }}>
+                Sorry, CresQ is for people aged {MIN_AGE} and over. You are welcome back when you are {MIN_AGE}.
+              </Txt>
+            </Row>
+          ) : null}
+        </View>
+      ) : null}
       {step.key === "goal" ? (
         <View style={{ gap: 8 }}>
           <Option icon="dumbbell" label="Get stronger" sub="Heavier top sets, longer rest" on={a.goal === "strength"} onPress={() => setA({ ...a, goal: "strength" })} />
@@ -89,6 +112,38 @@ export default function Onboarding() {
           })}
           <Chip label="Nothing" selected={a.limitations?.length === 0} onPress={() => setA({ ...a, limitations: [] })} />
         </Row>
+      ) : null}
+      {step.key === "data" ? (
+        <View>
+          <Row gap={14} style={{ paddingVertical: 12 }}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Txt variant="labelL">Anonymous usage statistics</Txt>
+              <Txt variant="bodyS" tone="tertiary">
+                Which screens are used and how often. No names, no log data.
+              </Txt>
+            </View>
+            <Toggle value={c.analytics} onChange={(v) => setC({ ...c, analytics: v })} />
+          </Row>
+          <Divider />
+          <Row gap={14} style={{ paddingVertical: 12 }}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Txt variant="labelL">Age statistics</Txt>
+              <Txt variant="bodyS" tone="tertiary">
+                Your age as a band, such as 25 to 34, to see who CresQ serves.
+              </Txt>
+            </View>
+            <Toggle value={c.ageStats} onChange={(v) => setC({ ...c, ageStats: v })} />
+          </Row>
+          <Divider />
+          <Pressable accessibilityRole="link" onPress={() => router.push("/legal/privacy")} hitSlop={8} style={{ paddingVertical: 12 }}>
+            <Row gap={4}>
+              <Txt variant="labelM" tone="secondary">
+                Read the Privacy Policy
+              </Txt>
+              <Icon name="chevronRight" size={14} color={colors.text.secondary} strokeWidth={2} />
+            </Row>
+          </Pressable>
+        </View>
       ) : null}
     </Screen>
   );

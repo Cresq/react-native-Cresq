@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Pressable, View, type ImageSourcePropType } from "react-native";
+import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Card } from "./ui/Card";
 import { Txt } from "./ui/Text";
@@ -10,6 +11,8 @@ import { Row } from "./ui/Screen";
 
 export type Post = {
   id: string;
+  /** Author in the people directory; undefined for your own posts. */
+  userId?: string;
   name: string;
   meta: string;
   avatar?: ImageSourcePropType;
@@ -29,18 +32,21 @@ export type Post = {
  */
 export function PostCard({ post, preview }: { post: Post; preview?: boolean }) {
   const { colors } = useTheme();
+  const router = useRouter();
   const [liked, setLiked] = useState(!!post.liked);
   const likes = post.likes + (liked && !post.liked ? 1 : !liked && post.liked ? -1 : 0);
   return (
     <Card padding={0} gap={0} style={{ overflow: "hidden" }}>
       <Row style={{ paddingHorizontal: 16, paddingVertical: 14 }} gap={10}>
-        <Avatar source={post.avatar} size={36} />
-        <View style={{ flex: 1, gap: 1 }}>
-          <Txt variant="labelL">{post.name}</Txt>
-          <Txt variant="labelS" tone="tertiary">
-            {post.meta}
-          </Txt>
-        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel={`${post.name}'s profile`} disabled={!post.userId} onPress={() => router.push(`/user/${post.userId}`)} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Avatar source={post.avatar} size={36} initial={post.name[0]} />
+          <View style={{ flex: 1, gap: 1 }}>
+            <Txt variant="labelL">{post.name}</Txt>
+            <Txt variant="labelS" tone="tertiary">
+              {post.meta}
+            </Txt>
+          </View>
+        </Pressable>
         <Icon name="moreHorizontal" size={20} color={colors.text.tertiary} />
       </Row>
       <PhotoSlot source={post.photo} height={post.photoHeight ?? 300} radius={0}>

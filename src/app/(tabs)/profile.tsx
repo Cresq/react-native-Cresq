@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, View, useWindowDimensions } from "react-native";
+import { Image, Pressable, View, useWindowDimensions } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
-import { finished, liftTrend, newRecords, records, shortDate, streakWeeks } from "@/db/derive";
+import { useSocial } from "@/store/social";
+import { finished, liftTrend, newRecords, shortDate } from "@/db/derive";
 import { DEFAULT_FAVOURITES } from "@/db/types";
-import { photos, social } from "@/data/mock";
+import { photos } from "@/data/mock";
 import { Screen, Row } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
@@ -13,21 +14,21 @@ import { Avatar } from "@/components/ui/PhotoSlot";
 import { Divider } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Tabs } from "@/components/ui/Tabs";
-import { Stat, StatDivider } from "@/components/StatCard";
 import { WorkoutTile } from "@/components/WorkoutTile";
 
-const TABS = ["workouts", "favourites", "records"];
+const TABS = ["workouts", "photos", "lifts"];
 const MOCK_PHOTOS = [photos.gym1, photos.gym2, photos.gym3];
 
 /**
- * Profile. Who you are on top, then a grid of every workout (a photo when
- * there is one, the workout's initials when there is not), your favourite
- * lifts, and your records. Each tile and row is a door, nothing more.
+ * Profile. Who you are, three numbers, then one grid at a time: workouts,
+ * photos, or the lifts you follow. Settings live behind the gear, records
+ * live on each lift. Nothing else competes for the eye.
  */
 export default function Profile() {
   const { colors, layout } = useTheme();
   const router = useRouter();
   const { db, update } = useDb();
+  const { followers, following } = useSocial();
   const { width } = useWindowDimensions();
   const { tab: wanted } = useLocalSearchParams<{ tab?: string }>();
   const [tab, setTab] = useState(TABS.includes(wanted ?? "") ? wanted! : "workouts");
@@ -36,10 +37,13 @@ export default function Profile() {
   }, [wanted]);
 
   const done = useMemo(() => finished(db.sessions), [db.sessions]);
-  const streak = useMemo(() => streakWeeks(db.sessions), [db.sessions]);
-  const recs = useMemo(() => records(db.sessions, db.exercises), [db.sessions, db.exercises]);
+  const workouts = useMemo(() => {
+    let shared = 0;
+    return [...done].reverse().map((s) => ({ s, prs: newRecords(s, db.sessions.filter((x) => x.startedAt < s.startedAt)).length, photo: s.shared ? MOCK_PHOTOS[shared++ % MOCK_PHOTOS.length] : undefined }));
+  }, [done, db.sessions]);
+  const withPhoto = workouts.filter((w) => w.photo);
   const favourites = db.profile.favourites ?? DEFAULT_FAVOURITES;
-  const favs = useMemo(
+  const lifts = useMemo(
     () =>
       favourites
         .map((id) => db.exercises.find((e) => e.id === id))
@@ -50,14 +54,9 @@ export default function Profile() {
         }),
     [favourites, db.exercises, db.sessions],
   );
-  const workouts = useMemo(() => {
-    let shared = 0;
-    return [...done].reverse().map((s) => ({ s, prs: newRecords(s, db.sessions.filter((x) => x.startedAt < s.startedAt)).length, photo: s.shared ? MOCK_PHOTOS[shared++ % MOCK_PHOTOS.length] : undefined }));
-  }, [done, db.sessions]);
 
   const gap = 6;
   const tile = Math.floor((Math.min(width, 520) - layout.screenInset * 2 - gap * 2) / 3);
-  const rowStyle = ({ pressed }: { pressed: boolean }) => ({ flexDirection: "row" as const, alignItems: "center" as const, gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 });
   const unfavourite = (id: string) => update((d) => ({ ...d, profile: { ...d.profile, favourites: (d.profile.favourites ?? DEFAULT_FAVOURITES).filter((x) => x !== id) } }));
 
   return (
@@ -66,34 +65,30 @@ export default function Profile() {
         <Txt variant="displayXL" style={{ flex: 1 }}>
           Profile
         </Txt>
-        <IconButton name="share" />
         <IconButton name="settings" onPress={() => router.push("/settings")} accessibilityLabel="Settings" />
       </Row>
 
-      <View style={{ gap: 20 }}>
-        <Row gap={16}>
-          <Avatar source={photos.selfie} size={84} />
-          <View style={{ flex: 1, gap: 4 }}>
-            <Txt variant="displayL">{db.profile.name}</Txt>
+      <Row gap={16}>
+        <Avatar source={photos.selfie} size={72} />
+        <View style={{ flex: 1, gap: 3 }}>
+          <Txt variant="displayL">{db.profile.name}</Txt>
+          <Txt variant="bodyS" tone="secondary">
+            {db.profile.handle}
+            {db.profile.showCity === false ? "" : ` · ${db.profile.city}`}
+          </Txt>
+          {db.profile.bio ? (
             <Txt variant="bodyS" tone="secondary">
-              {db.profile.handle} · {db.profile.city} · since {db.profile.since}
+              {db.profile.bio}
             </Txt>
-            <Row gap={5}>
-              <Icon name="trendingUp" size={12} color={streak ? colors.accent.ember : colors.text.tertiary} strokeWidth={2.2} />
-              <Txt variant="labelS" tone={streak ? "ember" : "tertiary"}>
-                {streak ? `${streak}-week streak` : "Start a streak this week"}
-              </Txt>
-            </Row>
-          </View>
-        </Row>
-        <Row gap={12} align="stretch">
-          <Stat label="Sessions" value={String(done.length)} size="M" />
-          <StatDivider />
-          <Stat label="Followers" value={social.followers} size="M" />
-          <StatDivider />
-          <Stat label="Following" value={String(social.following)} size="M" />
-        </Row>
-      </View>
+          ) : null}
+        </View>
+      </Row>
+
+      <Row gap={0} align="stretch">
+        <Count label="Sessions" value={done.length} />
+        <Count label="Followers" value={followers.length} onPress={() => router.push("/followers?tab=followers")} />
+        <Count label="Following" value={following.length} onPress={() => router.push("/followers?tab=following")} />
+      </Row>
 
       <View style={{ gap: 12 }}>
         <Tabs
@@ -101,8 +96,8 @@ export default function Profile() {
           onChange={setTab}
           tabs={[
             { key: "workouts", label: "Workouts", count: done.length },
-            { key: "favourites", label: "Favourites", count: favs.length },
-            { key: "records", label: "Records", count: recs.length },
+            { key: "photos", label: "Photos", count: withPhoto.length },
+            { key: "lifts", label: "Lifts", count: lifts.length },
           ]}
         />
 
@@ -120,13 +115,29 @@ export default function Profile() {
           )
         ) : null}
 
-        {tab === "favourites" ? (
+        {tab === "photos" ? (
+          withPhoto.length === 0 ? (
+            <Txt variant="bodyM" tone="secondary" style={{ paddingTop: 4 }}>
+              Photos you add to a session show up here.
+            </Txt>
+          ) : (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
+              {withPhoto.map(({ s, photo }) => (
+                <Pressable key={s.id} accessibilityRole="button" accessibilityLabel={`${s.planName}, ${shortDate(s.startedAt)}`} onPress={() => router.push(`/workout/${s.id}`)} style={({ pressed }) => ({ width: tile, height: tile, borderRadius: 14, overflow: "hidden", backgroundColor: colors.bg.surface, opacity: pressed ? 0.8 : 1 })}>
+                  <Image source={photo} style={{ width: tile, height: tile }} resizeMode="cover" />
+                </Pressable>
+              ))}
+            </View>
+          )
+        ) : null}
+
+        {tab === "lifts" ? (
           <View style={{ marginTop: -8 }}>
-            {favs.map((l, i) => (
+            {lifts.map((l, i) => (
               <View key={l.ex.id}>
                 {i > 0 ? <Divider /> : null}
                 <Row gap={14}>
-                  <Pressable accessibilityRole="button" onPress={() => router.push(`/progress/${l.ex.id}`)} style={[rowStyle({ pressed: false }), { flex: 1 }]}>
+                  <Pressable accessibilityRole="button" onPress={() => router.push(`/progress/${l.ex.id}`)} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
                     <View style={{ flex: 1, gap: 2 }}>
                       <Txt variant="labelL">{l.ex.name}</Txt>
                       <Txt variant="bodyS" tone="tertiary">
@@ -152,14 +163,14 @@ export default function Profile() {
                       </View>
                     ) : null}
                   </Pressable>
-                  <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${l.ex.name} from favourites`} hitSlop={10} onPress={() => unfavourite(l.ex.id)}>
+                  <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${l.ex.name} from your lifts`} hitSlop={10} onPress={() => unfavourite(l.ex.id)}>
                     <Icon name="star" size={20} color={colors.pr.gold} fill={colors.pr.gold} strokeWidth={1.8} />
                   </Pressable>
                 </Row>
               </View>
             ))}
-            {favs.length ? <Divider /> : null}
-            <Pressable accessibilityRole="button" onPress={() => router.push("/exercises?favourite=1")} style={rowStyle}>
+            {lifts.length ? <Divider /> : null}
+            <Pressable accessibilityRole="button" onPress={() => router.push("/exercises?favourite=1")} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
               <Icon name="addPlus" size={18} color={colors.text.secondary} strokeWidth={2} />
               <Txt variant="labelL" tone="secondary" style={{ flex: 1 }}>
                 Add a lift
@@ -167,41 +178,22 @@ export default function Profile() {
             </Pressable>
           </View>
         ) : null}
-
-        {tab === "records" ? (
-          <View style={{ marginTop: -8 }}>
-            {recs.length === 0 ? (
-              <Txt variant="bodyM" tone="secondary" style={{ paddingTop: 12 }}>
-                Your first weighted set becomes your first record.
-              </Txt>
-            ) : null}
-            {recs.map((r, i) => (
-              <View key={r.exerciseId}>
-                {i > 0 ? <Divider /> : null}
-                <Pressable accessibilityRole="button" onPress={() => router.push(`/progress/${r.exerciseId}`)} style={rowStyle}>
-                  <Icon name="trophy" size={20} color={i === 0 ? colors.pr.gold : colors.text.tertiary} strokeWidth={1.9} />
-                  <View style={{ flex: 1, gap: 1 }}>
-                    <Row gap={6} align="baseline">
-                      <Txt variant="numberM" tabular>
-                        {r.kg} kg
-                      </Txt>
-                      <Txt variant="labelS" tone="secondary">
-                        × {r.reps} · {r.name}
-                      </Txt>
-                    </Row>
-                    <Txt variant="bodyS" tone="tertiary">
-                      {shortDate(r.date)}
-                      {r.previous ? ` · up from ${r.previous} kg` : ""}
-                    </Txt>
-                  </View>
-                  <Icon name="chevronRight" size={18} color={colors.text.tertiary} />
-                </Pressable>
-              </View>
-            ))}
-          </View>
-        ) : null}
       </View>
     </Screen>
+  );
+}
+
+/** A figure with its label. Tappable when it opens a list. */
+export function Count({ label, value, onPress }: { label: string; value: number | string; onPress?: () => void }) {
+  return (
+    <Pressable accessibilityRole={onPress ? "button" : undefined} disabled={!onPress} onPress={onPress} style={({ pressed }) => ({ flex: 1, gap: 2, opacity: pressed ? 0.7 : 1 })}>
+      <Txt variant="numberM" tabular>
+        {String(value)}
+      </Txt>
+      <Txt variant="labelS" tone="tertiary">
+        {label}
+      </Txt>
+    </Pressable>
   );
 }
 

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { View } from "react-native";
 import { useRouter } from "expo-router";
 import { useDb } from "@/db/DbProvider";
+import { useSocial } from "@/store/social";
 import { finished, fmtKg, newRecords, relativeDay, sessionStats } from "@/db/derive";
 import { otherPosts, photos } from "@/data/mock";
 import { Screen, Row } from "@/components/ui/Screen";
@@ -14,6 +15,7 @@ import { PostCard, type Post } from "@/components/PostCard";
 export default function Feed() {
   const router = useRouter();
   const { db } = useDb();
+  const { isFollowing } = useSocial();
   const [filter, setFilter] = useState("following");
 
   const mine = useMemo<Post[]>(
@@ -28,7 +30,7 @@ export default function Feed() {
           return {
             id: s.id,
             name: db.profile.name,
-            meta: `${s.planName} · ${relativeDay(s.startedAt)} · ${db.profile.city}`,
+            meta: `${s.planName} · ${relativeDay(s.startedAt)}${db.profile.showCity === false ? "" : ` · ${db.profile.city}`}`,
             avatar: photos.selfie,
             photo: photos.gym1,
             record: rec ? `New record · ${rec.name} ${rec.kg} kg` : undefined,
@@ -45,8 +47,7 @@ export default function Feed() {
         }),
     [db.sessions, db.profile],
   );
-  const all = [...mine, ...otherPosts];
-  const visible = filter === "records" ? all.filter((p) => p.record) : all;
+  const visible = filter === "following" ? [...mine, ...otherPosts.filter((p) => p.userId && isFollowing(p.userId))] : otherPosts.filter((p) => !p.userId || !isFollowing(p.userId));
 
   return (
     <Screen tabs>
@@ -55,17 +56,12 @@ export default function Feed() {
           <Txt variant="displayXL" style={{ flex: 1 }}>
             Feed
           </Txt>
-          <IconButton name="search" />
+          <IconButton name="search" onPress={() => router.push("/search")} accessibilityLabel="Find people" />
           <IconButton name="bell" badge onPress={() => router.push("/notifications")} accessibilityLabel="Notifications" />
         </Row>
         <Row gap={8}>
-          {[
-            ["following", "Following"],
-            ["discover", "Discover"],
-            ["records", "Records"],
-          ].map(([k, l]) => (
-            <Chip key={k} label={l} selected={filter === k} onPress={() => setFilter(k)} />
-          ))}
+          <Chip label="Following" selected={filter === "following"} onPress={() => setFilter("following")} />
+          <Chip label="Discover" selected={filter === "discover"} onPress={() => setFilter("discover")} />
         </Row>
       </View>
       <View style={{ gap: 20 }}>
@@ -74,7 +70,7 @@ export default function Feed() {
         ))}
         {visible.length === 0 ? (
           <Txt variant="bodyM" tone="secondary">
-            No records shared yet. Finish a session with a new best and share it.
+            {filter === "following" ? "Follow a few people and their sessions show up here." : "Nothing new to discover right now."}
           </Txt>
         ) : null}
       </View>

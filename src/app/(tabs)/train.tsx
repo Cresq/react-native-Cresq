@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
@@ -15,8 +15,8 @@ import { Icon } from "@/components/ui/Icon";
 import { IconButton } from "@/components/ui/IconButton";
 
 /**
- * Train. Three things, top to bottom: what is up next, the split that decides
- * that (one line, tap to edit), and the workouts you own.
+ * Train. Two things: what is up next, with the split it comes from on one
+ * quiet line inside the card, and the workouts you own.
  */
 export default function Train() {
   const { colors } = useTheme();
@@ -51,15 +51,15 @@ export default function Train() {
 
       <Card padding={20} gap={14}>
         <Txt variant="labelM" tone={running ? "ember" : "tertiary"}>
-          {running ? `Session running · ${session?.planName}` : `Up next · day ${split.nextIndex + 1} of ${split.days.length}`}
+          {running ? "Session running" : "Up next"}
         </Txt>
         <View style={{ gap: 4 }}>
-          <Txt variant="displayL">{nextDay?.name ?? "Quick session"}</Txt>
+          <Txt variant="displayL">{running ? session?.planName : (nextDay?.name ?? "Quick session")}</Txt>
           <Txt variant="bodyM" tone="secondary">
-            {nextDay?.focus}
+            {running ? `${session?.exercises.length} exercises` : (nextDay?.focus ?? "Pick any workout below")}
           </Txt>
         </View>
-        {nextPlan ? (
+        {nextPlan && !running ? (
           <Row gap={16}>
             <Meta icon="calendar" text={`${nextPlan.exercises.length} exercises`} />
             <Meta icon="clock" text={`${estimateMinutes(nextPlan)} min`} />
@@ -67,30 +67,17 @@ export default function Train() {
           </Row>
         ) : null}
         <Button label={running ? "Continue session" : nextDay?.rest ? "Rest day · start anyway" : "Start session"} iconRight="arrowRight" onPress={() => begin(nextPlan?.id, nextDay?.name)} style={{ marginTop: 4 }} />
-      </Card>
-
-      <Section title="Your split" action="Edit" onAction={() => router.push("/train/split")}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Edit your split" onPress={() => router.push("/train/split")} style={{ gap: 10 }}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, alignItems: "center", paddingRight: 20 }} style={{ marginHorizontal: -20, paddingHorizontal: 20 }}>
-            {split.days.map((d, i) => {
-              const isNext = i === split.nextIndex;
-              return (
-                <Row key={d.id} gap={6}>
-                  <View style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 999, backgroundColor: isNext ? colors.accent.ember : colors.bg.surface }}>
-                    <Txt variant="labelM" style={{ color: isNext ? colors.accent.on : d.rest ? colors.text.tertiary : colors.text.secondary }}>
-                      {d.name}
-                    </Txt>
-                  </View>
-                  {i < split.days.length - 1 ? <Icon name="chevronRight" size={12} color={colors.text.tertiary} strokeWidth={2.2} /> : null}
-                </Row>
-              );
-            })}
-          </ScrollView>
-          <Txt variant="bodyS" tone="tertiary">
-            {split.name}. Finishing a session moves you to the next day, and after day {split.days.length} it starts again.
+        <Pressable accessibilityRole="button" accessibilityLabel="Edit your split" onPress={() => router.push("/train/split")} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, opacity: pressed ? 0.7 : 1 })}>
+          <Icon name="rows" size={14} color={colors.text.tertiary} strokeWidth={1.8} />
+          <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }}>
+            {split.name} · day {split.nextIndex + 1} of {split.days.length}
           </Txt>
+          <Txt variant="labelS" tone="secondary">
+            Change
+          </Txt>
+          <Icon name="chevronRight" size={14} color={colors.text.secondary} strokeWidth={2} />
         </Pressable>
-      </Section>
+      </Card>
 
       <Section title="Workouts" action="New" onAction={newWorkout} gap={0}>
         {db.plans.map((p, i) => {
@@ -113,19 +100,6 @@ export default function Train() {
             </View>
           );
         })}
-        <Divider />
-        <Pressable accessibilityRole="button" style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14, opacity: pressed ? 0.7 : 1 })}>
-          <Icon name="sun" size={18} color={colors.pr.gold} strokeWidth={2} />
-          <View style={{ flex: 1, gap: 2 }}>
-            <Txt variant="labelL">Build a workout with AI</Txt>
-            <Txt variant="bodyS" tone="tertiary">
-              Describe your goals and limits, edit the result line by line.
-            </Txt>
-          </View>
-          <Txt variant="labelS" tone="tertiary">
-            Soon
-          </Txt>
-        </Pressable>
       </Section>
     </Screen>
   );

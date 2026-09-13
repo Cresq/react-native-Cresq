@@ -13,11 +13,9 @@ export const photos: Record<string, ImageSourcePropType> = {
   gym3: require("@/assets/photos/gym-3.png"),
 };
 
-export const social = { followers: "1.2k", following: 210 };
-
 export const otherPosts: Post[] = [
-  { id: "p2", name: "Sara de Vries", meta: "Legs · yesterday", photo: photos.gym2, photoHeight: 260, caption: "Pause squats, 5 × 5 at 90 kg.", stats: [{ value: "64", unit: "min" }, { value: "9.8k", unit: "kg" }, { value: "16", unit: "sets" }], likes: 12, comments: 3 },
-  { id: "p3", name: "Tom Bakker", meta: "Arms · yesterday", photo: photos.gym3, photoHeight: 260, caption: "Preacher curls to finish. Forearms gone.", stats: [{ value: "41", unit: "min" }, { value: "4.2k", unit: "kg" }, { value: "14", unit: "sets" }], likes: 8, comments: 1 },
+  { id: "p2", userId: "u2", name: "Sara de Vries", meta: "Legs · yesterday", photo: photos.gym2, photoHeight: 260, caption: "Pause squats, 5 × 5 at 90 kg.", stats: [{ value: "64", unit: "min" }, { value: "9.8k", unit: "kg" }, { value: "16", unit: "sets" }], likes: 12, comments: 3 },
+  { id: "p3", userId: "u3", name: "Tom Bakker", meta: "Arms · yesterday", photo: photos.gym3, photoHeight: 260, caption: "Preacher curls to finish. Forearms gone.", stats: [{ value: "41", unit: "min" }, { value: "4.2k", unit: "kg" }, { value: "14", unit: "sets" }], likes: 8, comments: 1 },
 ];
 
 export type Notification = { id: string; kind: "like" | "comment" | "follow" | "record" | "reminder" | "device"; title: string; body?: string; when: string; unread?: boolean; avatar?: ImageSourcePropType };

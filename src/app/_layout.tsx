@@ -28,6 +28,11 @@ SplashScreen.preventAutoHideAsync();
  *   /progress/[lift]      One exercise: trend, forecast, records, history
  *   /settings             Units, language, sample data, reset, sign out
  *   /settings/devices     Connected devices and Health permissions
+ *   /settings/account     Account, privacy switches, consent, export, delete
+ *   /legal/[doc]          privacy · terms · cookies · refunds · licences
+ *   /search               Find people (from Feed)
+ *   /followers            ?user=me|ID&tab=followers|following
+ *   /user/[id]            Someone else's profile
  */
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -66,6 +71,11 @@ export default function RootLayout() {
             <Stack.Screen name="progress/index" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="progress/[lift]" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="workout/[id]" options={{ animation: "slide_from_right" }} />
+            <Stack.Screen name="user/[id]" options={{ animation: "slide_from_right" }} />
+            <Stack.Screen name="search" options={{ animation: "slide_from_right" }} />
+            <Stack.Screen name="followers" options={{ animation: "slide_from_right" }} />
+            <Stack.Screen name="settings/account" options={{ animation: "slide_from_right" }} />
+            <Stack.Screen name="legal/[doc]" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="settings/index" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="settings/devices" options={{ animation: "slide_from_right" }} />
           </Stack>

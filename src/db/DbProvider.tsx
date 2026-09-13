@@ -14,6 +14,12 @@ type DbState = {
 
 const DbContext = createContext<DbState | null>(null);
 
+/** Fill keys that were added after a document was first stored, without touching what the user already has. */
+function migrate(stored: Db): Db {
+  const fresh = createSeedDb();
+  return { ...fresh, ...stored, profile: { ...fresh.profile, ...stored.profile }, consent: { ...fresh.consent, ...(stored.consent ?? {}) }, following: stored.following ?? fresh.following };
+}
+
 export function DbProvider({ children }: PropsWithChildren) {
   const [db, setDb] = useState<Db>(() => createSeedDb());
   const [ready, setReady] = useState(false);
@@ -23,7 +29,7 @@ export function DbProvider({ children }: PropsWithChildren) {
     let alive = true;
     loadDb().then((stored) => {
       if (!alive) return;
-      if (stored && stored.version === DB_VERSION) setDb(stored);
+      if (stored && stored.version === DB_VERSION) setDb(migrate(stored));
       else saveDb(db);
       loaded.current = true;
       setReady(true);
