@@ -12,6 +12,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Card, Divider } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
+import { Field } from "@/components/ui/Field";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 
 /**
@@ -21,7 +22,9 @@ import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 export default function SplitEditor() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { split, nextDay, addDay, removeDay, moveDay, setNext } = useSplit();
+  const { split, nextDay, rename, addDay, removeDay, moveDay, setNext } = useSplit();
+  const [renaming, setRenaming] = useState(false);
+  const [nameText, setNameText] = useState(split.name);
   const { db } = useDb();
   const splitTemplates = templatesFor(db.plans);
   const [sheet, setSheet] = useState<null | { kind: "day"; day: SplitDay } | { kind: "add" }>(null);
@@ -29,7 +32,14 @@ export default function SplitEditor() {
 
   return (
     <Screen bottom={90} footer={<Button label="Save split" onPress={() => router.back()} />}>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title="Your split" right={<IconButton name="noteEdit" accessibilityLabel="Rename" />} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title="Your split" right={<IconButton name="noteEdit" onPress={() => { setNameText(split.name); setRenaming(true); }} accessibilityLabel="Rename split" />} />
+
+      <BottomSheet visible={renaming} onClose={() => setRenaming(false)} title="Rename your split">
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
+          <Field label="Name" value={nameText} onChangeText={setNameText} placeholder="Push Pull Legs" autoFocus />
+          <Button label="Save name" onPress={() => { if (nameText.trim()) rename(nameText.trim()); setRenaming(false); }} disabled={!nameText.trim()} />
+        </View>
+      </BottomSheet>
 
       <View style={{ gap: 4 }}>
         <Txt variant="displayL">{split.name}</Txt>

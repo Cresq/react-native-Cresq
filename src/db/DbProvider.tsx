@@ -17,7 +17,7 @@ const DbContext = createContext<DbState | null>(null);
 /** Fill keys that were added after a document was first stored, without touching what the user already has. */
 function migrate(stored: Db): Db {
   const fresh = createSeedDb();
-  return { ...fresh, ...stored, profile: { ...fresh.profile, ...stored.profile }, consent: { ...fresh.consent, ...(stored.consent ?? {}) }, following: stored.following ?? fresh.following };
+  return { ...fresh, ...stored, profile: { ...fresh.profile, ...stored.profile }, consent: { ...fresh.consent, ...(stored.consent ?? {}) }, following: stored.following ?? fresh.following, blocked: stored.blocked ?? [] };
 }
 
 export function DbProvider({ children }: PropsWithChildren) {

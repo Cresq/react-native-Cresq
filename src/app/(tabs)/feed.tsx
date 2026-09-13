@@ -8,15 +8,20 @@ import { otherPosts, photos } from "@/data/mock";
 import { Screen, Row } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
+import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
+import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { PostCard, type Post } from "@/components/PostCard";
 
 /** Feed. Your own shared sessions come from the database; other people's posts are placeholders until there is a server. */
 export default function Feed() {
   const router = useRouter();
-  const { db } = useDb();
+  const { db, update } = useDb();
   const { isFollowing } = useSocial();
   const [filter, setFilter] = useState("following");
+  const [more, setMore] = useState<Post | null>(null);
+  const [hidden, setHidden] = useState<string[]>([]);
+  const [reported, setReported] = useState(false);
 
   const mine = useMemo<Post[]>(
     () =>
@@ -34,7 +39,7 @@ export default function Feed() {
             avatar: photos.selfie,
             photo: photos.gym1,
             record: rec ? `New record · ${rec.name} ${rec.kg} kg` : undefined,
-            caption: rec ? `${rec.name} ${rec.kg} kg. ${rec.previous ? `Up ${Math.round((rec.kg - rec.previous) * 10) / 10} kg.` : "First logged best."}` : `${s.planName} done. Every set counted.`,
+            caption: s.caption || (rec ? `${rec.name} ${rec.kg} kg. ${rec.previous ? `Up ${Math.round((rec.kg - rec.previous) * 10) / 10} kg.` : "First logged best."}` : `${s.planName} done. Every set counted.`),
             stats: [
               { value: String(stats.minutes), unit: "min" },
               { value: fmtKg(stats.volume), unit: "kg" },
@@ -47,7 +52,8 @@ export default function Feed() {
         }),
     [db.sessions, db.profile],
   );
-  const visible = filter === "following" ? [...mine, ...otherPosts.filter((p) => p.userId && isFollowing(p.userId))] : otherPosts.filter((p) => !p.userId || !isFollowing(p.userId));
+  const visible = (filter === "following" ? [...mine, ...otherPosts.filter((p) => p.userId && isFollowing(p.userId))] : otherPosts.filter((p) => !p.userId || !isFollowing(p.userId))).filter((p) => !hidden.includes(p.id));
+  const open = (p: Post) => (p.userId ? router.push(`/user/${p.userId}`) : router.push(`/workout/${p.id}`));
 
   return (
     <Screen tabs>
@@ -66,7 +72,7 @@ export default function Feed() {
       </View>
       <View style={{ gap: 20 }}>
         {visible.map((p) => (
-          <PostCard key={p.id} post={p} />
+          <PostCard key={p.id} post={p} onPress={() => open(p)} onMore={() => setMore(p)} />
         ))}
         {visible.length === 0 ? (
           <Txt variant="bodyM" tone="secondary">
@@ -74,6 +80,25 @@ export default function Feed() {
           </Txt>
         ) : null}
       </View>
+
+      <BottomSheet visible={!!more} onClose={() => { setMore(null); setReported(false); }} title={reported ? "Thanks, we got it" : (more?.name ?? "")} subtitle={reported ? "We look at every report within two days." : undefined}>
+        {reported ? (
+          <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
+            <Button label="Done" variant="secondary" size="M" onPress={() => { setMore(null); setReported(false); }} />
+          </View>
+        ) : more?.userId ? (
+          <>
+            <SheetOption icon="user" label="View profile" onPress={() => { const id = more.userId!; setMore(null); router.push(`/user/${id}`); }} />
+            <SheetOption icon="close" label="Hide this post" sub="Only from your feed" onPress={() => { setHidden((h) => [...h, more.id]); setMore(null); }} />
+            <SheetOption icon="flag" label="Report post" sub="Spam or abuse" danger onPress={() => setReported(true)} />
+          </>
+        ) : more ? (
+          <>
+            <SheetOption icon="rows" label="Open session" onPress={() => { const id = more.id; setMore(null); router.push(`/workout/${id}`); }} />
+            <SheetOption icon="lock" label="Make private" sub="Removes it from the feed, keeps it in your log" onPress={() => { const id = more.id; update((d) => ({ ...d, sessions: d.sessions.map((s) => (s.id === id ? { ...s, shared: false } : s)) })); setMore(null); }} />
+          </>
+        ) : null}
+      </BottomSheet>
     </Screen>
   );
 }

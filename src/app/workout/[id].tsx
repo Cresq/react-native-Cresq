@@ -18,7 +18,7 @@ export default function SessionDetail() {
   const router = useRouter();
   const { db } = useDb();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const session = db.sessions.find((s) => s.id === id);
+  const session = db.sessions.find((s) => s.id === id) ?? (db.activeSession?.id === id ? db.activeSession : undefined);
   const recs = useMemo(() => (session ? newRecords(session, db.sessions.filter((x) => x.startedAt < session.startedAt)) : []), [session, db.sessions]);
 
   if (!session) {

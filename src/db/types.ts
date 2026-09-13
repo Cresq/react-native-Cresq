@@ -28,6 +28,8 @@ export type Session = {
   shared?: boolean;
   /** Generated on first launch so the app is not empty; removable from Settings. */
   sample?: boolean;
+  /** Caption written when sharing to the feed. */
+  caption?: string;
 };
 
 export type SplitDay = { id: string; name: string; focus: string; planId?: string; exercises?: number; minutes?: number; rest?: boolean };
@@ -84,6 +86,8 @@ export type Db = {
   consent: Consent;
   /** Ids of people the user follows (mock directory until there is a server). */
   following: string[];
+  /** People the user blocked: hidden everywhere, cannot follow. */
+  blocked: string[];
 };
 
 /** Bump when the seed or shape changes in a way that should discard stored data during development. */

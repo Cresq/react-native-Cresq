@@ -166,9 +166,9 @@ export function weekDays(sessions: Session[], now = Date.now()) {
   const letters = ["M", "T", "W", "T", "F", "S", "S"];
   return letters.map((letter, i) => {
     const day = start + i * 86400000;
-    const done = sessions.some((s) => s.finishedAt && startOfDay(s.startedAt) === day);
-    const state: DayState = done ? "done" : day === today ? "today" : day > today ? "future" : "rest";
-    return { num: String(new Date(day).getDate()), letter, state };
+    const session = sessions.find((s) => s.finishedAt && startOfDay(s.startedAt) === day);
+    const state: DayState = session ? "done" : day === today ? "today" : day > today ? "future" : "rest";
+    return { num: String(new Date(day).getDate()), letter, state, sessionId: session?.id };
   });
 }
 

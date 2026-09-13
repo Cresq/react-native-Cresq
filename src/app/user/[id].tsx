@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Image, Pressable, View, useWindowDimensions } from "react-native";
+import { Image, Share, View, useWindowDimensions } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useSocial } from "@/store/social";
@@ -10,6 +10,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Avatar } from "@/components/ui/PhotoSlot";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
+import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { WorkoutTile } from "@/components/WorkoutTile";
 import { Count } from "../(tabs)/profile";
 
@@ -18,7 +19,8 @@ export default function UserProfile() {
   const { colors, layout } = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { isFollowing, toggleFollow } = useSocial();
+  const { isFollowing, toggleFollow, block } = useSocial();
+  const [more, setMore] = useState<null | "menu" | "report" | "reported">(null);
   const { width } = useWindowDimensions();
   const [tab, setTab] = useState("workouts");
   const p = findPerson(id);
@@ -41,7 +43,7 @@ export default function UserProfile() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title={p.handle} right={<IconButton name="moreHorizontal" accessibilityLabel="More" />} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title={p.handle} right={<IconButton name="moreHorizontal" onPress={() => setMore("menu")} accessibilityLabel="More options" />} />
 
       <Row gap={16}>
         <Avatar source={p.avatar} size={72} initial={p.name[0]} />
@@ -88,13 +90,24 @@ export default function UserProfile() {
         ) : (
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
             {withPhoto.map((r, i) => (
-              <Pressable key={i} accessibilityRole="button" accessibilityLabel={`${r.name}, ${r.date}`} style={{ width: tile, height: tile, borderRadius: 14, overflow: "hidden", backgroundColor: colors.bg.surface }}>
+              <View key={i} accessibilityLabel={`${r.name}, ${r.date}`} style={{ width: tile, height: tile, borderRadius: 14, overflow: "hidden", backgroundColor: colors.bg.surface }}>
                 <Image source={r.photo} style={{ width: tile, height: tile }} resizeMode="cover" />
-              </Pressable>
+              </View>
             ))}
           </View>
         )}
       </View>
+
+      <BottomSheet visible={more === "menu"} onClose={() => setMore(null)} title={p.name}>
+        <SheetOption icon="share" label="Share profile" onPress={() => { setMore(null); Share.share({ message: `${p.name} on CresQ: ${p.handle}` }); }} />
+        <SheetOption icon="flag" label="Report account" sub="Spam, impersonation or abuse" onPress={() => setMore("report")} />
+        <SheetOption icon="lock" label={`Block ${p.name.split(" ")[0]}`} sub="They disappear from your feed and lists" danger onPress={() => { setMore(null); block(p.id); router.back(); }} />
+      </BottomSheet>
+      <BottomSheet visible={more === "report" || more === "reported"} onClose={() => setMore(null)} title={more === "reported" ? "Thanks, we got it" : "Report this account?"} subtitle={more === "reported" ? "We look at every report within two days. You can also block the account." : "Tell us if this account is spam, pretends to be someone else, or posts abusive content."}>
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
+          {more === "reported" ? <Button label="Done" variant="secondary" size="M" onPress={() => setMore(null)} /> : <Button label="Send report" variant="danger" size="M" onPress={() => setMore("reported")} />}
+        </View>
+      </BottomSheet>
     </Screen>
   );
 }

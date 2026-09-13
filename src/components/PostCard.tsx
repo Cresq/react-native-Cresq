@@ -30,7 +30,7 @@ export type Post = {
  * A post is one surface: author, photo bleeding to the edges, caption, figures, reactions.
  * The photo carries the weight; everything else stays quiet.
  */
-export function PostCard({ post, preview }: { post: Post; preview?: boolean }) {
+export function PostCard({ post, preview, onPress, onMore }: { post: Post; preview?: boolean; onPress?: () => void; onMore?: () => void }) {
   const { colors } = useTheme();
   const router = useRouter();
   const [liked, setLiked] = useState(!!post.liked);
@@ -47,8 +47,13 @@ export function PostCard({ post, preview }: { post: Post; preview?: boolean }) {
             </Txt>
           </View>
         </Pressable>
-        <Icon name="moreHorizontal" size={20} color={colors.text.tertiary} />
+        {onMore ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="Post options" hitSlop={10} onPress={onMore}>
+            <Icon name="moreHorizontal" size={20} color={colors.text.tertiary} />
+          </Pressable>
+        ) : null}
       </Row>
+      <Pressable accessibilityRole={onPress ? "button" : undefined} disabled={!onPress} onPress={onPress}>
       <PhotoSlot source={post.photo} height={post.photoHeight ?? 300} radius={0}>
         {post.record ? (
           <View style={{ position: "absolute", left: 12, top: 12 }}>
@@ -56,6 +61,7 @@ export function PostCard({ post, preview }: { post: Post; preview?: boolean }) {
           </View>
         ) : null}
       </PhotoSlot>
+      </Pressable>
       <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16, gap: 12 }}>
         <Txt variant="displayS">{post.caption}</Txt>
         <Row gap={16}>

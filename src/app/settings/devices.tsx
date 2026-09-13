@@ -18,6 +18,7 @@ export default function Devices() {
   const router = useRouter();
   const [healthOn, setHealthOn] = useState(true);
   const [sheet, setSheet] = useState(false);
+  const [coming, setComing] = useState<string | null>(null);
   const [perms, setPerms] = useState<Record<string, boolean>>(Object.fromEntries(devices.permissions.map((p) => [p.key, p.on])));
 
   return (
@@ -53,7 +54,7 @@ export default function Devices() {
           <View key={d.key}>
             {i > 0 ? <Divider /> : null}
             <DeviceRow letter={d.letter} name={d.name} sub={d.sub}>
-              <Button label="Connect" variant="inverse" size="S" full={false} onPress={() => {}} />
+              <Button label="Connect" variant="inverse" size="S" full={false} onPress={() => setComing(d.name)} />
             </DeviceRow>
           </View>
         ))}
@@ -66,6 +67,11 @@ export default function Devices() {
         </Txt>
       </View>
 
+      <BottomSheet visible={!!coming} onClose={() => setComing(null)} title={`Connect ${coming ?? ""}`} subtitle="Connecting other apps needs the CresQ build for iPhone and Android, which is on its way. Expo Go cannot talk to other apps yet.">
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
+          <Button label="Got it" variant="secondary" size="M" onPress={() => setComing(null)} />
+        </View>
+      </BottomSheet>
       <BottomSheet visible={sheet} onClose={() => setSheet(false)} title="Connect Apple Health" subtitle="Pick what CresQ may read. Each one powers a feature; the rest stays off.">
         {devices.permissions.map((p, i) => (
           <View key={p.key}>

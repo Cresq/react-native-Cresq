@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, Share, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
@@ -11,6 +11,8 @@ import { Card, Divider } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Segmented } from "@/components/ui/Segmented";
 import { Tabs } from "@/components/ui/Tabs";
+import { BottomSheet } from "@/components/ui/BottomSheet";
+import { Button } from "@/components/ui/Button";
 import { LineChart } from "@/components/LineChart";
 
 const RANGES: Record<string, number> = { "1m": 30, "3m": 91, "6m": 182, "1y": 365, all: 100000 };
@@ -27,6 +29,7 @@ export default function LiftDetail() {
   const exercise = db.exercises.find((e) => e.id === id) ?? db.exercises[0];
   const [range, setRange] = useState("3m");
   const [tab, setTab] = useState("trend");
+  const [how, setHow] = useState(false);
 
   const all = useMemo(() => liftTrend(db.sessions, exercise.id), [db.sessions, exercise.id]);
   const since = Date.now() - RANGES[range] * 86400000;
@@ -47,7 +50,7 @@ export default function LiftDetail() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title={exercise.name} subtitle={`${exercise.muscles} · ${exercise.equipment}`} right={<IconButton name="share" />} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title={exercise.name} subtitle={`${exercise.muscles} · ${exercise.equipment}`} right={<IconButton name="share" onPress={() => Share.share({ message: `${exercise.name}: estimated 1RM ${current} kg, ${delta >= 0 ? "+" : ""}${delta} kg over ${shown.length} sessions. Logged with CresQ.` })} accessibilityLabel="Share" />} />
 
       {all.length === 0 ? (
         <View style={{ gap: 6, paddingTop: 8 }}>
@@ -127,7 +130,7 @@ export default function LiftDetail() {
                         </Txt>
                       </>
                     )}
-                    <Pressable accessibilityRole="button" hitSlop={8}>
+                    <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setHow(true)}>
                       <Row gap={4}>
                         <Txt variant="labelM" tone="secondary">
                           How this is calculated
@@ -191,6 +194,24 @@ export default function LiftDetail() {
           </View>
         </>
       )}
+
+      <BottomSheet visible={how} onClose={() => setHow(false)} title="How this is calculated" subtitle="Two simple formulas, nothing hidden.">
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
+          <View style={{ gap: 4 }}>
+            <Txt variant="labelL">Estimated one-rep max</Txt>
+            <Txt variant="bodyM" tone="secondary">
+              Your best working set of the session, weight × (1 + reps ÷ 30). This is the Epley formula. A set of 100 kg × 5 counts as about 117 kg.
+            </Txt>
+          </View>
+          <View style={{ gap: 4 }}>
+            <Txt variant="labelL">Forecast</Txt>
+            <Txt variant="bodyM" tone="secondary">
+              A straight line through your last six sessions. The next record is the next 5 kg step above your current estimate; the weeks are how long the line takes to get there at the same pace. It is a projection, not a promise.
+            </Txt>
+          </View>
+          <Button label="Got it" variant="secondary" size="M" onPress={() => setHow(false)} />
+        </View>
+      </BottomSheet>
     </Screen>
   );
 }

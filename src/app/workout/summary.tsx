@@ -35,13 +35,18 @@ export default function Summary() {
     file(false);
     router.replace("/(tabs)");
   };
+  const viewSession = () => {
+    const id = session?.id;
+    file(false);
+    router.replace(id ? `/workout/${id}` : "/(tabs)");
+  };
 
   const footer = (
     <>
       <Button label="Share to feed" icon="share" onPress={() => router.replace("/workout/posted")} />
       <Row gap={10}>
         <Button label="Save privately" variant="secondary" size="M" icon="lock" onPress={savePrivately} style={{ flex: 1 }} />
-        <Button label="View session" variant="tertiary" size="M" iconRight="chevronRight" onPress={savePrivately} style={{ flex: 1 }} />
+        <Button label="View session" variant="tertiary" size="M" iconRight="chevronRight" onPress={viewSession} style={{ flex: 1 }} />
       </Row>
       <Txt variant="labelS" tone="tertiary" align="center">
         Shared posts go to your followers. Undo within 60 seconds.

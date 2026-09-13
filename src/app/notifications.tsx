@@ -37,7 +37,7 @@ export default function Notifications() {
             return (
               <View key={n.id}>
                 {i > 0 ? <Divider inset={54} /> : null}
-                <Pressable accessibilityRole="button" onPress={() => setRead((r) => ({ ...r, [n.id]: true }))} style={({ pressed }) => ({ flexDirection: "row", alignItems: "flex-start", gap: 14, paddingVertical: 14, opacity: pressed ? 0.7 : 1 })}>
+                <Pressable accessibilityRole="button" onPress={() => { setRead((r) => ({ ...r, [n.id]: true })); if (n.href) router.push(n.href); }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "flex-start", gap: 14, paddingVertical: 14, opacity: pressed ? 0.7 : 1 })}>
                   {n.avatar ? (
                     <Avatar source={n.avatar} size={40} />
                   ) : (

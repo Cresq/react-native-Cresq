@@ -29,6 +29,7 @@ type WorkoutState = {
   moveExercise: (exerciseId: string, direction: -1 | 1) => void;
   setRestSeconds: (exerciseId: string, seconds: number) => void;
   setNote: (exerciseId: string, note: string) => void;
+  setCaption: (caption: string) => void;
   adjustRest: (delta: number) => void;
   skipRest: () => void;
 };
@@ -151,12 +152,13 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
   );
   const setRestSeconds = useCallback((exerciseId: string, seconds: number) => mutate((s) => mapEx(s, exerciseId, (e) => ({ ...e, restSeconds: seconds }))), [mutate]);
   const setNote = useCallback((exerciseId: string, note: string) => mutate((s) => mapEx(s, exerciseId, (e) => ({ ...e, note }))), [mutate]);
+  const setCaption = useCallback((caption: string) => mutate((s) => ({ ...s, caption })), [mutate]);
   const adjustRest = useCallback((delta: number) => setRest((r) => (r ? { ...r, left: Math.max(1, r.left + delta), total: Math.max(r.total, r.left + delta) } : r)), []);
   const skipRest = useCallback(() => setRest(null), []);
 
   const value = useMemo<WorkoutState>(
-    () => ({ session, rest, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, adjustRest, skipRest }),
-    [session, rest, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, adjustRest, skipRest],
+    () => ({ session, rest, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, adjustRest, skipRest }),
+    [session, rest, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, adjustRest, skipRest],
   );
   return <WorkoutContext.Provider value={value}>{children}</WorkoutContext.Provider>;
 }

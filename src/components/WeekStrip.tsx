@@ -1,13 +1,13 @@
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Txt } from "./ui/Text";
 import { Icon } from "./ui/Icon";
 
 export type DayState = "done" | "rest" | "missed" | "today" | "future";
-export type Day = { num: string; letter: string; state: DayState };
+export type Day = { num: string; letter: string; state: DayState; sessionId?: string };
 
 /** Seven days. Trained days are green, today is outlined in ember, everything else is quiet. */
-export function WeekStrip({ days }: { days: Day[] }) {
+export function WeekStrip({ days, onPress }: { days: Day[]; onPress?: (day: Day) => void }) {
   const { colors } = useTheme();
   return (
     <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 }}>
@@ -15,7 +15,7 @@ export function WeekStrip({ days }: { days: Day[] }) {
         const s = d.state;
         const bg = s === "done" ? colors.status.success : s === "today" ? colors.accent.soft : colors.bg.surface;
         return (
-          <View key={i} style={{ alignItems: "center", gap: 6 }}>
+          <Pressable key={i} accessibilityRole={d.sessionId ? "button" : undefined} accessibilityLabel={d.sessionId ? `Session on the ${d.num}th` : undefined} disabled={!d.sessionId || !onPress} onPress={() => onPress?.(d)} style={({ pressed }) => ({ alignItems: "center", gap: 6, opacity: pressed ? 0.7 : 1 })}>
             <Txt variant="labelS" tone={s === "today" ? "primary" : "tertiary"}>
               {d.num}
             </Txt>
@@ -28,7 +28,7 @@ export function WeekStrip({ days }: { days: Day[] }) {
             <Txt variant="labelS" tone={s === "today" ? "ember" : "tertiary"}>
               {d.letter}
             </Txt>
-          </View>
+          </Pressable>
         );
       })}
     </View>

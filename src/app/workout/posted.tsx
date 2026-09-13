@@ -13,6 +13,8 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { PostCard } from "@/components/PostCard";
+import { BottomSheet } from "@/components/ui/BottomSheet";
+import { Field } from "@/components/ui/Field";
 
 /** Posted. The session is filed as shared when you leave; Undo returns to the summary with nothing filed yet. */
 export default function Posted() {
@@ -20,8 +22,10 @@ export default function Posted() {
   const router = useRouter();
   const { followers } = useSocial();
   const { db } = useDb();
-  const { session, file } = useWorkout();
+  const { session, file, setCaption } = useWorkout();
   const [left, setLeft] = useState(60);
+  const [editing, setEditing] = useState(false);
+  const [captionText, setCaptionText] = useState(session?.caption ?? "");
   const stats = sessionStats(session);
   const record = session ? newRecords(session, db.sessions).sort((a, b) => b.kg - a.kg)[0] : null;
 
@@ -77,7 +81,7 @@ export default function Posted() {
           photo: photos.gym1,
           photoHeight: 210,
           record: record ? `New record · ${record.name} ${record.kg} kg` : undefined,
-          caption: record ? `${record.name} ${record.kg} kg. Up ${record.previous ? Math.round((record.kg - record.previous) * 10) / 10 : record.kg} kg.` : `${session?.planName ?? "Session"} done. Every set counted.`,
+          caption: session?.caption || (record ? `${record.name} ${record.kg} kg. Up ${record.previous ? Math.round((record.kg - record.previous) * 10) / 10 : record.kg} kg.` : `${session?.planName ?? "Session"} done. Every set counted.`),
           stats: [
             { value: String(stats.minutes), unit: "min" },
             { value: fmtKg(stats.volume), unit: "kg" },
@@ -87,14 +91,21 @@ export default function Posted() {
           comments: 0,
         }}
       />
-      <Pressable accessibilityRole="button" hitSlop={8} style={{ alignSelf: "center" }}>
+      <Pressable accessibilityRole="button" hitSlop={8} onPress={() => { setCaptionText(session?.caption ?? ""); setEditing(true); }} style={{ alignSelf: "center" }}>
         <Row gap={6}>
           <Icon name="noteEdit" size={14} color={colors.text.secondary} strokeWidth={1.7} />
           <Txt variant="labelM" tone="secondary">
-            Edit caption or photo
+            Edit caption
           </Txt>
         </Row>
       </Pressable>
+
+      <BottomSheet visible={editing} onClose={() => setEditing(false)} title="Caption" subtitle="Leave it empty and CresQ writes one from your session.">
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
+          <Field label="Caption" value={captionText} onChangeText={setCaptionText} placeholder="How did it go?" multiline autoFocus />
+          <Button label="Save caption" onPress={() => { setCaption(captionText.trim()); setEditing(false); }} />
+        </View>
+      </BottomSheet>
     </Screen>
   );
 }

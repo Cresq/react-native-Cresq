@@ -18,23 +18,23 @@ export const otherPosts: Post[] = [
   { id: "p3", userId: "u3", name: "Tom Bakker", meta: "Arms · yesterday", photo: photos.gym3, photoHeight: 260, caption: "Preacher curls to finish. Forearms gone.", stats: [{ value: "41", unit: "min" }, { value: "4.2k", unit: "kg" }, { value: "14", unit: "sets" }], likes: 8, comments: 1 },
 ];
 
-export type Notification = { id: string; kind: "like" | "comment" | "follow" | "record" | "reminder" | "device"; title: string; body?: string; when: string; unread?: boolean; avatar?: ImageSourcePropType };
+export type Notification = { id: string; kind: "like" | "comment" | "follow" | "record" | "reminder" | "device"; title: string; body?: string; when: string; unread?: boolean; avatar?: ImageSourcePropType; /** Where a tap goes. */ href?: string };
 
 export const notifications: { group: string; items: Notification[] }[] = [
   {
     group: "Today",
     items: [
-      { id: "n1", kind: "like", title: "Sara de Vries and 11 others liked your session", body: "Push · New record · Bench 100 kg", when: "2 h", unread: true, avatar: photos.gym2 },
-      { id: "n2", kind: "comment", title: "Tom Bakker commented", body: "“Two weeks early, that forecast is scared of you.”", when: "3 h", unread: true, avatar: photos.gym3 },
-      { id: "n3", kind: "record", title: "Your next record is close", body: "Bench press 100 kg is likely within two weeks. Keep three sessions.", when: "6 h", unread: true },
+      { id: "n1", kind: "like", title: "Sara de Vries and 11 others liked your session", body: "Push · New record · Bench 100 kg", when: "2 h", unread: true, avatar: photos.gym2, href: "/(tabs)/feed" },
+      { id: "n2", kind: "comment", title: "Tom Bakker commented", body: "“Two weeks early, that forecast is scared of you.”", when: "3 h", unread: true, avatar: photos.gym3, href: "/(tabs)/feed" },
+      { id: "n3", kind: "record", title: "Your next record is close", body: "Bench press 100 kg is likely within two weeks. Keep three sessions.", when: "6 h", unread: true, href: "/progress/bench" },
     ],
   },
   {
     group: "This week",
     items: [
-      { id: "n4", kind: "follow", title: "Lisa Jansen started following you", when: "Tue" },
-      { id: "n5", kind: "reminder", title: "Legs is up next", body: "Last done 2 days ago. Your split says today.", when: "Tue" },
-      { id: "n6", kind: "device", title: "Apple Watch synced", body: "Heart rate and energy added to Pull, 8 Sep.", when: "Mon" },
+      { id: "n4", kind: "follow", title: "Lisa Jansen started following you", when: "Tue", href: "/user/u4" },
+      { id: "n5", kind: "reminder", title: "Legs is up next", body: "Last done 2 days ago. Your split says today.", when: "Tue", href: "/(tabs)/train" },
+      { id: "n6", kind: "device", title: "Apple Watch synced", body: "Heart rate and energy added to Pull, 8 Sep.", when: "Mon", href: "/settings/devices" },
     ],
   },
 ];

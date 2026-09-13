@@ -71,7 +71,9 @@ export default function Home() {
   return (
     <Screen tabs>
       <Row gap={12}>
-        <Avatar source={photos.selfie} size={44} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Your profile" onPress={() => router.push("/(tabs)/profile")}>
+          <Avatar source={photos.selfie} size={44} />
+        </Pressable>
         <View style={{ flex: 1, gap: 2 }}>
           <Txt variant="labelS" tone="tertiary">
             {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
@@ -102,7 +104,7 @@ export default function Home() {
       ) : (
         <>
           <View style={{ gap: 20 }}>
-            <WeekStrip days={week} />
+            <WeekStrip days={week} onPress={(d) => d.sessionId && router.push(`/workout/${d.sessionId}`)} />
 
             <Card padding={20} gap={14}>
               <Txt variant="labelM" tone={running ? "ember" : "tertiary"}>
