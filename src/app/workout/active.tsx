@@ -30,7 +30,8 @@ export default function ActiveWorkout() {
   const w = useWorkout();
   const { session, rest } = w;
   const [, force] = useState(0);
-  const [sheet, setSheet] = useState<null | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry }>(null);
+  const [sheet, setSheet] = useState<null | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry } | { kind: "session" } | { kind: "discard" }>(null);
+  const [blocked, setBlocked] = useState<{ id: string; msg: string } | null>(null);
 
   useEffect(() => {
     const t = setInterval(() => force((n) => n + 1), 1000);
@@ -76,7 +77,12 @@ export default function ActiveWorkout() {
           left={<IconButton name="chevronDown" onPress={() => router.back()} accessibilityLabel="Minimise" />}
           title={session.planName}
           subtitle={`Exercise ${session.currentIndex + 1} of ${session.exercises.length}`}
-          right={<Button label="Finish" variant="inverse" size="S" full={false} onPress={finish} />}
+          right={
+            <Row gap={6}>
+              <IconButton name="moreHorizontal" size={34} iconSize={18} tone="raised" onPress={() => setSheet({ kind: "session" })} accessibilityLabel="Session options" />
+              <Button label="Finish" variant="inverse" size="S" full={false} onPress={finish} />
+            </Row>
+          }
         />
 
         <Row gap={0}>
@@ -135,7 +141,17 @@ export default function ActiveWorkout() {
               if (s.type === "working") working++;
               const label = setLabel(s, working);
               const isCurrent = !s.done && current.sets.findIndex((x) => !x.done) === i;
-              return <SetRow key={s.id} set={s} label={label} isCurrent={isCurrent} onType={() => setSheet({ kind: "set", ex: current, set: s, index: i })} onChange={(patch) => w.updateSet(current.id, s.id, patch)} onDone={() => w.completeSet(current.id, s.id)} />;
+              const complete = () => {
+                const firstOpen = current.sets.findIndex((x) => !x.done);
+                if (!s.done && firstOpen !== -1 && firstOpen < i) {
+                  setBlocked({ id: s.id, msg: `Finish set ${firstOpen + 1} first, sets count in order` });
+                  setTimeout(() => setBlocked((b) => (b?.id === s.id ? null : b)), 2500);
+                  return;
+                }
+                setBlocked(null);
+                w.completeSet(current.id, s.id);
+              };
+              return <SetRow key={s.id} set={s} label={label} isCurrent={isCurrent} error={blocked?.id === s.id ? blocked.msg : undefined} onType={() => setSheet({ kind: "set", ex: current, set: s, index: i })} onChange={(patch) => w.updateSet(current.id, s.id, patch)} onDone={complete} />;
             })}
           </View>
 
@@ -239,6 +255,20 @@ export default function ActiveWorkout() {
         ) : null}
       </BottomSheet>
 
+      <BottomSheet visible={sheet?.kind === "session"} onClose={() => setSheet(null)} title={session.planName} subtitle={`${stats.elapsed} elapsed · ${stats.setsDone} of ${stats.setsTotal} sets`}>
+        <SheetOption icon="addPlus" label="Add exercise" sub="From your library" onPress={() => { setSheet(null); router.push("/exercises?session=1"); }} />
+        <SheetOption icon="chevronDown" label="Minimise" sub="Keep it running, look around the app" onPress={() => { setSheet(null); router.back(); }} />
+        <SheetOption icon="circleCheck" label="Finish session" sub="Go to the summary" onPress={() => { setSheet(null); finish(); }} />
+        <SheetOption icon="trash" label="Discard session" sub="Nothing from this session is saved" danger onPress={() => setSheet({ kind: "discard" })} />
+      </BottomSheet>
+
+      <BottomSheet visible={sheet?.kind === "discard"} onClose={() => setSheet(null)} title="Discard this session?" subtitle={`${stats.setsDone} completed set${stats.setsDone === 1 ? "" : "s"} will be lost. This cannot be undone.`}>
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
+          <Button label="Discard session" variant="danger" size="M" onPress={() => { setSheet(null); w.discard(); router.back(); }} />
+          <Button label="Keep training" variant="secondary" size="M" onPress={() => setSheet(null)} />
+        </View>
+      </BottomSheet>
+
       <BottomSheet visible={sheet?.kind === "rest"} onClose={() => setSheet(null)} title="Rest timer" subtitle={sheet?.kind === "rest" ? `After each set of ${sheet.ex.name}` : undefined}>
         {sheet?.kind === "rest" ? (
           <Row gap={8} style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
@@ -272,14 +302,15 @@ function Strip({ label, value, unit }: { label: string; value: string; unit?: st
   );
 }
 
-function SetRow({ set, label, isCurrent, onType, onChange, onDone }: { set: SetEntry; label: string; isCurrent: boolean; onType: () => void; onChange: (p: Partial<Pick<SetEntry, "kg" | "reps">>) => void; onDone: () => void }) {
+function SetRow({ set, label, isCurrent, error, onType, onChange, onDone }: { set: SetEntry; label: string; isCurrent: boolean; error?: string; onType: () => void; onChange: (p: Partial<Pick<SetEntry, "kg" | "reps">>) => void; onDone: () => void }) {
   const { colors, radius } = useTheme();
   const dim = !set.done && !isCurrent;
   const boxBg = isCurrent ? colors.bg.ground : colors.bg.raised;
   const prev = set.prevKg === null ? "—" : `${set.prevKg || "BW"} × ${set.prevReps}`;
   const inputStyle = { width: "100%" as const, textAlign: "center" as const, color: dim ? colors.text.tertiary : colors.text.primary, fontFamily: fontFamily.displaySemi, fontSize: 20, paddingVertical: 0 };
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4, paddingHorizontal: 6, borderRadius: radius.setRow, backgroundColor: isCurrent ? colors.accent.soft : "transparent", opacity: dim ? 0.6 : 1 }}>
+    <View>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4, paddingHorizontal: 6, borderRadius: radius.setRow, backgroundColor: isCurrent ? colors.accent.soft : "transparent", opacity: dim && !error ? 0.6 : 1, borderWidth: error ? 1.5 : 0, borderColor: error ? colors.status.danger : "transparent" }}>
       <Pressable accessibilityRole="button" onPress={onType} hitSlop={6} style={{ width: 28 }} accessibilityLabel="Set type">
         <Txt variant="labelL" tone={isCurrent ? "ember" : set.type === "warmup" ? "tertiary" : "primary"}>
           {label}
@@ -302,6 +333,15 @@ function SetRow({ set, label, isCurrent, onType, onChange, onDone }: { set: SetE
       >
         {set.done || isCurrent ? <Icon name="check" size={18} color={colors.accent.on} strokeWidth={2.6} /> : null}
       </Pressable>
+    </View>
+    {error ? (
+      <Row gap={6} style={{ paddingHorizontal: 8, paddingTop: 4, paddingBottom: 2 }}>
+        <Icon name="info" size={13} color={colors.status.danger} strokeWidth={2.2} />
+        <Txt variant="labelS" style={{ color: colors.status.danger }}>
+          {error}
+        </Txt>
+      </Row>
+    ) : null}
     </View>
   );
 }

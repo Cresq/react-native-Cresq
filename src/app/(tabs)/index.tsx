@@ -149,12 +149,14 @@ export default function Home() {
 
           <Section title="Progress">
             <Card padding={18} gap={14}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }} style={{ marginHorizontal: -18, paddingHorizontal: 18 }}>
-                {lifts.map((l) => (
-                  <Chip key={l.ex.id} label={l.ex.name} selected={lift?.ex.id === l.ex.id} onPress={() => setLiftId(l.ex.id)} />
-                ))}
-                <Chip label="Add" icon="addPlus" onPress={() => router.push("/exercises?favourite=1")} />
-              </ScrollView>
+              <Row gap={10}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }} style={{ flex: 1, marginLeft: -18, paddingLeft: 18 }}>
+                  {lifts.map((l) => (
+                    <Chip key={l.ex.id} label={l.ex.name} selected={lift?.ex.id === l.ex.id} onPress={() => setLiftId(l.ex.id)} />
+                  ))}
+                </ScrollView>
+                <IconButton name="addPlus" size={36} iconSize={18} tone="raised" onPress={() => router.push("/exercises?favourite=1")} accessibilityLabel="Add a lift to follow" />
+              </Row>
 
               {lift && lift.points.length >= 2 ? (
                 <Pressable accessibilityRole="button" accessibilityLabel={`${lift.ex.name} details`} onPress={() => router.push(`/progress/${lift.ex.id}`)} style={{ gap: 12 }}>

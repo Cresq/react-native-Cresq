@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useWorkout } from "@/store/workout";
-import { fmtTime } from "@/db/derive";
+import { fmtTime, plannedSets } from "@/db/derive";
 import { estimateMinutes } from "@/db/seed";
-import type { Plan, PlanExercise } from "@/db/types";
+import type { Plan, PlanExercise, PlannedSet, SetType } from "@/db/types";
 import { Screen, Row, Section, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
@@ -14,27 +14,33 @@ import { Card, Divider } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
+import { Chip } from "@/components/ui/Chip";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { fontFamily } from "../../../../constants/theme";
+
+const typeLabel = (t: SetType, working: number) => (t === "warmup" ? "W" : t === "drop" ? "D" : t === "failure" ? "F" : String(working));
 
 /**
- * Plan detail and editor in one. Name and focus are editable inline; exercises are
- * a list with one options sheet per row and a stepper sheet for sets, reps, weight and rest.
+ * Workout detail and editor in one. Name and focus are inline; each exercise
+ * is a row that opens into the same set table you log in during a session,
+ * so what you plan here is exactly what you see when you train.
  */
 export default function PlanEditor() {
-  const { colors } = useTheme();
+  const { colors, radius } = useTheme();
   const router = useRouter();
   const { db, update } = useDb();
   const { session, start } = useWorkout();
   const { id } = useLocalSearchParams<{ id: string }>();
   const plan = db.plans.find((p) => p.id === id);
-  const [sheet, setSheet] = useState<null | { kind: "options"; index: number } | { kind: "edit"; index: number } | { kind: "delete" }>(null);
+  const [open, setOpen] = useState<number | null>(0);
+  const [sheet, setSheet] = useState<null | { kind: "options"; index: number } | { kind: "rest"; index: number } | { kind: "type"; index: number; set: number } | { kind: "delete" }>(null);
 
   if (!plan) {
     return (
       <Screen>
-        <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title="Plan" />
+        <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title="Workout" />
         <Txt variant="bodyM" tone="secondary">
-          This plan no longer exists.
+          This workout no longer exists.
         </Txt>
       </Screen>
     );
@@ -42,6 +48,11 @@ export default function PlanEditor() {
 
   const patch = (fn: (p: Plan) => Plan) => update((d) => ({ ...d, plans: d.plans.map((p) => (p.id === plan.id ? fn(p) : p)) }));
   const patchEx = (index: number, fn: (e: PlanExercise) => PlanExercise) => patch((p) => ({ ...p, exercises: p.exercises.map((e, i) => (i === index ? fn(e) : e)) }));
+  const setSets = (index: number, list: PlannedSet[]) =>
+    patchEx(index, (e) => {
+      const first = list.find((s) => s.type !== "warmup") ?? list[0];
+      return { ...e, setList: list, sets: list.length, reps: first?.reps ?? e.reps, kg: first?.kg ?? e.kg };
+    });
   const move = (index: number, dir: -1 | 1) =>
     patch((p) => {
       const j = index + dir;
@@ -50,7 +61,10 @@ export default function PlanEditor() {
       [ex[index], ex[j]] = [ex[j], ex[index]];
       return { ...p, exercises: ex };
     });
-  const remove = (index: number) => patch((p) => ({ ...p, exercises: p.exercises.filter((_, i) => i !== index) }));
+  const remove = (index: number) => {
+    patch((p) => ({ ...p, exercises: p.exercises.filter((_, i) => i !== index) }));
+    setOpen(null);
+  };
   const deletePlan = () => {
     update((d) => ({ ...d, plans: d.plans.filter((p) => p.id !== plan.id), split: { ...d.split, days: d.split.days.map((day) => (day.planId === plan.id ? { ...day, planId: undefined } : day)) } }));
     router.back();
@@ -60,7 +74,7 @@ export default function PlanEditor() {
     router.push("/workout/active");
   };
   const name = (e: PlanExercise) => db.exercises.find((x) => x.id === e.exerciseId)?.name ?? e.exerciseId;
-  const editing = sheet?.kind === "edit" ? plan.exercises[sheet.index] : null;
+  const inputStyle = { width: "100%" as const, textAlign: "center" as const, color: colors.text.primary, fontFamily: fontFamily.displaySemi, fontSize: 18, paddingVertical: 0 };
 
   return (
     <Screen bottom={90} footer={<Button label={session && !session.finishedAt ? "Continue session" : "Start this workout"} iconRight="arrowRight" onPress={begin} disabled={plan.exercises.length === 0} />}>
@@ -71,23 +85,25 @@ export default function PlanEditor() {
         <Field label="Focus" value={plan.focus} onChangeText={(t) => patch((p) => ({ ...p, focus: t }))} placeholder="Chest, shoulders, triceps" />
       </View>
 
-      <Section title="Exercises" action="Add" onAction={() => router.push(`/exercises?plan=${plan.id}`)} gap={0}>
+      <Section title="Exercises" action="Add" actionIcon="addPlus" onAction={() => router.push(`/exercises?plan=${plan.id}`)} gap={8}>
         {plan.exercises.length === 0 ? (
           <Txt variant="bodyM" tone="secondary" style={{ paddingVertical: 8 }}>
-            Add exercises from the library. Sets, reps and weight can be set per exercise.
+            Add exercises from the library, then tap one to set its sets, weight and reps.
           </Txt>
         ) : null}
-        <Card padding={6} gap={0}>
-          {plan.exercises.map((e, i) => (
-            <View key={`${e.exerciseId}-${i}`}>
-              {i > 0 ? <Divider inset={50} /> : null}
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingHorizontal: 10 }}>
-                <View style={{ width: 28, height: 28, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg.raised }}>
-                  <Txt variant="labelM" tone="secondary">
+        {plan.exercises.map((e, i) => {
+          const sets = plannedSets(e);
+          const isOpen = open === i;
+          let working = 0;
+          return (
+            <Card key={`${e.exerciseId}-${i}`} padding={isOpen ? 14 : 6} gap={0} tone={isOpen ? "surface" : "surface"}>
+              <Row gap={12} style={{ paddingVertical: isOpen ? 0 : 6, paddingHorizontal: isOpen ? 0 : 8 }}>
+                <View style={{ width: 28, height: 28, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: isOpen ? colors.accent.ember : colors.bg.raised }}>
+                  <Txt variant="labelM" style={{ color: isOpen ? colors.accent.on : colors.text.secondary }}>
                     {i + 1}
                   </Txt>
                 </View>
-                <Pressable accessibilityRole="button" onPress={() => setSheet({ kind: "edit", index: i })} style={{ flex: 1, gap: 2 }}>
+                <Pressable accessibilityRole="button" accessibilityState={{ expanded: isOpen }} onPress={() => setOpen(isOpen ? null : i)} style={{ flex: 1, gap: 2 }}>
                   <Row gap={8}>
                     <Txt variant="labelL">{name(e)}</Txt>
                     {e.supersetGroup ? (
@@ -97,32 +113,84 @@ export default function PlanEditor() {
                     ) : null}
                   </Row>
                   <Txt variant="bodyS" tone="tertiary">
-                    {e.sets} × {e.reps}
-                    {e.kg ? ` · ${e.kg} kg` : " · bodyweight"} · rest {fmtTime(e.restSeconds)}
+                    {sets.length} set{sets.length === 1 ? "" : "s"}
+                    {e.kg ? ` · ${e.kg} kg × ${e.reps}` : ` · ${e.reps} reps, bodyweight`} · rest {fmtTime(e.restSeconds)}
                   </Txt>
                 </Pressable>
                 <Pressable accessibilityRole="button" accessibilityLabel="Options" hitSlop={10} onPress={() => setSheet({ kind: "options", index: i })}>
                   <Icon name="moreHorizontal" size={18} color={colors.text.tertiary} />
                 </Pressable>
-              </View>
-            </View>
-          ))}
-          {plan.exercises.length ? <Divider inset={50} /> : null}
-          <Pressable accessibilityRole="button" onPress={() => router.push(`/exercises?plan=${plan.id}`)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 10 }}>
-            <View style={{ width: 28, alignItems: "center" }}>
-              <Icon name="addPlus" size={16} color={colors.text.secondary} strokeWidth={2} />
-            </View>
+                <Pressable accessibilityRole="button" accessibilityLabel={isOpen ? "Collapse" : "Expand"} hitSlop={10} onPress={() => setOpen(isOpen ? null : i)}>
+                  <Icon name={isOpen ? "chevronDown" : "chevronRight"} size={18} color={colors.text.tertiary} strokeWidth={2} />
+                </Pressable>
+              </Row>
+
+              {isOpen ? (
+                <View style={{ gap: 4, paddingTop: 12 }}>
+                  <Row gap={8} style={{ paddingHorizontal: 6, paddingBottom: 4 }}>
+                    <Txt variant="labelS" tone="tertiary" style={{ width: 28 }}>
+                      Set
+                    </Txt>
+                    <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} align="center">
+                      kg
+                    </Txt>
+                    <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} align="center">
+                      Reps
+                    </Txt>
+                    <View style={{ width: 36 }} />
+                  </Row>
+                  {sets.map((s, si) => {
+                    if (s.type === "working") working++;
+                    return (
+                      <View key={si} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4, paddingHorizontal: 6, borderRadius: radius.setRow }}>
+                        <Pressable accessibilityRole="button" accessibilityLabel="Set type" hitSlop={6} onPress={() => setSheet({ kind: "type", index: i, set: si })} style={{ width: 28 }}>
+                          <Txt variant="labelL" tone={s.type === "warmup" ? "tertiary" : "primary"}>
+                            {typeLabel(s.type, working)}
+                          </Txt>
+                        </Pressable>
+                        <View style={{ flex: 1, height: 40, borderRadius: radius.input, backgroundColor: colors.bg.raised, justifyContent: "center" }}>
+                          <TextInput value={String(s.kg)} onChangeText={(t) => setSets(i, sets.map((x, k) => (k === si ? { ...x, kg: Number(t.replace(",", ".")) || 0 } : x)))} keyboardType="decimal-pad" selectTextOnFocus style={inputStyle} accessibilityLabel={`Set ${si + 1} weight`} />
+                        </View>
+                        <View style={{ flex: 1, height: 40, borderRadius: radius.input, backgroundColor: colors.bg.raised, justifyContent: "center" }}>
+                          <TextInput value={String(s.reps)} onChangeText={(t) => setSets(i, sets.map((x, k) => (k === si ? { ...x, reps: Number(t) || 0 } : x)))} keyboardType="number-pad" selectTextOnFocus style={inputStyle} accessibilityLabel={`Set ${si + 1} reps`} />
+                        </View>
+                        <Pressable accessibilityRole="button" accessibilityLabel="Remove set" hitSlop={6} disabled={sets.length === 1} onPress={() => setSets(i, sets.filter((_, k) => k !== si))} style={{ width: 36, height: 40, alignItems: "center", justifyContent: "center", opacity: sets.length === 1 ? 0.3 : 1 }}>
+                          <Icon name="close" size={16} color={colors.text.tertiary} strokeWidth={2} />
+                        </Pressable>
+                      </View>
+                    );
+                  })}
+                  <Row gap={10} style={{ paddingTop: 8, paddingHorizontal: 6 }}>
+                    <Pressable accessibilityRole="button" onPress={() => setSets(i, [...sets, { ...(sets[sets.length - 1] ?? { kg: e.kg, reps: e.reps }), type: "working" }])} hitSlop={6} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6 }}>
+                      <Icon name="addPlus" size={14} color={colors.text.secondary} strokeWidth={2.2} />
+                      <Txt variant="labelM" tone="secondary">
+                        Add set
+                      </Txt>
+                    </Pressable>
+                    <Pressable accessibilityRole="button" accessibilityLabel="Rest between sets" onPress={() => setSheet({ kind: "rest", index: i })} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingLeft: 10, paddingRight: 8, height: 32, borderRadius: radius.pill, backgroundColor: colors.bg.raised }}>
+                      <Icon name="timer" size={13} color={colors.text.secondary} strokeWidth={1.9} />
+                      <Txt variant="labelS">{fmtTime(e.restSeconds)} rest</Txt>
+                      <Icon name="chevronDown" size={12} color={colors.text.tertiary} strokeWidth={2.2} />
+                    </Pressable>
+                  </Row>
+                </View>
+              ) : null}
+            </Card>
+          );
+        })}
+        {plan.exercises.length ? (
+          <Pressable accessibilityRole="button" onPress={() => router.push(`/exercises?plan=${plan.id}`)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingHorizontal: 14 }}>
+            <Icon name="addPlus" size={16} color={colors.text.secondary} strokeWidth={2} />
             <Txt variant="labelM" tone="secondary">
               Add exercise
             </Txt>
           </Pressable>
-        </Card>
+        ) : null}
       </Section>
 
       <BottomSheet visible={sheet?.kind === "options"} onClose={() => setSheet(null)} title={sheet?.kind === "options" ? name(plan.exercises[sheet.index]) : ""}>
         {sheet?.kind === "options" ? (
           <>
-            <SheetOption icon="sliders" label="Sets, reps, weight, rest" onPress={() => setSheet({ kind: "edit", index: sheet.index })} />
             <SheetOption icon="dragVertical" label="Move up" onPress={() => { move(sheet.index, -1); setSheet(null); }} />
             <SheetOption icon="dragVertical" label="Move down" onPress={() => { move(sheet.index, 1); setSheet(null); }} />
             <SheetOption icon="link" label={plan.exercises[sheet.index].supersetGroup ? "Remove from superset" : "Superset with next"} sub="No rest between the two" onPress={() => { const cur = plan.exercises[sheet.index]; const g = cur.supersetGroup ? undefined : String.fromCharCode(65 + sheet.index); patchEx(sheet.index, (e) => ({ ...e, supersetGroup: g })); if (sheet.index + 1 < plan.exercises.length) patchEx(sheet.index + 1, (e) => ({ ...e, supersetGroup: g })); setSheet(null); }} />
@@ -131,14 +199,30 @@ export default function PlanEditor() {
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={sheet?.kind === "edit"} onClose={() => setSheet(null)} title={editing ? name(editing) : ""} subtitle="Defaults for a new session. Last time's numbers still pre-fill.">
-        {sheet?.kind === "edit" && editing ? (
-          <View style={{ gap: 6, paddingHorizontal: 8, paddingVertical: 6 }}>
-            <Stepper label="Sets" value={editing.sets} step={1} min={1} onChange={(v) => patchEx(sheet.index, (e) => ({ ...e, sets: v }))} />
-            <Stepper label="Reps" value={editing.reps} step={1} min={1} onChange={(v) => patchEx(sheet.index, (e) => ({ ...e, reps: v }))} />
-            <Stepper label="Weight" value={editing.kg} step={2.5} min={0} unit="kg" onChange={(v) => patchEx(sheet.index, (e) => ({ ...e, kg: v }))} />
-            <Stepper label="Rest" value={editing.restSeconds} step={15} min={15} format={fmtTime} onChange={(v) => patchEx(sheet.index, (e) => ({ ...e, restSeconds: v }))} />
-          </View>
+      <BottomSheet visible={sheet?.kind === "type"} onClose={() => setSheet(null)} title={sheet?.kind === "type" ? `Set ${sheet.set + 1}` : ""} subtitle={sheet?.kind === "type" ? name(plan.exercises[sheet.index]) : undefined}>
+        {sheet?.kind === "type" ? (
+          <>
+            {(
+              [
+                ["warmup", "sun", "Warm-up", "Lighter weight, not counted in volume"],
+                ["working", "circleCheck", "Working set", "Counts toward volume and records"],
+                ["drop", "chevronDown", "Drop set", "Lower the weight and keep going"],
+                ["failure", "star", "Failure set", "Reps until you can't do another"],
+              ] as const
+            ).map(([type, icon, label, sub]) => (
+              <SheetOption key={type} icon={icon} label={label} sub={sub} selected={plannedSets(plan.exercises[sheet.index])[sheet.set]?.type === type} onPress={() => { const list = plannedSets(plan.exercises[sheet.index]).map((s, k) => (k === sheet.set ? { ...s, type: type as SetType } : s)); setSets(sheet.index, list); setSheet(null); }} />
+            ))}
+          </>
+        ) : null}
+      </BottomSheet>
+
+      <BottomSheet visible={sheet?.kind === "rest"} onClose={() => setSheet(null)} title="Rest between sets" subtitle={sheet?.kind === "rest" ? name(plan.exercises[sheet.index]) : undefined}>
+        {sheet?.kind === "rest" ? (
+          <Row gap={8} style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
+            {[60, 90, 120, 150, 180].map((s) => (
+              <Chip key={s} label={fmtTime(s)} selected={plan.exercises[sheet.index].restSeconds === s} onPress={() => { patchEx(sheet.index, (e) => ({ ...e, restSeconds: s })); setSheet(null); }} style={{ flex: 1, justifyContent: "center" }} />
+            ))}
+          </Row>
         ) : null}
       </BottomSheet>
 
@@ -148,33 +232,5 @@ export default function PlanEditor() {
         </View>
       </BottomSheet>
     </Screen>
-  );
-}
-
-function Stepper({ label, value, step, min, unit, format, onChange }: { label: string; value: number; step: number; min: number; unit?: string; format?: (v: number) => string; onChange: (v: number) => void }) {
-  const { colors } = useTheme();
-  const btn = (icon: "addPlus" | "close", onPress: () => void, minus?: boolean) => (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? colors.border.strong : colors.bg.raised })}>
-      {minus ? <View style={{ width: 12, height: 2, borderRadius: 1, backgroundColor: colors.text.primary }} /> : <Icon name={icon} size={16} color={colors.text.primary} strokeWidth={2.2} />}
-    </Pressable>
-  );
-  return (
-    <Row gap={12} style={{ paddingVertical: 6 }}>
-      <Txt variant="labelL" style={{ flex: 1 }}>
-        {label}
-      </Txt>
-      {btn("close", () => onChange(Math.max(min, Math.round((value - step) * 100) / 100)), true)}
-      <Row gap={3} align="baseline" style={{ minWidth: 70, justifyContent: "center" }}>
-        <Txt variant="numberM" tabular>
-          {format ? format(value) : value}
-        </Txt>
-        {unit ? (
-          <Txt variant="labelS" tone="secondary">
-            {unit}
-          </Txt>
-        ) : null}
-      </Row>
-      {btn("addPlus", () => onChange(Math.round((value + step) * 100) / 100))}
-    </Row>
   );
 }

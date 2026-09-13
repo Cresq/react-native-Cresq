@@ -8,7 +8,13 @@ export type SetType = "warmup" | "working" | "drop" | "failure";
 
 export type Exercise = { id: string; name: string; muscles: string; equipment: string; bodyweight?: boolean };
 
-export type PlanExercise = { exerciseId: string; sets: number; reps: number; kg: number; restSeconds: number; note?: string; supersetGroup?: string };
+export type PlannedSet = { kg: number; reps: number; type: SetType };
+
+/**
+ * `sets`, `reps` and `kg` stay as the summary the lists show. `setList`, when
+ * present, is the truth per set (edited in the workout editor) and wins.
+ */
+export type PlanExercise = { exerciseId: string; sets: number; reps: number; kg: number; restSeconds: number; note?: string; supersetGroup?: string; setList?: PlannedSet[] };
 
 export type Plan = { id: string; name: string; focus: string; exercises: PlanExercise[]; createdAt: number };
 

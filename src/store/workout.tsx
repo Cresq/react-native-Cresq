@@ -36,6 +36,12 @@ type WorkoutState = {
 
 const WorkoutContext = createContext<WorkoutState | null>(null);
 
+/** True while a session is open and not yet finished. Safe anywhere, even outside the provider. */
+export function useRunningSession() {
+  const ctx = useContext(WorkoutContext);
+  return !!ctx?.session && !ctx.session.finishedAt;
+}
+
 /**
  * The running session is stored in the database document (`activeSession`) so a
  * crash or restart mid-workout loses nothing. Finishing moves it into `sessions`.

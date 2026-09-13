@@ -1,4 +1,4 @@
-import type { Exercise, ExerciseEntry, Plan, Session, SetEntry } from "./types";
+import type { Exercise, ExerciseEntry, Plan, PlanExercise, PlannedSet, Session, SetEntry, SetType } from "./types";
 import { uid } from "./storage";
 
 /** Epley estimate of a one-rep max. Warm-ups are excluded everywhere this is used. */
@@ -205,12 +205,27 @@ function lastEntry(sessions: Session[], exerciseId: string) {
 }
 
 /** Build a fresh session from a plan, pre-filled with what happened last time. */
+/** The sets a plan prescribes for one exercise: the edited list when there is one, else the summary expanded. */
+export function plannedSets(pe: PlanExercise): PlannedSet[] {
+  if (pe.setList && pe.setList.length) return pe.setList;
+  return Array.from({ length: pe.sets }, () => ({ kg: pe.kg, reps: pe.reps, type: "working" as SetType }));
+}
+
 export function sessionFromPlan(plan: Plan, exercises: Exercise[], sessions: Session[]): Session {
   const entries: ExerciseEntry[] = plan.exercises.map((pe) => {
     const ex = exercises.find((e) => e.id === pe.exerciseId);
     const last = lastEntry(sessions, pe.exerciseId);
     const lastWorking = last?.sets.filter(isWorking) ?? [];
     const lastWarm = last?.sets.find((s) => s.type === "warmup" && s.done) ?? null;
+    if (pe.setList && pe.setList.length) {
+      let w = 0;
+      const sets: SetEntry[] = pe.setList.map((ps) => {
+        if (ps.type === "warmup") return { id: uid(), type: "warmup", prevKg: lastWarm ? lastWarm.kg : null, prevReps: lastWarm ? lastWarm.reps : null, kg: lastWarm?.kg ?? ps.kg, reps: lastWarm?.reps ?? ps.reps, done: false };
+        const prev = lastWorking[w++] ?? lastWorking[lastWorking.length - 1];
+        return { id: uid(), type: ps.type, prevKg: prev ? prev.kg : null, prevReps: prev ? prev.reps : null, kg: prev?.kg ?? ps.kg, reps: prev?.reps ?? ps.reps, done: false };
+      });
+      return { id: uid(), exerciseId: pe.exerciseId, name: ex?.name ?? pe.exerciseId, note: pe.note ?? last?.note, restSeconds: pe.restSeconds, supersetGroup: pe.supersetGroup, sets };
+    }
     const hasWarm = !ex?.bodyweight && pe.kg >= 40;
     const sets: SetEntry[] = Array.from({ length: pe.sets }, (_, i) => {
       const warm = hasWarm && i === 0;

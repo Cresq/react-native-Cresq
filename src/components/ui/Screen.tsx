@@ -5,6 +5,8 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { Txt } from "./Text";
 import { Icon } from "./Icon";
 import { Pressable } from "react-native";
+import { useRunningSession } from "@/store/workout";
+import type { IconName } from "./Icon";
 
 /**
  * Screen scaffold. Ground colour, safe-area top, 20 pt inset.
@@ -14,7 +16,8 @@ import { Pressable } from "react-native";
 export function Screen({ children, tabs, bottom = 0, scroll = true, footer, style, contentStyle }: PropsWithChildren<{ tabs?: boolean; bottom?: number; scroll?: boolean; footer?: React.ReactNode; style?: StyleProp<ViewStyle>; contentStyle?: StyleProp<ViewStyle> }>) {
   const { colors, layout } = useTheme();
   const insets = useSafeAreaInsets();
-  const paddingBottom = (tabs ? layout.tabBarClearance : 40) + bottom;
+  const running = useRunningSession();
+  const paddingBottom = (tabs ? layout.tabBarClearance + (running ? 56 : 0) : 40) + bottom;
   const content: ViewStyle = { paddingTop: insets.top + 12, paddingHorizontal: layout.screenInset, paddingBottom, gap: layout.sectionGap };
   return (
     <View style={[{ flex: 1, backgroundColor: colors.bg.ground }, style]}>
@@ -39,7 +42,7 @@ export function Row({ children, gap = 12, align = "center", justify, style }: Pr
 }
 
 /** A titled section: title row (with optional action) and 12 pt to its content. */
-export function Section({ title, action, onAction, meta, children, gap = 12 }: PropsWithChildren<{ title?: string; action?: string; onAction?: () => void; /** Quiet text on the right when there is no action, like a date. */ meta?: string; gap?: number }>) {
+export function Section({ title, action, actionIcon, onAction, meta, children, gap = 12 }: PropsWithChildren<{ title?: string; action?: string; actionIcon?: IconName; onAction?: () => void; /** Quiet text on the right when there is no action, like a date. */ meta?: string; gap?: number }>) {
   const { colors } = useTheme();
   return (
     <View style={{ gap }}>
@@ -52,11 +55,12 @@ export function Section({ title, action, onAction, meta, children, gap = 12 }: P
             </Txt>
           ) : null}
           {action ? (
-            <Pressable accessibilityRole="button" onPress={onAction} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+            <Pressable accessibilityRole="button" onPress={onAction} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: actionIcon ? 5 : 2 }}>
+              {actionIcon ? <Icon name={actionIcon} size={15} color={colors.text.secondary} strokeWidth={2.2} /> : null}
               <Txt variant="labelM" tone="secondary">
                 {action}
               </Txt>
-              <Icon name="chevronRight" size={14} color={colors.text.secondary} strokeWidth={2} />
+              {actionIcon ? null : <Icon name="chevronRight" size={14} color={colors.text.secondary} strokeWidth={2} />}
             </Pressable>
           ) : null}
         </Row>
