@@ -12,6 +12,10 @@ import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { PostCard, type Post } from "@/components/PostCard";
+import { Field } from "@/components/ui/Field";
+
+/** Placeholder replies on the mock posts, so the sheet is not empty on day one. */
+const seedComments = (p: Post): { name: string; text: string }[] => (p.userId === "u2" ? [{ name: "Tom Bakker", text: "Pause squats at 90, strong." }, { name: "Nick Li", text: "That bar speed though." }] : p.userId === "u3" ? [{ name: "Sara de Vries", text: "Forearms will forgive you by Thursday." }] : []);
 
 /** Feed. Your own shared sessions come from the database; other people's posts are placeholders until there is a server. */
 export default function Feed() {
@@ -22,6 +26,9 @@ export default function Feed() {
   const [more, setMore] = useState<Post | null>(null);
   const [hidden, setHidden] = useState<string[]>([]);
   const [reported, setReported] = useState(false);
+  const [commentsFor, setCommentsFor] = useState<Post | null>(null);
+  const [comments, setComments] = useState<Record<string, { name: string; text: string }[]>>({});
+  const [draft, setDraft] = useState("");
 
   const mine = useMemo<Post[]>(
     () =>
@@ -72,7 +79,7 @@ export default function Feed() {
       </View>
       <View style={{ gap: 20 }}>
         {visible.map((p) => (
-          <PostCard key={p.id} post={p} onPress={() => open(p)} onMore={() => setMore(p)} />
+          <PostCard key={p.id} post={p} onPress={() => open(p)} onMore={() => setMore(p)} onComment={() => setCommentsFor(p)} />
         ))}
         {visible.length === 0 ? (
           <Txt variant="bodyM" tone="secondary">
@@ -80,6 +87,35 @@ export default function Feed() {
           </Txt>
         ) : null}
       </View>
+
+      <BottomSheet visible={!!commentsFor} onClose={() => { setCommentsFor(null); setDraft(""); }} title="Comments" subtitle={commentsFor ? `${commentsFor.name} · ${commentsFor.meta}` : undefined}>
+        {commentsFor ? (
+          <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
+            {[...seedComments(commentsFor), ...(comments[commentsFor.id] ?? [])].map((c, i) => (
+              <View key={i} style={{ gap: 2 }}>
+                <Txt variant="labelM">{c.name}</Txt>
+                <Txt variant="bodyM" tone="secondary">
+                  {c.text}
+                </Txt>
+              </View>
+            ))}
+            {seedComments(commentsFor).length + (comments[commentsFor.id]?.length ?? 0) === 0 ? (
+              <Txt variant="bodyM" tone="tertiary">
+                No comments yet. Say something.
+              </Txt>
+            ) : null}
+            <Row gap={8}>
+              <View style={{ flex: 1 }}>
+                <Field label="Comment" value={draft} onChangeText={setDraft} placeholder="Nice work" />
+              </View>
+              <Button label="Post" size="M" full={false} disabled={!draft.trim()} onPress={() => { const id = commentsFor.id; setComments((c) => ({ ...c, [id]: [...(c[id] ?? []), { name: db.profile.name, text: draft.trim() }] })); setDraft(""); }} />
+            </Row>
+            <Txt variant="labelS" tone="tertiary">
+              Comments stay on this device until accounts sync.
+            </Txt>
+          </View>
+        ) : null}
+      </BottomSheet>
 
       <BottomSheet visible={!!more} onClose={() => { setMore(null); setReported(false); }} title={reported ? "Thanks, we got it" : (more?.name ?? "")} subtitle={reported ? "We look at every report within two days." : undefined}>
         {reported ? (

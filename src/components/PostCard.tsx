@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, View, type ImageSourcePropType } from "react-native";
+import { Pressable, Share, View, type ImageSourcePropType } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Card } from "./ui/Card";
@@ -30,7 +30,7 @@ export type Post = {
  * A post is one surface: author, photo bleeding to the edges, caption, figures, reactions.
  * The photo carries the weight; everything else stays quiet.
  */
-export function PostCard({ post, preview, onPress, onMore }: { post: Post; preview?: boolean; onPress?: () => void; onMore?: () => void }) {
+export function PostCard({ post, preview, onPress, onMore, onComment }: { post: Post; preview?: boolean; onPress?: () => void; onMore?: () => void; onComment?: () => void }) {
   const { colors } = useTheme();
   const router = useRouter();
   const [liked, setLiked] = useState(!!post.liked);
@@ -88,14 +88,16 @@ export function PostCard({ post, preview, onPress, onMore }: { post: Post; previ
                 {likes}
               </Txt>
             </Pressable>
-            <Row gap={6}>
+            <Pressable onPress={onComment} disabled={!onComment} accessibilityRole="button" accessibilityLabel="Comments" hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <Icon name="chatCircle" size={20} color={colors.text.secondary} strokeWidth={1.8} />
               <Txt variant="labelM" tone="secondary">
                 {post.comments}
               </Txt>
-            </Row>
+            </Pressable>
             <View style={{ flex: 1 }} />
-            <Icon name="share" size={20} color={colors.text.secondary} strokeWidth={1.8} />
+            <Pressable onPress={() => Share.share({ message: `${post.name}: ${post.caption} · ${post.stats.map((s) => `${s.value} ${s.unit}`).join(", ")} · on CresQ` })} accessibilityRole="button" accessibilityLabel="Share post" hitSlop={8}>
+              <Icon name="share" size={20} color={colors.text.secondary} strokeWidth={1.8} />
+            </Pressable>
           </Row>
         )}
       </View>

@@ -14,6 +14,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { Field } from "@/components/ui/Field";
 import { fontFamily } from "../../../constants/theme";
 
 const setLabel = (s: SetEntry, workingIndex: number) => (s.type === "warmup" ? "W" : s.type === "drop" ? "D" : s.type === "failure" ? "F" : String(workingIndex));
@@ -30,7 +31,8 @@ export default function ActiveWorkout() {
   const w = useWorkout();
   const { session, rest } = w;
   const [, force] = useState(0);
-  const [sheet, setSheet] = useState<null | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry } | { kind: "session" } | { kind: "discard" }>(null);
+  const [sheet, setSheet] = useState<null | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry } | { kind: "session" } | { kind: "discard" } | { kind: "note"; ex: ExerciseEntry }>(null);
+  const [noteText, setNoteText] = useState("");
   const [blocked, setBlocked] = useState<{ id: string; msg: string } | null>(null);
 
   useEffect(() => {
@@ -228,9 +230,9 @@ export default function ActiveWorkout() {
           <>
             <SheetOption icon="dragVertical" label="Move up" sub="Do this exercise earlier" onPress={() => { w.moveExercise(sheet.ex.id, -1); setSheet(null); }} />
             <SheetOption icon="dragVertical" label="Move down" sub="Do this exercise later" onPress={() => { w.moveExercise(sheet.ex.id, 1); setSheet(null); }} />
-            <SheetOption icon="reload" label="Swap exercise" sub="Keep the sets, change the movement" onPress={() => setSheet(null)} />
-            <SheetOption icon="link" label="Add to superset" sub="Pair with the next exercise, no rest between" onPress={() => setSheet(null)} />
-            <SheetOption icon="noteEdit" label="Add a note" sub="Cues for next time" onPress={() => setSheet(null)} />
+            <SheetOption icon="reload" label="Swap exercise" sub="Keep the sets, change the movement" onPress={() => { const id = sheet.ex.id; setSheet(null); router.push(`/exercises?swap=${id}`); }} />
+            <SheetOption icon="link" label={sheet.ex.supersetGroup ? "Remove from superset" : "Add to superset"} sub={sheet.ex.supersetGroup ? "Rest between them again" : "Pair with the next exercise, no rest between"} onPress={() => { w.toggleSuperset(sheet.ex.id); setSheet(null); }} />
+            <SheetOption icon="noteEdit" label={sheet.ex.note ? "Edit note" : "Add a note"} sub={sheet.ex.note ?? "Cues for next time"} onPress={() => { setNoteText(sheet.ex.note ?? ""); setSheet({ kind: "note", ex: sheet.ex }); }} />
             <SheetOption icon="timer" label="Rest timer" sub={`${fmtTime(sheet.ex.restSeconds)} after each set`} onPress={() => setSheet({ kind: "rest", ex: sheet.ex })} />
             <SheetOption icon="trash" label="Remove from workout" sub="You can restore it from the summary" danger onPress={() => { w.removeExercise(sheet.ex.id); setSheet(null); }} />
           </>
@@ -252,6 +254,15 @@ export default function ActiveWorkout() {
             ))}
             <SheetOption icon="trash" label="Remove set" sub="Removes only this set" danger onPress={() => { w.removeSet(sheet.ex.id, sheet.set.id); setSheet(null); }} />
           </>
+        ) : null}
+      </BottomSheet>
+
+      <BottomSheet visible={sheet?.kind === "note"} onClose={() => setSheet(null)} title="Note" subtitle={sheet?.kind === "note" ? `${sheet.ex.name} · shown under the name, and next time you do it` : undefined}>
+        {sheet?.kind === "note" ? (
+          <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
+            <Field label="Note" value={noteText} onChangeText={setNoteText} placeholder="Feet planted, pause on the chest" multiline autoFocus />
+            <Button label="Save note" onPress={() => { w.setNote(sheet.ex.id, noteText.trim()); setSheet(null); }} />
+          </View>
         ) : null}
       </BottomSheet>
 

@@ -20,7 +20,7 @@ export function abbreviate(name: string) {
 export function WorkoutTile({ name, date, photo, records, size, onPress }: { name: string; date: string; photo?: ImageSourcePropType; records?: number; size: number; onPress?: () => void }) {
   const { colors } = useTheme();
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`${name}, ${date}`} onPress={onPress} style={({ pressed }) => ({ width: size, height: size, borderRadius: 14, overflow: "hidden", backgroundColor: colors.bg.surface, opacity: pressed ? 0.8 : 1 })}>
+    <Pressable accessibilityRole={onPress ? "button" : undefined} disabled={!onPress} accessibilityLabel={`${name}, ${date}`} onPress={onPress} style={({ pressed }) => ({ width: size, height: size, borderRadius: 14, overflow: "hidden", backgroundColor: colors.bg.surface, opacity: pressed ? 0.8 : 1 })}>
       {photo ? <Image source={photo} style={{ width: size, height: size }} resizeMode="cover" /> : null}
       {!photo ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>

@@ -24,14 +24,14 @@ export default function Exercises() {
   const { colors } = useTheme();
   const router = useRouter();
   const { db, update } = useDb();
-  const { addExercise } = useWorkout();
-  const { plan: planId, session: forSession, favourite } = useLocalSearchParams<{ plan?: string; session?: string; favourite?: string }>();
+  const { addExercise, swapExercise } = useWorkout();
+  const { plan: planId, session: forSession, favourite, swap } = useLocalSearchParams<{ plan?: string; session?: string; favourite?: string; swap?: string }>();
   const [q, setQ] = useState("");
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [muscles, setMuscles] = useState("");
 
-  const mode = planId ? "plan" : forSession ? "session" : favourite ? "favourite" : "browse";
+  const mode = planId ? "plan" : forSession ? "session" : swap ? "swap" : favourite ? "favourite" : "browse";
   const favourites = db.profile.favourites ?? DEFAULT_FAVOURITES;
   const list = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -52,6 +52,9 @@ export default function Exercises() {
     } else if (mode === "session") {
       addExercise(ex);
       router.back();
+    } else if (mode === "swap") {
+      swapExercise(swap!, ex);
+      router.back();
     } else if (mode === "favourite") toggleFavourite(id);
     else router.push(`/progress/${ex.id}`);
   };
@@ -67,8 +70,8 @@ export default function Exercises() {
     if (mode !== "browse") pick(id);
   };
 
-  const titles = { plan: "Add to workout", session: "Add exercise", favourite: "Favourite lifts", browse: "Exercises" } as const;
-  const subtitle = mode === "favourite" ? `${favourites.length} on Home · tap to add or remove` : `${db.exercises.length} in your library`;
+  const titles = { plan: "Add to workout", session: "Add exercise", swap: "Swap exercise", favourite: "Favourite lifts", browse: "Exercises" } as const;
+  const subtitle = mode === "favourite" ? `${favourites.length} on Home · tap to add or remove` : mode === "swap" ? "Sets and numbers stay, the movement changes" : `${db.exercises.length} in your library`;
 
   return (
     <Screen bottom={mode === "favourite" ? 80 : 0} footer={mode === "favourite" ? <Button label="Done" variant="inverse" size="M" onPress={() => router.back()} /> : undefined}>
@@ -91,7 +94,7 @@ export default function Exercises() {
                 {mode === "favourite" ? (
                   <Icon name="star" size={20} color={fav ? colors.pr.gold : colors.text.tertiary} fill={fav ? colors.pr.gold : undefined} strokeWidth={1.8} />
                 ) : (
-                  <Icon name={mode === "browse" ? "chevronRight" : "addPlus"} size={18} color={mode === "browse" ? colors.text.tertiary : colors.text.secondary} strokeWidth={2} />
+                  <Icon name={mode === "browse" ? "chevronRight" : mode === "swap" ? "reload" : "addPlus"} size={18} color={mode === "browse" ? colors.text.tertiary : colors.text.secondary} strokeWidth={2} />
                 )}
               </Pressable>
             </View>

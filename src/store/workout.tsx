@@ -30,6 +30,8 @@ type WorkoutState = {
   setRestSeconds: (exerciseId: string, seconds: number) => void;
   setNote: (exerciseId: string, note: string) => void;
   setCaption: (caption: string) => void;
+  swapExercise: (entryId: string, ex: Exercise) => void;
+  toggleSuperset: (entryId: string) => void;
   adjustRest: (delta: number) => void;
   skipRest: () => void;
 };
@@ -143,6 +145,22 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
       })),
     [mutate],
   );
+  /** Replace the movement, keep the sets and their numbers. */
+  const swapExercise = useCallback((entryId: string, ex: Exercise) => mutate((s) => mapEx(s, entryId, (e) => ({ ...e, exerciseId: ex.id, name: ex.name, sets: e.sets.map((x) => ({ ...x, prevKg: null, prevReps: null })) }))), [mutate]);
+  /** Pair with the next exercise (or unpair): both get the same group letter. */
+  const toggleSuperset = useCallback(
+    (entryId: string) =>
+      mutate((s) => {
+        const i = s.exercises.findIndex((e) => e.id === entryId);
+        if (i < 0) return s;
+        const cur = s.exercises[i];
+        if (cur.supersetGroup) return { ...s, exercises: s.exercises.map((e) => (e.supersetGroup === cur.supersetGroup ? { ...e, supersetGroup: undefined } : e)) };
+        if (i + 1 >= s.exercises.length) return s;
+        const g = String.fromCharCode(65 + i);
+        return { ...s, exercises: s.exercises.map((e, k) => (k === i || k === i + 1 ? { ...e, supersetGroup: g } : e)) };
+      }),
+    [mutate],
+  );
   const removeExercise = useCallback((exerciseId: string) => mutate((s) => ({ ...s, exercises: s.exercises.filter((e) => e.id !== exerciseId), currentIndex: Math.max(0, Math.min(s.currentIndex, s.exercises.length - 2)) })), [mutate]);
   const moveExercise = useCallback(
     (exerciseId: string, direction: -1 | 1) =>
@@ -163,8 +181,8 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
   const skipRest = useCallback(() => setRest(null), []);
 
   const value = useMemo<WorkoutState>(
-    () => ({ session, rest, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, adjustRest, skipRest }),
-    [session, rest, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, adjustRest, skipRest],
+    () => ({ session, rest, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, swapExercise, toggleSuperset, adjustRest, skipRest }),
+    [session, rest, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, swapExercise, toggleSuperset, adjustRest, skipRest],
   );
   return <WorkoutContext.Provider value={value}>{children}</WorkoutContext.Provider>;
 }
