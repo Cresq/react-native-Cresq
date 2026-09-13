@@ -102,13 +102,13 @@ export default function SplitEditor() {
             <SheetOption icon="circleCheck" label="Do this next" sub="Move the pointer to this day" onPress={() => { setNext(sheet.day.id); setSheet(null); }} />
             <SheetOption icon="dragVertical" label="Move up" onPress={() => { moveDay(sheet.day.id, -1); setSheet(null); }} />
             <SheetOption icon="dragVertical" label="Move down" onPress={() => { moveDay(sheet.day.id, 1); setSheet(null); }} />
-            <SheetOption icon="reload" label="Swap for another day" sub="Keep the position, change the plan" onPress={() => setSheet({ kind: "add" })} />
+            <SheetOption icon="reload" label="Swap for another day" sub="Keep the position, change the workout" onPress={() => setSheet({ kind: "add" })} />
             <SheetOption icon="trash" label="Remove from split" danger onPress={() => { removeDay(sheet.day.id); setSheet(null); }} />
           </>
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={sheet?.kind === "add"} onClose={() => setSheet(null)} title="Add a day" subtitle="Pick a plan or a rest day. You can reorder afterwards.">
+      <BottomSheet visible={sheet?.kind === "add"} onClose={() => setSheet(null)} title="Add a day" subtitle="Pick a workout or a rest day. You can reorder afterwards.">
         {splitTemplates.map((t) => (
           <SheetOption key={t.name} icon={t.rest ? "sun" : "dumbbell"} label={t.name} sub={t.rest ? t.focus : `${t.focus} · ${t.exercises} exercises`} onPress={() => { addDay(t); setSheet(null); }} />
         ))}

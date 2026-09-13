@@ -63,11 +63,11 @@ export default function PlanEditor() {
   const editing = sheet?.kind === "edit" ? plan.exercises[sheet.index] : null;
 
   return (
-    <Screen bottom={90} footer={<Button label={session && !session.finishedAt ? "Continue session" : "Start this plan"} iconRight="arrowRight" onPress={begin} disabled={plan.exercises.length === 0} />}>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title="Plan" subtitle={`${plan.exercises.length} exercises · ${estimateMinutes(plan)} min`} right={<IconButton name="trash" onPress={() => setSheet({ kind: "delete" })} accessibilityLabel="Delete plan" />} />
+    <Screen bottom={90} footer={<Button label={session && !session.finishedAt ? "Continue session" : "Start this workout"} iconRight="arrowRight" onPress={begin} disabled={plan.exercises.length === 0} />}>
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title="Workout" subtitle={`${plan.exercises.length} exercises · ${estimateMinutes(plan)} min`} right={<IconButton name="trash" onPress={() => setSheet({ kind: "delete" })} accessibilityLabel="Delete workout" />} />
 
       <View style={{ gap: 10 }}>
-        <Field label="Name" value={plan.name} onChangeText={(t) => patch((p) => ({ ...p, name: t }))} placeholder="Push" />
+        <Field label="Name" value={plan.name} onChangeText={(t) => patch((p) => ({ ...p, name: t }))} placeholder="Push day" />
         <Field label="Focus" value={plan.focus} onChangeText={(t) => patch((p) => ({ ...p, focus: t }))} placeholder="Chest, shoulders, triceps" />
       </View>
 
@@ -126,7 +126,7 @@ export default function PlanEditor() {
             <SheetOption icon="dragVertical" label="Move up" onPress={() => { move(sheet.index, -1); setSheet(null); }} />
             <SheetOption icon="dragVertical" label="Move down" onPress={() => { move(sheet.index, 1); setSheet(null); }} />
             <SheetOption icon="link" label={plan.exercises[sheet.index].supersetGroup ? "Remove from superset" : "Superset with next"} sub="No rest between the two" onPress={() => { const cur = plan.exercises[sheet.index]; const g = cur.supersetGroup ? undefined : String.fromCharCode(65 + sheet.index); patchEx(sheet.index, (e) => ({ ...e, supersetGroup: g })); if (sheet.index + 1 < plan.exercises.length) patchEx(sheet.index + 1, (e) => ({ ...e, supersetGroup: g })); setSheet(null); }} />
-            <SheetOption icon="trash" label="Remove from plan" danger onPress={() => { remove(sheet.index); setSheet(null); }} />
+            <SheetOption icon="trash" label="Remove from workout" danger onPress={() => { remove(sheet.index); setSheet(null); }} />
           </>
         ) : null}
       </BottomSheet>
@@ -142,9 +142,9 @@ export default function PlanEditor() {
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={sheet?.kind === "delete"} onClose={() => setSheet(null)} title="Delete this plan?" subtitle="Sessions you already logged with it stay in your history.">
+      <BottomSheet visible={sheet?.kind === "delete"} onClose={() => setSheet(null)} title="Delete this workout?" subtitle="Sessions you already logged with it stay in your history.">
         <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
-          <Button label="Delete plan" variant="danger" size="M" onPress={deletePlan} />
+          <Button label="Delete workout" variant="danger" size="M" onPress={deletePlan} />
         </View>
       </BottomSheet>
     </Screen>

@@ -46,7 +46,11 @@ export type Profile = {
   experience?: "new" | "some" | "years";
   daysPerWeek?: number;
   limitations?: string[];
+  /** Exercise ids charted on Home and listed under Profile › Favourites. Defaults to the four compound lifts. */
+  favourites?: string[];
 };
+
+export const DEFAULT_FAVOURITES = ["bench", "squat", "deadlift", "ohp"];
 
 export type Db = {
   version: number;

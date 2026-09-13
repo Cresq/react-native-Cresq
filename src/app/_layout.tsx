@@ -19,11 +19,12 @@ SplashScreen.preventAutoHideAsync();
  *   /notifications        From the bell on Home and Feed
  *   /train/split          Split editor (order of training days)
  *   /train/plan/[id]      Plan detail and editor
- *   /exercises            Exercise library; ?plan=ID adds to a plan, ?session=1 adds to the running session
+ *   /exercises            Exercise library; ?plan=ID adds to a plan, ?session=1 adds to the running session, ?favourite=1 picks Home lifts
  *   /workout/active       Running session (full-screen modal over the tabs)
  *   /workout/summary      Session complete
  *   /workout/posted       Posted to feed, with undo
- *   /progress             Redirects to Profile › Lifts (old links)
+ *   /workout/[id]         One logged session, read-only (from the Profile grid)
+ *   /progress             Redirects to Profile › Favourites (old links)
  *   /progress/[lift]      One exercise: trend, forecast, records, history
  *   /settings             Units, language, sample data, reset, sign out
  *   /settings/devices     Connected devices and Health permissions
@@ -64,6 +65,7 @@ export default function RootLayout() {
             <Stack.Screen name="workout/posted" options={{ presentation: "fullScreenModal", animation: "slide_from_right" }} />
             <Stack.Screen name="progress/index" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="progress/[lift]" options={{ animation: "slide_from_right" }} />
+            <Stack.Screen name="workout/[id]" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="settings/index" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="settings/devices" options={{ animation: "slide_from_right" }} />
           </Stack>
