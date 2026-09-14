@@ -26,7 +26,7 @@ type WorkoutState = {
   addSet: (exerciseId: string) => void;
   addExercise: (exercise: Exercise) => void;
   removeExercise: (exerciseId: string) => void;
-  moveExercise: (exerciseId: string, direction: -1 | 1) => void;
+  moveExercise: (exerciseId: string, delta: number) => void;
   setRestSeconds: (exerciseId: string, seconds: number) => void;
   setNote: (exerciseId: string, note: string) => void;
   setCaption: (caption: string) => void;
@@ -163,15 +163,20 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
     [mutate],
   );
   const removeExercise = useCallback((exerciseId: string) => mutate((s) => ({ ...s, exercises: s.exercises.filter((e) => e.id !== exerciseId), currentIndex: Math.max(0, Math.min(s.currentIndex, s.exercises.length - 2)) })), [mutate]);
+  /** Move an exercise by any number of places; the current exercise stays the current one. */
   const moveExercise = useCallback(
-    (exerciseId: string, direction: -1 | 1) =>
+    (exerciseId: string, delta: number) =>
       mutate((s) => {
         const i = s.exercises.findIndex((e) => e.id === exerciseId);
-        const j = i + direction;
-        if (i < 0 || j < 0 || j >= s.exercises.length) return s;
+        if (i < 0 || !delta) return s;
+        const j = Math.max(0, Math.min(s.exercises.length - 1, i + delta));
+        if (j === i) return s;
         const next = [...s.exercises];
-        [next[i], next[j]] = [next[j], next[i]];
-        return { ...s, exercises: next, currentIndex: s.currentIndex === i ? j : s.currentIndex === j ? i : s.currentIndex };
+        const [item] = next.splice(i, 1);
+        next.splice(j, 0, item);
+        const currentId = s.exercises[s.currentIndex]?.id;
+        const currentIndex = currentId ? Math.max(0, next.findIndex((e) => e.id === currentId)) : s.currentIndex;
+        return { ...s, exercises: next, currentIndex };
       }),
     [mutate],
   );

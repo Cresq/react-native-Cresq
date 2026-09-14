@@ -30,13 +30,17 @@ export const haptic = (kind: "tap" | "done" | "error") => {
 
 const setLabel = (s: SetEntry, workingIndex: number) => (s.type === "warmup" ? "W" : s.type === "drop" ? "D" : s.type === "failure" ? "F" : String(workingIndex));
 
+/** One collapsed exercise row is about this tall; dragging that far moves one place. */
+const ROW_STEP = 64;
+
 type Sheet = null | { kind: "finish" } | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry } | { kind: "session" } | { kind: "discard" } | { kind: "note"; ex: ExerciseEntry };
 
 /**
  * Active workout. Built for one-handed input between sets: the exercise you
  * are on is the only surface (both exercises when it is a superset), done and
  * upcoming exercises are plain rows above and below, the rest timer docks at
- * the bottom. A set row swipes left to reveal delete.
+ * the bottom. Set rows swipe left to delete; the handle at the top-left of
+ * an exercise drags it up or down the list.
  */
 export default function ActiveWorkout() {
   const { colors, radius, shadow } = useTheme();
@@ -85,12 +89,12 @@ export default function ActiveWorkout() {
   const before = items.filter((it) => it.index < firstIdx && !groupIds.has(it.ex.id));
   const after = items.filter((it) => it.index > firstIdx && !groupIds.has(it.ex.id));
   const upNextIndex = after[0]?.index;
+  const openSets = stats.setsTotal - stats.setsDone;
 
   const finish = () => {
     w.finish();
     router.replace("/workout/summary");
   };
-  const openSets = stats.setsTotal - stats.setsDone;
   const complete = (ex: ExerciseEntry, s: SetEntry, i: number) => {
     const firstOpen = ex.sets.findIndex((x) => !x.done);
     if (!s.done && firstOpen !== -1 && firstOpen < i) {
@@ -103,74 +107,34 @@ export default function ActiveWorkout() {
     haptic(s.done ? "tap" : "done");
     w.completeSet(ex.id, s.id);
   };
-
-  const card = (ex: ExerciseEntry, isCurrentEx: boolean) => {
-    let working = 0;
-    return (
-      <Card key={ex.id} padding={16} gap={6}>
-        <Row gap={10} align="flex-start">
-          <View style={{ flex: 1, gap: 4 }}>
-            <Txt variant="displayM">{ex.name}</Txt>
-            {ex.note ? (
-              <Txt variant="bodyS" tone="secondary" italic>
-                {ex.note}
-              </Txt>
-            ) : null}
-          </View>
-          <Pressable accessibilityRole="button" accessibilityLabel="Rest timer" onPress={() => setSheet({ kind: "rest", ex })} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingLeft: 10, paddingRight: 8, height: 34, borderRadius: radius.pill, backgroundColor: colors.bg.raised }}>
-            <Icon name="timer" size={14} color={colors.text.secondary} strokeWidth={1.9} />
-            <Txt variant="labelM">{fmtTime(ex.restSeconds)}</Txt>
-            <Icon name="chevronDown" size={12} color={colors.text.tertiary} strokeWidth={2.2} />
-          </Pressable>
-          <IconButton name="moreHorizontal" size={34} iconSize={18} tone="raised" onPress={() => setSheet({ kind: "exercise", ex })} accessibilityLabel="Exercise options" />
-        </Row>
-
-        <Row gap={8} style={{ paddingHorizontal: 6, paddingTop: 10 }}>
-          <Txt variant="labelS" tone="tertiary" style={{ width: 28 }}>
-            Set
-          </Txt>
-          <Txt variant="labelS" tone="tertiary" style={{ width: 72 }} align="center">
-            Previous
-          </Txt>
-          <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} align="center">
-            kg
-          </Txt>
-          <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} align="center">
-            Reps
-          </Txt>
-          <View style={{ width: 40 }} />
-        </Row>
-
-        <View style={{ gap: 4 }}>
-          {ex.sets.map((s, i) => {
-            if (s.type === "working") working++;
-            const label = setLabel(s, working);
-            const isCurrent = isCurrentEx && !s.done && ex.sets.findIndex((x) => !x.done) === i;
-            return (
-              <SetRow
-                key={s.id}
-                set={s}
-                label={label}
-                isCurrent={isCurrent}
-                error={blocked?.id === s.id ? blocked.msg : undefined}
-                onType={() => setSheet({ kind: "set", ex, set: s, index: i })}
-                onChange={(patch) => w.updateSet(ex.id, s.id, patch)}
-                onDone={() => complete(ex, s, i)}
-                onRemove={() => { haptic("tap"); w.removeSet(ex.id, s.id); }}
-              />
-            );
-          })}
-        </View>
-
-        <Pressable accessibilityRole="button" onPress={() => w.addSet(ex.id)} hitSlop={6} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 10, paddingHorizontal: 6 }}>
-          <Icon name="addPlus" size={14} color={colors.text.secondary} strokeWidth={2.2} />
-          <Txt variant="labelM" tone="secondary">
-            Add set
-          </Txt>
-        </Pressable>
-      </Card>
-    );
+  const openNote = (ex: ExerciseEntry) => {
+    setNoteText(ex.note ?? "");
+    setSheet({ kind: "note", ex });
   };
+  const move = (ex: ExerciseEntry, steps: number) => {
+    if (steps) {
+      haptic("tap");
+      w.moveExercise(ex.id, steps);
+    }
+  };
+
+  const card = (ex: ExerciseEntry, isCurrentEx: boolean) => (
+    <ExerciseCard
+      key={ex.id}
+      ex={ex}
+      isCurrentEx={isCurrentEx}
+      blocked={blocked}
+      onMove={(steps) => move(ex, steps)}
+      onNote={() => openNote(ex)}
+      onRest={() => setSheet({ kind: "rest", ex })}
+      onMore={() => setSheet({ kind: "exercise", ex })}
+      onSetType={(s, i) => setSheet({ kind: "set", ex, set: s, index: i })}
+      onChange={(s, patch) => w.updateSet(ex.id, s.id, patch)}
+      onDone={(s, i) => complete(ex, s, i)}
+      onRemoveSet={(s) => { haptic("tap"); w.removeSet(ex.id, s.id); }}
+      onAddSet={() => w.addSet(ex.id)}
+    />
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg.ground }}>
@@ -198,7 +162,7 @@ export default function ActiveWorkout() {
             {before.map((it, i) => (
               <View key={it.ex.id}>
                 {i > 0 ? <Divider inset={42} /> : null}
-                <CollapsedExercise ex={it.ex} index={it.index} onPress={() => w.setCurrent(it.index)} onMore={() => setSheet({ kind: "exercise", ex: it.ex })} />
+                <CollapsedExercise ex={it.ex} index={it.index} onPress={() => w.setCurrent(it.index)} onMore={() => setSheet({ kind: "exercise", ex: it.ex })} onMove={(steps) => move(it.ex, steps)} />
               </View>
             ))}
           </View>
@@ -225,7 +189,7 @@ export default function ActiveWorkout() {
             <View key={g[0].ex.id}>
               {gi > 0 ? <Divider inset={42} /> : null}
               {g.length === 1 ? (
-                <CollapsedExercise ex={g[0].ex} index={g[0].index} upNext={g[0].index === upNextIndex} onPress={() => w.setCurrent(g[0].index)} onMore={() => setSheet({ kind: "exercise", ex: g[0].ex })} />
+                <CollapsedExercise ex={g[0].ex} index={g[0].index} upNext={g[0].index === upNextIndex} onPress={() => w.setCurrent(g[0].index)} onMore={() => setSheet({ kind: "exercise", ex: g[0].ex })} onMove={(steps) => move(g[0].ex, steps)} />
               ) : (
                 <View style={{ borderLeftWidth: 2, borderLeftColor: colors.border.strong, paddingLeft: 12, marginLeft: 6, marginVertical: 6 }}>
                   <Row gap={6} style={{ paddingTop: 4, paddingBottom: 2 }}>
@@ -237,7 +201,7 @@ export default function ActiveWorkout() {
                   {g.map((it, ii) => (
                     <View key={it.ex.id}>
                       {ii > 0 ? <Divider inset={42} /> : null}
-                      <CollapsedExercise ex={it.ex} index={it.index} upNext={it.index === upNextIndex} onPress={() => w.setCurrent(it.index)} onMore={() => setSheet({ kind: "exercise", ex: it.ex })} />
+                      <CollapsedExercise ex={it.ex} index={it.index} upNext={it.index === upNextIndex} onPress={() => w.setCurrent(it.index)} onMore={() => setSheet({ kind: "exercise", ex: it.ex })} onMove={(steps) => move(it.ex, steps)} />
                     </View>
                   ))}
                 </View>
@@ -283,13 +247,9 @@ export default function ActiveWorkout() {
       <BottomSheet visible={sheet?.kind === "exercise"} onClose={() => setSheet(null)} title={sheet?.kind === "exercise" ? sheet.ex.name : ""} subtitle={sheet?.kind === "exercise" ? `Exercise ${session.exercises.indexOf(sheet.ex) + 1} of ${session.exercises.length}` : undefined}>
         {sheet?.kind === "exercise" ? (
           <>
-            <SheetOption icon="dragVertical" label="Move up" sub="Do this exercise earlier" onPress={() => { w.moveExercise(sheet.ex.id, -1); setSheet(null); }} />
-            <SheetOption icon="dragVertical" label="Move down" sub="Do this exercise later" onPress={() => { w.moveExercise(sheet.ex.id, 1); setSheet(null); }} />
             <SheetOption icon="reload" label="Swap exercise" sub="Keep the sets, change the movement" onPress={() => { const id = sheet.ex.id; setSheet(null); router.push(`/exercises?swap=${id}`); }} />
             <SheetOption icon="link" label={sheet.ex.supersetGroup ? "Remove from superset" : "Add to superset"} sub={sheet.ex.supersetGroup ? "Rest between them again" : "Pair with the next exercise, no rest between"} onPress={() => { w.toggleSuperset(sheet.ex.id); setSheet(null); }} />
-            <SheetOption icon="noteEdit" label={sheet.ex.note ? "Edit note" : "Add a note"} sub={sheet.ex.note ?? "Cues for next time"} onPress={() => { setNoteText(sheet.ex.note ?? ""); setSheet({ kind: "note", ex: sheet.ex }); }} />
-            <SheetOption icon="timer" label="Rest timer" sub={`${fmtTime(sheet.ex.restSeconds)} after each set`} onPress={() => setSheet({ kind: "rest", ex: sheet.ex })} />
-            <SheetOption icon="trash" label="Remove from workout" sub="You can restore it from the summary" danger onPress={() => { w.removeExercise(sheet.ex.id); setSheet(null); }} />
+            <SheetOption icon="trash" label="Remove from workout" sub="Its sets leave this session" danger onPress={() => { w.removeExercise(sheet.ex.id); setSheet(null); }} />
           </>
         ) : null}
       </BottomSheet>
@@ -323,8 +283,6 @@ export default function ActiveWorkout() {
 
       <BottomSheet visible={sheet?.kind === "session"} onClose={() => setSheet(null)} title={session.planName} subtitle={`${stats.elapsed} elapsed · ${stats.setsDone} of ${stats.setsTotal} sets`}>
         <SheetOption icon="addPlus" label="Add exercise" sub="From your library" onPress={() => { setSheet(null); router.push("/exercises?session=1"); }} />
-        <SheetOption icon="chevronDown" label="Minimise" sub="Keep it running, look around the app" onPress={() => { setSheet(null); router.back(); }} />
-        <SheetOption icon="circleCheck" label="Finish session" sub="Go to the summary" onPress={() => setSheet({ kind: "finish" })} />
         <SheetOption icon="trash" label="Discard session" sub="Nothing from this session is saved" danger onPress={() => setSheet({ kind: "discard" })} />
       </BottomSheet>
 
@@ -353,6 +311,102 @@ export default function ActiveWorkout() {
       </BottomSheet>
     </View>
   );
+}
+
+/**
+ * The open exercise. Drag the handle at the top-left to move it in the list;
+ * the card lifts and follows, and on release it lands one place per row
+ * travelled. Tap the line under the name to write or edit the note.
+ */
+function ExerciseCard({ ex, isCurrentEx, blocked, onMove, onNote, onRest, onMore, onSetType, onChange, onDone, onRemoveSet, onAddSet }: { ex: ExerciseEntry; isCurrentEx: boolean; blocked: { id: string; msg: string } | null; onMove: (steps: number) => void; onNote: () => void; onRest: () => void; onMore: () => void; onSetType: (s: SetEntry, i: number) => void; onChange: (s: SetEntry, patch: Partial<Pick<SetEntry, "kg" | "reps">>) => void; onDone: (s: SetEntry, i: number) => void; onRemoveSet: (s: SetEntry) => void; onAddSet: () => void }) {
+  const { colors, radius } = useTheme();
+  const { drag, style } = useDrag(onMove);
+  let working = 0;
+  return (
+    <Animated.View style={style}>
+      <Card padding={16} gap={6}>
+        <Row gap={10} align="flex-start">
+          <GestureDetector gesture={drag}>
+            <Animated.View accessibilityRole="button" accessibilityLabel="Drag to reorder" style={{ width: 28, height: 28, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg.raised, marginTop: 1 }}>
+              <Icon name="dragVertical" size={16} color={colors.text.secondary} strokeWidth={2} />
+            </Animated.View>
+          </GestureDetector>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Txt variant="displayM">{ex.name}</Txt>
+            <Pressable accessibilityRole="button" accessibilityLabel={ex.note ? "Edit note" : "Add a note"} onPress={onNote} hitSlop={6} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+              <Txt variant="bodyS" tone={ex.note ? "secondary" : "tertiary"} italic numberOfLines={2}>
+                {ex.note || "Add a note"}
+              </Txt>
+            </Pressable>
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Rest timer" onPress={onRest} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingLeft: 10, paddingRight: 8, height: 34, borderRadius: radius.pill, backgroundColor: colors.bg.raised }}>
+            <Icon name="timer" size={14} color={colors.text.secondary} strokeWidth={1.9} />
+            <Txt variant="labelM">{fmtTime(ex.restSeconds)}</Txt>
+            <Icon name="chevronDown" size={12} color={colors.text.tertiary} strokeWidth={2.2} />
+          </Pressable>
+          <IconButton name="moreHorizontal" size={34} iconSize={18} tone="raised" onPress={onMore} accessibilityLabel="Exercise options" />
+        </Row>
+
+        <Row gap={8} style={{ paddingHorizontal: 6, paddingTop: 10 }}>
+          <Txt variant="labelS" tone="tertiary" style={{ width: 28 }}>
+            Set
+          </Txt>
+          <Txt variant="labelS" tone="tertiary" style={{ width: 72 }} align="center">
+            Previous
+          </Txt>
+          <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} align="center">
+            kg
+          </Txt>
+          <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} align="center">
+            Reps
+          </Txt>
+          <View style={{ width: 40 }} />
+        </Row>
+
+        <View style={{ gap: 4 }}>
+          {ex.sets.map((s, i) => {
+            if (s.type === "working") working++;
+            const label = setLabel(s, working);
+            const isCurrent = isCurrentEx && !s.done && ex.sets.findIndex((x) => !x.done) === i;
+            return <SetRow key={s.id} set={s} label={label} isCurrent={isCurrent} error={blocked?.id === s.id ? blocked.msg : undefined} onType={() => onSetType(s, i)} onChange={(patch) => onChange(s, patch)} onDone={() => onDone(s, i)} onRemove={() => onRemoveSet(s)} />;
+          })}
+        </View>
+
+        <Pressable accessibilityRole="button" onPress={onAddSet} hitSlop={6} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 10, paddingHorizontal: 6 }}>
+          <Icon name="addPlus" size={14} color={colors.text.secondary} strokeWidth={2.2} />
+          <Txt variant="labelM" tone="secondary">
+            Add set
+          </Txt>
+        </Pressable>
+      </Card>
+    </Animated.View>
+  );
+}
+
+/** Vertical drag that lifts the element, follows the finger, and reports how many rows it travelled. */
+function useDrag(onMove: (steps: number) => void) {
+  const ty = useSharedValue(0);
+  const lift = useSharedValue(0);
+  const drag = Gesture.Pan()
+    .activeOffsetY([-8, 8])
+    .failOffsetX([-16, 16])
+    .onStart(() => {
+      lift.value = withSpring(1, springs.snappy);
+    })
+    .onUpdate((e) => {
+      ty.value = e.translationY;
+    })
+    .onEnd((e) => {
+      const steps = Math.round(e.translationY / ROW_STEP);
+      lift.value = withSpring(0, springs.snappy);
+      ty.value = withSpring(0, springs.base);
+      runOnJS(onMove)(steps);
+    })
+    .onFinalize(() => {
+      lift.value = withSpring(0, springs.snappy);
+    });
+  const style = useAnimatedStyle(() => ({ zIndex: lift.value > 0.01 ? 10 : 0, transform: [{ translateY: ty.value }, { scale: 1 + lift.value * 0.02 }], opacity: 1 - lift.value * 0.08 }));
+  return { drag, style };
 }
 
 function Strip({ label, value, unit }: { label: string; value: string; unit?: string }) {
@@ -431,7 +485,7 @@ function SetRow({ set, label, isCurrent, error, onType, onChange, onDone, onRemo
           </Pressable>
         </Animated.View>
         <GestureDetector gesture={pan}>
-          <Animated.View style={[{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4, paddingHorizontal: 6, borderRadius: radius.setRow, backgroundColor: isCurrent ? colors.accent.soft : error ? colors.bg.surface : colors.bg.surface, opacity: dim && !error ? 0.6 : 1, borderWidth: error ? 1.5 : 0, borderColor: error ? colors.status.danger : "transparent" }, rowAnim]}>
+          <Animated.View style={[{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4, paddingHorizontal: 6, borderRadius: radius.setRow, backgroundColor: isCurrent ? colors.accent.soft : colors.bg.surface, opacity: dim && !error ? 0.6 : 1, borderWidth: error ? 1.5 : 0, borderColor: error ? colors.status.danger : "transparent" }, rowAnim]}>
             <Pressable accessibilityRole="button" onPress={onType} hitSlop={6} style={{ width: 28 }} accessibilityLabel="Set type">
               <Txt variant="labelL" tone={isCurrent ? "ember" : set.type === "warmup" ? "tertiary" : "primary"}>
                 {label}
@@ -475,15 +529,22 @@ function SetRow({ set, label, isCurrent, error, onType, onChange, onDone, onRemo
   );
 }
 
-function CollapsedExercise({ ex, index, upNext, onPress, onMore }: { ex: ExerciseEntry; index: number; upNext?: boolean; onPress: () => void; onMore: () => void }) {
+/** A done or upcoming exercise as one row: drag handle, position, name, detail, options. */
+function CollapsedExercise({ ex, index, upNext, onPress, onMore, onMove }: { ex: ExerciseEntry; index: number; upNext?: boolean; onPress: () => void; onMore: () => void; onMove: (steps: number) => void }) {
   const { colors } = useTheme();
+  const { drag, style } = useDrag(onMove);
   const done = ex.sets.length > 0 && ex.sets.every((s) => s.done);
   const working = ex.sets.filter((s) => s.type !== "warmup");
   const top = working[0] ?? ex.sets[0];
   const detail = `${working.length || ex.sets.length} × ${top?.reps ?? 0}${top?.kg ? ` · ${top.kg} kg` : " · bodyweight"}`;
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 14, opacity: done ? 0.6 : 1 }}>
-      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Go to ${ex.name}`} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
+    <Animated.View style={[{ flexDirection: "row", alignItems: "center", gap: 10, opacity: done ? 0.6 : 1, backgroundColor: colors.bg.ground }, style]}>
+      <GestureDetector gesture={drag}>
+        <Animated.View accessibilityRole="button" accessibilityLabel="Drag to reorder" style={{ width: 28, height: 44, alignItems: "center", justifyContent: "center" }}>
+          <Icon name="dragVertical" size={16} color={colors.text.tertiary} strokeWidth={2} />
+        </Animated.View>
+      </GestureDetector>
+      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Go to ${ex.name}`} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
         <View style={{ width: 28, height: 28, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: done ? colors.status.success : colors.bg.surface }}>
           {done ? (
             <Icon name="check" size={15} color={colors.accent.on} strokeWidth={2.4} />
@@ -512,7 +573,7 @@ function CollapsedExercise({ ex, index, upNext, onPress, onMore }: { ex: Exercis
       <Pressable accessibilityRole="button" onPress={onMore} hitSlop={10} accessibilityLabel="Options" style={{ paddingVertical: 12 }}>
         <Icon name="moreHorizontal" size={18} color={colors.text.tertiary} />
       </Pressable>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -538,13 +599,11 @@ function RestRing({ progress }: { progress: number }) {
   );
 }
 
-export function SmallPill({ label, onPress, inverse, onEmber }: { label: string; onPress: () => void; inverse?: boolean; onEmber?: boolean }) {
+export function SmallPill({ label, onPress, inverse }: { label: string; onPress: () => void; inverse?: boolean }) {
   const { colors, radius } = useTheme();
-  const bg = onEmber ? colors.bg.ground : inverse ? colors.bg.inverse : colors.bg.surface;
-  const fg = onEmber ? "primary" : inverse ? "inverse" : "primary";
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ paddingHorizontal: 12, height: 40, justifyContent: "center", borderRadius: radius.pill, backgroundColor: bg, opacity: pressed ? 0.8 : 1 })}>
-      <Txt variant="buttonM" tone={fg}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ paddingHorizontal: 12, height: 40, justifyContent: "center", borderRadius: radius.pill, backgroundColor: inverse ? colors.bg.inverse : colors.bg.surface, opacity: pressed ? 0.8 : 1 })}>
+      <Txt variant="buttonM" tone={inverse ? "inverse" : "primary"}>
         {label}
       </Txt>
     </Pressable>
