@@ -16,7 +16,7 @@ export type ChartPoint = { value: number; record?: boolean };
  * Put a finger on it and a marker follows, snapping to the nearest session
  * with a light tick; the value and its date read above the finger.
  */
-export function LineChart({ points, forecast, height = 96, labels, target, scrubLabels, unit = "kg" }: { points: ChartPoint[]; forecast?: number[]; height?: number; labels?: string[]; target?: number; /** One label per point, shown while scrubbing (usually the date). */ scrubLabels?: string[]; unit?: string }) {
+export function LineChart({ points, forecast, height = 96, labels, target, scrubLabels, unit = "kg", onScrub }: { points: ChartPoint[]; forecast?: number[]; height?: number; labels?: string[]; target?: number; /** One label per point, shown while scrubbing (usually the date). */ scrubLabels?: string[]; unit?: string; /** Fires true when a scrub starts and false when it ends, so a parent Pressable can ignore the release. */ onScrub?: (active: boolean) => void }) {
   const { colors } = useTheme();
   const [width, setWidth] = useState(0);
   const [active, setActive] = useState<number | null>(null);
@@ -66,21 +66,25 @@ export function LineChart({ points, forecast, height = 96, labels, target, scrub
       runOnJS(haptic)("select");
     }
   };
+  const notify = (on: boolean) => onScrub?.(on);
   const release = () => {
     "worklet";
     shown.value = withTiming(0, { duration: 160 });
     lastIndex.value = -1;
     runOnJS(setActive)(null);
+    runOnJS(notify)(false);
   };
-  const pan = Gesture.Pan()
-    .activateAfterLongPress(0)
-    .minDistance(0)
-    .onBegin((e) => {
-      shown.value = withTiming(1, { duration: 120 });
-      pick(e.x);
-    })
-    .onUpdate((e) => pick(e.x))
-    .onFinalize(release);
+  // Two ways in, one behaviour: rest the finger 160 ms, or swipe sideways. A plain tap does
+  // neither, so a card around the chart still opens on tap and stays put after a scrub.
+  const begin = (e: { x: number }) => {
+    "worklet";
+    shown.value = withTiming(1, { duration: 120 });
+    runOnJS(notify)(true);
+    pick(e.x);
+  };
+  const hold = Gesture.Pan().activateAfterLongPress(160).onStart(begin).onUpdate((e) => pick(e.x)).onFinalize(release);
+  const swipe = Gesture.Pan().activeOffsetX([-10, 10]).failOffsetY([-12, 12]).onStart(begin).onUpdate((e) => pick(e.x)).onFinalize(release);
+  const pan = Gesture.Race(hold, swipe);
   const markerStyle = useAnimatedStyle(() => ({ opacity: shown.value, transform: [{ translateX: mx.value }] }));
   const dotStyle = useAnimatedStyle(() => ({ opacity: shown.value, transform: [{ translateX: mx.value - 7 }, { translateY: my.value - 7 }] }));
   const value = active !== null ? points[active]?.value : null;

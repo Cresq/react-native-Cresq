@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -48,6 +48,12 @@ export default function Home() {
   const { isFollowing } = useSocial();
   const [mode, setMode] = useState("gym");
   const [choosing, setChoosing] = useState(false);
+  // While the chart is being scrubbed, releasing the finger must not open the lift.
+  const scrubbing = useRef(false);
+  const onScrub = (on: boolean) => {
+    if (on) scrubbing.current = true;
+    else setTimeout(() => { scrubbing.current = false; }, 300);
+  };
 
   const override = split.overridePlanId ? db.plans.find((p) => p.id === split.overridePlanId) : undefined;
   const plan = override ?? db.plans.find((p) => p.id === nextDay?.planId);
@@ -203,7 +209,7 @@ export default function Home() {
               </Row>
 
               {lift && lift.points.length >= 2 ? (
-                <Pressable accessibilityRole="button" accessibilityLabel={lift.ex.name} onPress={() => router.push(`/progress/${lift.ex.id}`)} style={{ gap: 12 }}>
+                <Pressable accessibilityRole="button" accessibilityLabel={lift.ex.name} onPress={() => { if (!scrubbing.current) router.push(`/progress/${lift.ex.id}`); }} style={{ gap: 12 }}>
                   <Row justify="space-between" align="flex-end">
                     <View style={{ gap: 2 }}>
                       <Txt variant="labelS" tone="tertiary">
@@ -232,7 +238,7 @@ export default function Home() {
                       </Row>
                     </View>
                   </Row>
-                  <LineChart points={lift.points.slice(-8)} labels={lift.points.slice(-8).map((p, i, a) => (i === a.length - 1 ? t("Now") : shortDate(p.date)))} scrubLabels={lift.points.slice(-8).map((p) => shortDate(p.date))} height={110} />
+                  <LineChart points={lift.points.slice(-8)} labels={lift.points.slice(-8).map((p, i, a) => (i === a.length - 1 ? t("Now") : shortDate(p.date)))} scrubLabels={lift.points.slice(-8).map((p) => shortDate(p.date))} height={110} onScrub={onScrub} />
                   <Row gap={6}>
                     <Icon name="star" size={12} color={fc?.weeksToTarget ? colors.fuel.sage : colors.text.tertiary} strokeWidth={2} />
                     <Txt variant="labelS" tone={fc?.weeksToTarget ? "sage" : "tertiary"}>

@@ -1,9 +1,10 @@
 import { useEffect, useState, type PropsWithChildren } from "react";
-import { Modal, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
+import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
+import { useT } from "@/i18n";
 import { project, rubberband, spring, springs } from "@/motion";
 import { Txt } from "./Text";
 import { Icon, type IconName } from "./Icon";
@@ -19,6 +20,7 @@ import { Press } from "./Press";
  */
 export function BottomSheet({ visible, onClose, title, subtitle, children }: PropsWithChildren<{ visible: boolean; onClose: () => void; title: string; subtitle?: string }>) {
   const { colors, radius } = useTheme();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const { height: screenH } = useWindowDimensions();
   const [mounted, setMounted] = useState(visible);
@@ -76,6 +78,7 @@ export function BottomSheet({ visible, onClose, title, subtitle, children }: Pro
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.55)" }, scrimStyle]}>
           <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityLabel="Close" accessibilityRole="button" />
         </Animated.View>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} pointerEvents="box-none">
         <GestureDetector gesture={pan}>
           <Animated.View
             onLayout={(e) => {
@@ -93,9 +96,10 @@ export function BottomSheet({ visible, onClose, title, subtitle, children }: Pro
               ) : null}
             </View>
             <View>{children}</View>
-            <Button label="Cancel" variant="tertiary" size="M" onPress={onClose} style={{ marginTop: 8 }} />
+            <Button label={t("Cancel")} variant="tertiary" size="M" onPress={onClose} style={{ marginTop: 8 }} />
           </Animated.View>
         </GestureDetector>
+        </KeyboardAvoidingView>
       </GestureHandlerRootView>
     </Modal>
   );

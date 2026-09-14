@@ -118,9 +118,11 @@ export default function ActiveWorkout() {
     setNoteText(ex.note ?? "");
     setSheet({ kind: "note", ex });
   };
+  // Sheets are native modals: one has to be gone before the next appears, or iOS locks up.
   const openSuperset = (ex: ExerciseEntry) => {
     setPick(session.exercises.filter((e) => e.id !== ex.id && ex.supersetGroup && e.supersetGroup === ex.supersetGroup).map((e) => e.id));
-    setSheet({ kind: "superset", ex });
+    setSheet(null);
+    setTimeout(() => setSheet({ kind: "superset", ex }), 380);
   };
 
   /** Where a card dragged by `dy` from its slot would land, by walking the measured slots. */
@@ -255,7 +257,7 @@ export default function ActiveWorkout() {
       <BottomSheet visible={sheet?.kind === "exercise"} onClose={() => setSheet(null)} title={sheet?.kind === "exercise" ? sheet.ex.name : ""} subtitle={sheet?.kind === "exercise" ? t("Exercise {a} of {b}", { a: session.exercises.indexOf(sheet.ex) + 1, b: session.exercises.length }) : undefined}>
         {sheet?.kind === "exercise" ? (
           <>
-            <SheetOption icon="reload" label={t("Swap exercise")} sub={t("Keep the sets, change the movement")} onPress={() => { const id = sheet.ex.id; setSheet(null); router.push(`/exercises?swap=${id}`); }} />
+            <SheetOption icon="reload" label={t("Swap exercise")} sub={t("Keep the sets, change the movement")} onPress={() => { const id = sheet.ex.id; setSheet(null); setTimeout(() => router.push(`/exercises?swap=${id}`), 380); }} />
             <SheetOption icon="link" label={sheet.ex.supersetGroup ? t("Edit superset") : t("Make a superset")} sub={t("Choose which exercises alternate")} onPress={() => openSuperset(sheet.ex)} />
             {sheet.ex.supersetGroup ? <SheetOption icon="close" label={t("Remove from superset")} sub={t("Rest between them again")} onPress={() => { w.toggleSuperset(sheet.ex.id); setSheet(null); }} /> : null}
             <SheetOption icon="trash" label={t("Remove from workout")} sub={t("Its sets leave this session")} danger onPress={() => { w.removeExercise(sheet.ex.id); setSheet(null); }} />
@@ -298,8 +300,8 @@ export default function ActiveWorkout() {
       <BottomSheet visible={sheet?.kind === "note"} onClose={() => setSheet(null)} title={t("Note")} subtitle={sheet?.kind === "note" ? t("{name}, shown under the name, and next time you do it", { name: sheet.ex.name }) : undefined}>
         {sheet?.kind === "note" ? (
           <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
-            <Field label={t("Note")} value={noteText} onChangeText={setNoteText} placeholder={t("Feet planted, pause on the chest")} multiline autoFocus />
-            <Button label={t("Save note")} onPress={() => { w.setNote(sheet.ex.id, noteText.trim()); setSheet(null); }} />
+            <Field label={t("Note")} value={noteText} onChangeText={(v) => { setNoteText(v); w.setNote(sheet.ex.id, v.trimStart()); }} placeholder={t("Feet planted, pause on the chest")} multiline autoFocus />
+            <Button label={t("Done")} onPress={() => { w.setNote(sheet.ex.id, noteText.trim()); setSheet(null); }} />
           </View>
         ) : null}
       </BottomSheet>

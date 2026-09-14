@@ -31,7 +31,8 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
   const t = useT();
   const labels = t("Profile") === "Profiel" ? tabLabelsNl : tabLabels;
   const insets = useSafeAreaInsets();
-  const bottom = Math.max(insets.bottom, 12) + 10;
+  // Sits a little lower than the safe area suggests; Nick found the default too high (14 Sep 2026).
+  const bottom = Math.max(insets.bottom - 8, 10);
   const [inner, setInner] = useState(0);
   const n = state.routes.length;
   const slot = inner / n;
