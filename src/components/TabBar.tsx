@@ -12,12 +12,14 @@ import { springs, to } from "@/motion";
 import { Txt } from "./ui/Text";
 import { Icon, type IconName } from "./ui/Icon";
 import { Press } from "./ui/Press";
+import { useT } from "@/i18n";
 
 /** Props expo-router hands to a custom `tabBar`, derived so no navigation package import is needed. */
 type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>["tabBar"]>>[0];
 
 const tabIcons: Record<string, IconName> = { index: "house", feed: "rows", train: "dumbbell", profile: "user" };
 const tabLabels: Record<string, string> = { index: "Home", feed: "Feed", train: "Train", profile: "Profile" };
+const tabLabelsNl: Record<string, string> = { index: "Home", feed: "Feed", train: "Train", profile: "Profiel" };
 
 /**
  * Floating tab bar as a material: content scrolls underneath a blurred
@@ -26,6 +28,8 @@ const tabLabels: Record<string, string> = { index: "Home", feed: "Feed", train: 
  */
 export function TabBar({ state, navigation }: BottomTabBarProps) {
   const { colors, layout, radius, shadow } = useTheme();
+  const t = useT();
+  const labels = t("Profile") === "Profiel" ? tabLabelsNl : tabLabels;
   const insets = useSafeAreaInsets();
   const bottom = Math.max(insets.bottom, 12) + 10;
   const [inner, setInner] = useState(0);
@@ -52,7 +56,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
                 key={route.key}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: on }}
-                accessibilityLabel={tabLabels[route.name]}
+                accessibilityLabel={labels[route.name]}
                 scaleTo={0.94}
                 wrapperStyle={{ flex: 1 }}
                 onPress={() => {
@@ -63,7 +67,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
               >
                 <Icon name={name} size={22} color={on ? colors.text.primary : colors.text.tertiary} strokeWidth={on ? 2 : 1.7} />
                 <Txt variant="labelS" tone={on ? "primary" : "tertiary"}>
-                  {tabLabels[route.name] ?? route.name}
+                  {labels[route.name] ?? route.name}
                 </Txt>
               </Press>
             );
@@ -78,6 +82,7 @@ function RunningStrip() {
   const { colors, layout, radius, shadow } = useTheme();
   const router = useRouter();
   const { session, rest, adjustRest, skipRest, lastDiscarded, undoDiscard } = useWorkout();
+  const t = useT();
   const [, tick] = useState(0);
   const running = !!session && !session.finishedAt;
   const enter = useSharedValue(0);
@@ -93,12 +98,12 @@ function RunningStrip() {
     return (
       <View style={[{ marginHorizontal: layout.tabBarInset, marginBottom: 8, borderRadius: radius.pill, backgroundColor: colors.bg.raised, flexDirection: "row", alignItems: "center", paddingVertical: 10, paddingLeft: 16, paddingRight: 8, gap: 12 }, shadow.floating]}>
         <View style={{ flex: 1, gap: 1 }}>
-          <Txt variant="labelL">Session discarded</Txt>
+          <Txt variant="labelL">{t("Session discarded")}</Txt>
           <Txt variant="labelS" tone="tertiary" numberOfLines={1}>
-            {lastDiscarded.planName} · nothing was saved
+            {t("{plan}, nothing was saved", { plan: lastDiscarded.planName })}
           </Txt>
         </View>
-        <StripPill label="Undo" accent onPress={undoDiscard} />
+        <StripPill label={t("Undo")} accent onPress={undoDiscard} />
       </View>
     );
   }
@@ -107,14 +112,14 @@ function RunningStrip() {
   const resting = !!rest;
   return (
     <Animated.View style={[style, { marginHorizontal: layout.tabBarInset, marginBottom: 8, borderRadius: radius.pill, backgroundColor: resting ? colors.bg.raised : colors.accent.ember, flexDirection: "row", alignItems: "center", paddingRight: 8 }, shadow.floating]}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Return to your running session" onPress={() => router.push("/workout/active")} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingLeft: 16, paddingRight: 8, opacity: pressed ? 0.8 : 1 })}>
+      <Pressable accessibilityRole="button" accessibilityLabel={t("Return to your running session")} onPress={() => router.push("/workout/active")} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingLeft: 16, paddingRight: 8, opacity: pressed ? 0.8 : 1 })}>
         <Pulse color={resting ? colors.accent.ember : colors.accent.on} />
         <View style={{ flex: 1, gap: 1 }}>
           <Txt variant="labelL" style={{ color: resting ? colors.text.primary : colors.accent.on }} numberOfLines={1}>
-            {resting ? `Rest ${fmtTime(rest.left)}` : `${session.planName} · ${current?.name ?? "Add an exercise"}`}
+            {resting ? t("Rest {time}", { time: fmtTime(rest.left) }) : `${session.planName}, ${current?.name ?? t("Add exercise")}`}
           </Txt>
           <Txt variant="labelS" style={{ color: resting ? colors.text.tertiary : colors.accent.on, opacity: resting ? 1 : 0.8 }} numberOfLines={1}>
-            {resting ? `${rest.nextLabel} · ${stats.elapsed} elapsed` : `${stats.setsDone} of ${stats.setsTotal} sets`}
+            {resting ? t("{label}, {time} elapsed", { label: rest.nextLabel, time: stats.elapsed }) : t("{n} of {m} sets", { n: stats.setsDone, m: stats.setsTotal })}
           </Txt>
         </View>
         {resting ? null : (
@@ -127,7 +132,7 @@ function RunningStrip() {
         <View style={{ flexDirection: "row", gap: 6 }}>
           <StripPill label="−15" onPress={() => adjustRest(-15)} />
           <StripPill label="+15" onPress={() => adjustRest(15)} />
-          <StripPill label="Skip" accent onPress={skipRest} />
+          <StripPill label={t("Skip")} accent onPress={skipRest} />
         </View>
       ) : (
         <Icon name="chevronRight" size={16} color={colors.accent.on} strokeWidth={2.2} />

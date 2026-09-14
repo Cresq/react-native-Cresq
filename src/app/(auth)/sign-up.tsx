@@ -5,6 +5,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useAuth } from "@/store/auth";
 import { MIN_AGE } from "@/db/types";
+import { useT } from "@/i18n";
 import { AuthLayout } from "@/components/AuthLayout";
 import { Txt } from "@/components/ui/Text";
 import { Field } from "@/components/ui/Field";
@@ -18,10 +19,10 @@ import { Row } from "@/components/ui/Screen";
  * timestamps of both go into the document with the account.
  */
 export default function SignUp() {
-  const { colors } = useTheme();
   const { signIn } = useAuth();
   const { update } = useDb();
   const router = useRouter();
+  const t = useT();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,35 +43,35 @@ export default function SignUp() {
   };
 
   return (
-    <AuthLayout title="Create your account" subtitle="Your log, records and photos stay yours." footerCopy="Already have an account?" footerAction="Sign in" onFooter={() => router.back()} onSocial={go}>
-      <Field label="Name" value={name} onChangeText={setName} placeholder="Your name" style={{ marginTop: 0 }} />
-      <Field label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="you@example.com" />
-      <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry placeholder="At least 8 characters" icon="lock" />
+    <AuthLayout title={t("Create your account")} subtitle={t("Your log, records and photos stay yours.")} footerCopy={t("Already have an account?")} footerAction={t("Sign in")} onFooter={() => router.back()} onSocial={go}>
+      <Field label={t("Name")} value={name} onChangeText={setName} placeholder={t("Your name")} style={{ marginTop: 0 }} />
+      <Field label={t("Email")} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="you@example.com" />
+      <Field label={t("Password")} value={password} onChangeText={setPassword} secureTextEntry placeholder={t("At least 8 characters")} icon="lock" />
 
       <View style={{ gap: 4, paddingTop: 4 }}>
-        <Check on={ageOk} onPress={() => setAgeOk(!ageOk)} label={`I am ${MIN_AGE} or older`} />
+        <Check on={ageOk} onPress={() => setAgeOk(!ageOk)} label={t("I am {n} or older", { n: MIN_AGE })} />
         <Check on={agreed} onPress={() => setAgreed(!agreed)}>
           <Txt variant="bodyS" tone="secondary">
-            I agree to the{" "}
+            {t("I agree to the")}{" "}
             <Txt variant="bodyS" tone="primary" onPress={() => router.push("/legal/terms")}>
-              Terms of Use
+              {t("Terms of Use")}
             </Txt>{" "}
-            and the{" "}
+            {t("and the")}{" "}
             <Txt variant="bodyS" tone="primary" onPress={() => router.push("/legal/privacy")}>
-              Privacy Policy
+              {t("Privacy Policy")}
             </Txt>
           </Txt>
         </Check>
         {nudge && !ready ? (
           <Txt variant="labelS" tone="warning" style={{ paddingLeft: 34, paddingTop: 2 }}>
-            Tick both boxes to continue.
+            {t("Tick both boxes to continue.")}
           </Txt>
         ) : null}
       </View>
 
-      <Button label="Create account" onPress={go} style={{ marginTop: 6, opacity: ready ? 1 : 0.6 }} />
+      <Button label={t("Create account")} onPress={go} style={{ marginTop: 6, opacity: ready ? 1 : 0.6 }} />
       <Txt variant="labelS" tone="tertiary" align="center">
-        We store nothing about you until you create the account.
+        {t("We store nothing about you until you create the account.")}
       </Txt>
     </AuthLayout>
   );

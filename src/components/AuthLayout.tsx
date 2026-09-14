@@ -7,6 +7,7 @@ import { Lockup } from "./Brand";
 import { Txt } from "./ui/Text";
 import { Button } from "./ui/Button";
 import { BrandLogo } from "./ui/Icon";
+import { useT } from "@/i18n";
 
 /**
  * One layout for Sign in and Sign up so both screens share exact positions.
@@ -21,6 +22,7 @@ const OPTICAL_NUDGE = 3;
 
 export function AuthLayout({ title, subtitle, children, footerCopy, footerAction, onFooter, onSocial }: PropsWithChildren<{ title: string; subtitle: string; footerCopy: string; footerAction: string; onFooter: () => void; onSocial: () => void }>) {
   const insets = useSafeAreaInsets();
+  const t = useT();
   return (
     <Screen contentStyle={{ gap: 0, flexGrow: 1, paddingTop: insets.top + 36 }}>
       <View style={{ alignItems: "center", paddingLeft: OPTICAL_NUDGE }}>
@@ -38,8 +40,8 @@ export function AuthLayout({ title, subtitle, children, footerCopy, footerAction
 
       <View style={{ gap: 10, paddingTop: 28 }}>
         <OrDivider />
-        <Button label="Continue with Apple" variant="secondary" size="M" leading={<BrandLogo brand="apple" size={16} />} onPress={onSocial} />
-        <Button label="Continue with Google" variant="secondary" size="M" leading={<BrandLogo brand="google" size={16} />} onPress={onSocial} />
+        <Button label={t("Continue with Apple")} variant="secondary" size="M" leading={<BrandLogo brand="apple" size={16} />} onPress={onSocial} />
+        <Button label={t("Continue with Google")} variant="secondary" size="M" leading={<BrandLogo brand="google" size={16} />} onPress={onSocial} />
       </View>
 
       <View style={{ flex: 1 }} />
@@ -57,11 +59,12 @@ export function AuthLayout({ title, subtitle, children, footerCopy, footerAction
 
 function OrDivider() {
   const { colors } = useTheme();
+  const t = useT();
   return (
     <Row gap={12} style={{ paddingVertical: 6 }}>
       <View style={{ flex: 1, height: 1, backgroundColor: colors.border.subtle }} />
       <Txt variant="labelS" tone="tertiary">
-        or
+        {t("or")}
       </Txt>
       <View style={{ flex: 1, height: 1, backgroundColor: colors.border.subtle }} />
     </Row>

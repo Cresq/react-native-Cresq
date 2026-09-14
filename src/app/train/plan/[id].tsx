@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { fontFamily } from "../../../../constants/theme";
+import { useT } from "@/i18n";
 
 const typeLabel = (t: SetType, working: number) => (t === "warmup" ? "W" : t === "drop" ? "D" : t === "failure" ? "F" : String(working));
 
@@ -28,6 +29,7 @@ const typeLabel = (t: SetType, working: number) => (t === "warmup" ? "W" : t ===
 export default function PlanEditor() {
   const { colors, radius } = useTheme();
   const router = useRouter();
+  const t = useT();
   const { db, update } = useDb();
   const { session, start } = useWorkout();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -38,9 +40,9 @@ export default function PlanEditor() {
   if (!plan) {
     return (
       <Screen>
-        <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title="Workout" />
+        <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Workout")} />
         <Txt variant="bodyM" tone="secondary">
-          This workout no longer exists.
+          {t("This workout no longer exists.")}
         </Txt>
       </Screen>
     );
@@ -77,18 +79,18 @@ export default function PlanEditor() {
   const inputStyle = { width: "100%" as const, textAlign: "center" as const, color: colors.text.primary, fontFamily: fontFamily.displaySemi, fontSize: 18, paddingVertical: 0 };
 
   return (
-    <Screen bottom={90} footer={<Button label={session && !session.finishedAt ? "Continue session" : "Start this workout"} iconRight="arrowRight" onPress={begin} disabled={plan.exercises.length === 0} />}>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title="Workout" subtitle={`${plan.exercises.length} exercises · ${estimateMinutes(plan)} min`} right={<IconButton name="trash" onPress={() => setSheet({ kind: "delete" })} accessibilityLabel="Delete workout" />} />
+    <Screen bottom={90} footer={<Button label={session && !session.finishedAt ? t("Continue session") : t("Start this workout")} iconRight="arrowRight" onPress={begin} disabled={plan.exercises.length === 0} />}>
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Workout")} subtitle={`${t("{n} exercises", { n: plan.exercises.length })}, ${t("{n} min", { n: estimateMinutes(plan) })}`} right={<IconButton name="trash" onPress={() => setSheet({ kind: "delete" })} accessibilityLabel={t("Delete workout")} />} />
 
       <View style={{ gap: 10 }}>
-        <Field label="Name" value={plan.name} onChangeText={(t) => patch((p) => ({ ...p, name: t }))} placeholder="Push day" />
-        <Field label="Focus" value={plan.focus} onChangeText={(t) => patch((p) => ({ ...p, focus: t }))} placeholder="Chest, shoulders, triceps" />
+        <Field label={t("Name")} value={plan.name} onChangeText={(v) => patch((p) => ({ ...p, name: v }))} placeholder={t("Push day")} />
+        <Field label={t("Focus")} value={plan.focus} onChangeText={(v) => patch((p) => ({ ...p, focus: v }))} placeholder={t("Chest, shoulders, triceps")} />
       </View>
 
-      <Section title="Exercises" action="Add" actionIcon="addPlus" onAction={() => router.push(`/exercises?plan=${plan.id}`)} gap={8}>
+      <Section title={t("Exercises")} action={t("Add")} actionIcon="addPlus" onAction={() => router.push(`/exercises?plan=${plan.id}`)} gap={8}>
         {plan.exercises.length === 0 ? (
           <Txt variant="bodyM" tone="secondary" style={{ paddingVertical: 8 }}>
-            Add exercises from the library, then tap one to set its sets, weight and reps.
+            {t("Add exercises from the library, then tap one to set its sets, weight and reps.")}
           </Txt>
         ) : null}
         {plan.exercises.map((e, i) => {
@@ -108,19 +110,19 @@ export default function PlanEditor() {
                     <Txt variant="labelL">{name(e)}</Txt>
                     {e.supersetGroup ? (
                       <Txt variant="labelS" tone="tertiary">
-                        superset {e.supersetGroup}
+                        {t("superset {g}", { g: e.supersetGroup })}
                       </Txt>
                     ) : null}
                   </Row>
                   <Txt variant="bodyS" tone="tertiary">
-                    {sets.length} set{sets.length === 1 ? "" : "s"}
-                    {e.kg ? ` · ${e.kg} kg × ${e.reps}` : ` · ${e.reps} reps, bodyweight`} · rest {fmtTime(e.restSeconds)}
+                    {t(sets.length === 1 ? "{n} set" : "{n} sets", { n: sets.length })}
+                    {e.kg ? `, ${e.kg} kg × ${e.reps}` : `, ${t("{n} reps", { n: e.reps })}`}, {t("{time} rest", { time: fmtTime(e.restSeconds) })}
                   </Txt>
                 </Pressable>
-                <Pressable accessibilityRole="button" accessibilityLabel="Options" hitSlop={10} onPress={() => setSheet({ kind: "options", index: i })}>
+                <Pressable accessibilityRole="button" accessibilityLabel={t("Options")} hitSlop={10} onPress={() => setSheet({ kind: "options", index: i })}>
                   <Icon name="moreHorizontal" size={18} color={colors.text.tertiary} />
                 </Pressable>
-                <Pressable accessibilityRole="button" accessibilityLabel={isOpen ? "Collapse" : "Expand"} hitSlop={10} onPress={() => setOpen(isOpen ? null : i)}>
+                <Pressable accessibilityRole="button" accessibilityLabel={isOpen ? t("Collapse") : t("Expand")} hitSlop={10} onPress={() => setOpen(isOpen ? null : i)}>
                   <Icon name={isOpen ? "chevronDown" : "chevronRight"} size={18} color={colors.text.tertiary} strokeWidth={2} />
                 </Pressable>
               </Row>
@@ -129,13 +131,13 @@ export default function PlanEditor() {
                 <View style={{ gap: 4, paddingTop: 12 }}>
                   <Row gap={8} style={{ paddingHorizontal: 6, paddingBottom: 4 }}>
                     <Txt variant="labelS" tone="tertiary" style={{ width: 28 }}>
-                      Set
+                      {t("Set")}
                     </Txt>
                     <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} align="center">
                       kg
                     </Txt>
                     <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} align="center">
-                      Reps
+                      {t("Reps")}
                     </Txt>
                     <View style={{ width: 36 }} />
                   </Row>
@@ -143,18 +145,18 @@ export default function PlanEditor() {
                     if (s.type === "working") working++;
                     return (
                       <View key={si} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4, paddingHorizontal: 6, borderRadius: radius.setRow }}>
-                        <Pressable accessibilityRole="button" accessibilityLabel="Set type" hitSlop={6} onPress={() => setSheet({ kind: "type", index: i, set: si })} style={{ width: 28 }}>
+                        <Pressable accessibilityRole="button" accessibilityLabel={t("Set type")} hitSlop={6} onPress={() => setSheet({ kind: "type", index: i, set: si })} style={{ width: 28 }}>
                           <Txt variant="labelL" tone={s.type === "warmup" ? "tertiary" : "primary"}>
                             {typeLabel(s.type, working)}
                           </Txt>
                         </Pressable>
                         <View style={{ flex: 1, height: 40, borderRadius: radius.input, backgroundColor: colors.bg.raised, justifyContent: "center" }}>
-                          <TextInput value={String(s.kg)} onChangeText={(t) => setSets(i, sets.map((x, k) => (k === si ? { ...x, kg: Number(t.replace(",", ".")) || 0 } : x)))} keyboardType="decimal-pad" selectTextOnFocus style={inputStyle} accessibilityLabel={`Set ${si + 1} weight`} />
+                          <TextInput value={String(s.kg)} onChangeText={(v) => setSets(i, sets.map((x, k) => (k === si ? { ...x, kg: Number(v.replace(",", ".")) || 0 } : x)))} keyboardType="decimal-pad" selectTextOnFocus style={inputStyle} accessibilityLabel={t("Set {n} weight", { n: si + 1 })} />
                         </View>
                         <View style={{ flex: 1, height: 40, borderRadius: radius.input, backgroundColor: colors.bg.raised, justifyContent: "center" }}>
-                          <TextInput value={String(s.reps)} onChangeText={(t) => setSets(i, sets.map((x, k) => (k === si ? { ...x, reps: Number(t) || 0 } : x)))} keyboardType="number-pad" selectTextOnFocus style={inputStyle} accessibilityLabel={`Set ${si + 1} reps`} />
+                          <TextInput value={String(s.reps)} onChangeText={(v) => setSets(i, sets.map((x, k) => (k === si ? { ...x, reps: Number(v) || 0 } : x)))} keyboardType="number-pad" selectTextOnFocus style={inputStyle} accessibilityLabel={t("Set {n} reps", { n: si + 1 })} />
                         </View>
-                        <Pressable accessibilityRole="button" accessibilityLabel="Remove set" hitSlop={6} disabled={sets.length === 1} onPress={() => setSets(i, sets.filter((_, k) => k !== si))} style={{ width: 36, height: 40, alignItems: "center", justifyContent: "center", opacity: sets.length === 1 ? 0.3 : 1 }}>
+                        <Pressable accessibilityRole="button" accessibilityLabel={t("Remove set")} hitSlop={6} disabled={sets.length === 1} onPress={() => setSets(i, sets.filter((_, k) => k !== si))} style={{ width: 36, height: 40, alignItems: "center", justifyContent: "center", opacity: sets.length === 1 ? 0.3 : 1 }}>
                           <Icon name="close" size={16} color={colors.text.tertiary} strokeWidth={2} />
                         </Pressable>
                       </View>
@@ -164,12 +166,12 @@ export default function PlanEditor() {
                     <Pressable accessibilityRole="button" onPress={() => setSets(i, [...sets, { ...(sets[sets.length - 1] ?? { kg: e.kg, reps: e.reps }), type: "working" }])} hitSlop={6} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6 }}>
                       <Icon name="addPlus" size={14} color={colors.text.secondary} strokeWidth={2.2} />
                       <Txt variant="labelM" tone="secondary">
-                        Add set
+                        {t("Add set")}
                       </Txt>
                     </Pressable>
-                    <Pressable accessibilityRole="button" accessibilityLabel="Rest between sets" onPress={() => setSheet({ kind: "rest", index: i })} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingLeft: 10, paddingRight: 8, height: 32, borderRadius: radius.pill, backgroundColor: colors.bg.raised }}>
+                    <Pressable accessibilityRole="button" accessibilityLabel={t("Rest between sets")} onPress={() => setSheet({ kind: "rest", index: i })} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingLeft: 10, paddingRight: 8, height: 32, borderRadius: radius.pill, backgroundColor: colors.bg.raised }}>
                       <Icon name="timer" size={13} color={colors.text.secondary} strokeWidth={1.9} />
-                      <Txt variant="labelS">{fmtTime(e.restSeconds)} rest</Txt>
+                      <Txt variant="labelS">{t("{time} rest", { time: fmtTime(e.restSeconds) })}</Txt>
                       <Icon name="chevronDown" size={12} color={colors.text.tertiary} strokeWidth={2.2} />
                     </Pressable>
                   </Row>
@@ -182,7 +184,7 @@ export default function PlanEditor() {
           <Pressable accessibilityRole="button" onPress={() => router.push(`/exercises?plan=${plan.id}`)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingHorizontal: 14 }}>
             <Icon name="addPlus" size={16} color={colors.text.secondary} strokeWidth={2} />
             <Txt variant="labelM" tone="secondary">
-              Add exercise
+              {t("Add exercise")}
             </Txt>
           </Pressable>
         ) : null}
@@ -191,15 +193,15 @@ export default function PlanEditor() {
       <BottomSheet visible={sheet?.kind === "options"} onClose={() => setSheet(null)} title={sheet?.kind === "options" ? name(plan.exercises[sheet.index]) : ""}>
         {sheet?.kind === "options" ? (
           <>
-            <SheetOption icon="dragVertical" label="Move up" onPress={() => { move(sheet.index, -1); setSheet(null); }} />
-            <SheetOption icon="dragVertical" label="Move down" onPress={() => { move(sheet.index, 1); setSheet(null); }} />
-            <SheetOption icon="link" label={plan.exercises[sheet.index].supersetGroup ? "Remove from superset" : "Superset with next"} sub="No rest between the two" onPress={() => { const cur = plan.exercises[sheet.index]; const g = cur.supersetGroup ? undefined : String.fromCharCode(65 + sheet.index); patchEx(sheet.index, (e) => ({ ...e, supersetGroup: g })); if (sheet.index + 1 < plan.exercises.length) patchEx(sheet.index + 1, (e) => ({ ...e, supersetGroup: g })); setSheet(null); }} />
-            <SheetOption icon="trash" label="Remove from workout" danger onPress={() => { remove(sheet.index); setSheet(null); }} />
+            <SheetOption icon="dragVertical" label={t("Move up")} onPress={() => { move(sheet.index, -1); setSheet(null); }} />
+            <SheetOption icon="dragVertical" label={t("Move down")} onPress={() => { move(sheet.index, 1); setSheet(null); }} />
+            <SheetOption icon="link" label={plan.exercises[sheet.index].supersetGroup ? t("Remove from superset") : t("Superset with next")} sub={t("No rest between the two")} onPress={() => { const cur = plan.exercises[sheet.index]; const g = cur.supersetGroup ? undefined : String.fromCharCode(65 + sheet.index); patchEx(sheet.index, (e) => ({ ...e, supersetGroup: g })); if (sheet.index + 1 < plan.exercises.length) patchEx(sheet.index + 1, (e) => ({ ...e, supersetGroup: g })); setSheet(null); }} />
+            <SheetOption icon="trash" label={t("Remove from workout")} danger onPress={() => { remove(sheet.index); setSheet(null); }} />
           </>
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={sheet?.kind === "type"} onClose={() => setSheet(null)} title={sheet?.kind === "type" ? `Set ${sheet.set + 1}` : ""} subtitle={sheet?.kind === "type" ? name(plan.exercises[sheet.index]) : undefined}>
+      <BottomSheet visible={sheet?.kind === "type"} onClose={() => setSheet(null)} title={sheet?.kind === "type" ? t("Set {n}", { n: sheet.set + 1 }) : ""} subtitle={sheet?.kind === "type" ? name(plan.exercises[sheet.index]) : undefined}>
         {sheet?.kind === "type" ? (
           <>
             {(
@@ -210,13 +212,13 @@ export default function PlanEditor() {
                 ["failure", "star", "Failure set", "Reps until you can't do another"],
               ] as const
             ).map(([type, icon, label, sub]) => (
-              <SheetOption key={type} icon={icon} label={label} sub={sub} selected={plannedSets(plan.exercises[sheet.index])[sheet.set]?.type === type} onPress={() => { const list = plannedSets(plan.exercises[sheet.index]).map((s, k) => (k === sheet.set ? { ...s, type: type as SetType } : s)); setSets(sheet.index, list); setSheet(null); }} />
+              <SheetOption key={type} icon={icon} label={t(label)} sub={t(sub)} selected={plannedSets(plan.exercises[sheet.index])[sheet.set]?.type === type} onPress={() => { const list = plannedSets(plan.exercises[sheet.index]).map((s, k) => (k === sheet.set ? { ...s, type: type as SetType } : s)); setSets(sheet.index, list); setSheet(null); }} />
             ))}
           </>
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={sheet?.kind === "rest"} onClose={() => setSheet(null)} title="Rest between sets" subtitle={sheet?.kind === "rest" ? name(plan.exercises[sheet.index]) : undefined}>
+      <BottomSheet visible={sheet?.kind === "rest"} onClose={() => setSheet(null)} title={t("Rest between sets")} subtitle={sheet?.kind === "rest" ? name(plan.exercises[sheet.index]) : undefined}>
         {sheet?.kind === "rest" ? (
           <Row gap={8} style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
             {[60, 90, 120, 150, 180].map((s) => (
@@ -226,9 +228,9 @@ export default function PlanEditor() {
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={sheet?.kind === "delete"} onClose={() => setSheet(null)} title="Delete this workout?" subtitle="Sessions you already logged with it stay in your history.">
+      <BottomSheet visible={sheet?.kind === "delete"} onClose={() => setSheet(null)} title={t("Delete this workout?")} subtitle={t("Sessions you already logged with it stay in your history.")}>
         <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
-          <Button label="Delete workout" variant="danger" size="M" onPress={deletePlan} />
+          <Button label={t("Delete workout")} variant="danger" size="M" onPress={deletePlan} />
         </View>
       </BottomSheet>
     </Screen>

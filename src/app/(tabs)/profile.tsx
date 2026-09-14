@@ -7,6 +7,7 @@ import { useSocial } from "@/store/social";
 import { finished, liftTrend, newRecords, shortDate } from "@/db/derive";
 import { DEFAULT_FAVOURITES } from "@/db/types";
 import { photos } from "@/data/mock";
+import { useT } from "@/i18n";
 import { Screen, Row } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
@@ -26,6 +27,7 @@ const TABS = ["workouts", "photos", "lifts"];
 export default function Profile() {
   const { colors, layout } = useTheme();
   const router = useRouter();
+  const t = useT();
   const { db, update } = useDb();
   const { followers, following } = useSocial();
   const { width } = useWindowDimensions();
@@ -59,9 +61,9 @@ export default function Profile() {
     <Screen tabs>
       <Row gap={10}>
         <Txt variant="displayXL" style={{ flex: 1 }}>
-          Profile
+          {t("Profile")}
         </Txt>
-        <IconButton name="settings" onPress={() => router.push("/settings")} accessibilityLabel="Settings" />
+        <IconButton name="settings" onPress={() => router.push("/settings")} accessibilityLabel={t("Settings")} />
       </Row>
 
       <Row gap={16}>
@@ -70,7 +72,7 @@ export default function Profile() {
           <Txt variant="displayL">{db.profile.name}</Txt>
           <Txt variant="bodyS" tone="secondary">
             {db.profile.handle}
-            {db.profile.showCity === false ? "" : ` · ${db.profile.city}`}
+            {db.profile.showCity === false ? "" : `, ${db.profile.city}`}
           </Txt>
           {db.profile.bio ? (
             <Txt variant="bodyS" tone="secondary">
@@ -81,9 +83,9 @@ export default function Profile() {
       </Row>
 
       <Row gap={0} align="stretch">
-        <Count label="Sessions" value={done.length} />
-        <Count label="Followers" value={followers.length} onPress={() => router.push("/followers?tab=followers")} />
-        <Count label="Following" value={following.length} onPress={() => router.push("/followers?tab=following")} />
+        <Count label={t("Sessions")} value={done.length} />
+        <Count label={t("Followers")} value={followers.length} onPress={() => router.push("/followers?tab=followers")} />
+        <Count label={t("Following")} value={following.length} onPress={() => router.push("/followers?tab=following")} />
       </Row>
 
       <View style={{ gap: 12 }}>
@@ -91,16 +93,16 @@ export default function Profile() {
           value={tab}
           onChange={setTab}
           tabs={[
-            { key: "workouts", label: "Workouts", count: done.length },
-            { key: "photos", label: "Photos", count: withPhoto.length },
-            { key: "lifts", label: "Lifts", count: lifts.length },
+            { key: "workouts", label: t("Workouts"), count: done.length },
+            { key: "photos", label: t("Photos"), count: withPhoto.length },
+            { key: "lifts", label: t("Lifts"), count: lifts.length },
           ]}
         />
 
         {tab === "workouts" ? (
           workouts.length === 0 ? (
             <Txt variant="bodyM" tone="secondary" style={{ paddingTop: 4 }}>
-              Your finished sessions will show up here, one square each.
+              {t("Your finished sessions will show up here, one square each.")}
             </Txt>
           ) : (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
@@ -114,7 +116,7 @@ export default function Profile() {
         {tab === "photos" ? (
           withPhoto.length === 0 ? (
             <Txt variant="bodyM" tone="secondary" style={{ paddingTop: 4 }}>
-              Photos you add to a session show up here.
+              {t("Photos you add to a session show up here.")}
             </Txt>
           ) : (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
@@ -137,7 +139,7 @@ export default function Profile() {
                     <View style={{ flex: 1, gap: 2 }}>
                       <Txt variant="labelL">{l.ex.name}</Txt>
                       <Txt variant="bodyS" tone="tertiary">
-                        {l.last ? `${l.points.length} session${l.points.length === 1 ? "" : "s"} · last ${shortDate(l.last)}` : "Not logged yet"}
+                        {l.last ? t(l.points.length === 1 ? "{n} session, last {date}" : "{n} sessions, last {date}", { n: l.points.length, date: shortDate(l.last) }) : t("Not logged yet")}
                       </Txt>
                     </View>
                     {l.current !== null ? (
@@ -159,7 +161,7 @@ export default function Profile() {
                       </View>
                     ) : null}
                   </Pressable>
-                  <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${l.ex.name} from your lifts`} hitSlop={10} onPress={() => unfavourite(l.ex.id)}>
+                  <Pressable accessibilityRole="button" accessibilityLabel={t("Remove {name} from your lifts", { name: l.ex.name })} hitSlop={10} onPress={() => unfavourite(l.ex.id)}>
                     <Icon name="star" size={20} color={colors.pr.gold} fill={colors.pr.gold} strokeWidth={1.8} />
                   </Pressable>
                 </Row>
@@ -169,7 +171,7 @@ export default function Profile() {
             <Pressable accessibilityRole="button" onPress={() => router.push("/exercises?favourite=1")} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
               <Icon name="addPlus" size={18} color={colors.text.secondary} strokeWidth={2} />
               <Txt variant="labelL" tone="secondary" style={{ flex: 1 }}>
-                Add a lift
+                {t("Add a lift")}
               </Txt>
             </Pressable>
           </View>

@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/theme/ThemeProvider";
 import { DbProvider } from "@/db/DbProvider";
 import { WorkoutProvider } from "@/store/workout";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { LocaleSync } from "@/i18n";
 import { darkColors } from "../../constants/theme";
 
 SplashScreen.preventAutoHideAsync();
@@ -16,7 +17,7 @@ SplashScreen.preventAutoHideAsync();
  *   /(auth)/sign-in       Sign in
  *   /(auth)/sign-up       Sign up → /onboarding
  *   /onboarding           Goal, experience, days, limitations (feeds plans and AI later)
- *   /(tabs)               Home · Feed · Train · Profile
+ *   /(tabs)               Home, Feed, Train, Profile
  *   /notifications        From the bell on Home and Feed
  *   /train/split          Split editor (order of training days)
  *   /train/plan/[id]      Plan detail and editor
@@ -30,7 +31,7 @@ SplashScreen.preventAutoHideAsync();
  *   /settings             Units, language, sample data, reset, sign out
  *   /settings/devices     Connected devices and Health permissions
  *   /settings/account     Account, privacy switches, consent, export, delete
- *   /legal/[doc]          privacy · terms · cookies · refunds · licences
+ *   /legal/[doc]          privacy, terms, cookies, refunds, licences
  *   /search               Find people (from Feed)
  *   /followers            ?user=me|ID&tab=followers|following
  *   /user/[id]            Someone else's profile
@@ -57,6 +58,7 @@ export default function RootLayout() {
     <ThemeProvider scheme="dark">
       <DbProvider>
         <WorkoutProvider>
+          <LocaleSync />
           <StatusBar style="light" />
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: darkColors.bg.ground }, animation: "slide_from_right", animationDuration: 320, gestureEnabled: true, fullScreenGestureEnabled: true }}>
             <Stack.Screen name="index" />
@@ -74,6 +76,7 @@ export default function RootLayout() {
             <Stack.Screen name="progress/[lift]" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="workout/[id]" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="user/[id]" options={{ animation: "slide_from_right" }} />
+            <Stack.Screen name="live/[id]" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="search" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="followers" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="settings/account" options={{ animation: "slide_from_right" }} />

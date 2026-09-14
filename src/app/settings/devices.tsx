@@ -12,10 +12,12 @@ import { Chip } from "@/components/ui/Chip";
 import { Toggle } from "@/components/ui/Toggle";
 import { Button } from "@/components/ui/Button";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import { useT } from "@/i18n";
 
 export default function Devices() {
   const { colors } = useTheme();
   const router = useRouter();
+  const t = useT();
   const [healthOn, setHealthOn] = useState(true);
   const [sheet, setSheet] = useState(false);
   const [coming, setComing] = useState<string | null>(null);
@@ -23,18 +25,18 @@ export default function Devices() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title="Connected devices" />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Connected devices")} />
       <Txt variant="bodyM" tone="secondary">
-        CresQ reads heart rate, energy and recovery from the devices you connect, and writes your sessions back. Everything here is a switch you can turn off.
+        {t("CresQ reads heart rate, energy and recovery from the devices you connect, and writes your sessions back. Everything here is a switch you can turn off.")}
       </Txt>
 
       <Card padding={16} gap={0} style={{ paddingVertical: 4 }}>
         {devices.connected.map((d, i) => (
           <View key={d.key}>
             {i > 0 ? <Divider /> : null}
-            <DeviceRow icon={d.icon} iconColor={d.icon === "heart" ? colors.status.danger : colors.icon.strong} name={d.name} sub={d.sub}>
+            <DeviceRow icon={d.icon} iconColor={d.icon === "heart" ? colors.status.danger : colors.icon.strong} name={d.name} sub={t(d.sub)}>
               {d.synced ? (
-                <Chip label="Synced" icon="circleCheck" tone="success" size="S" />
+                <Chip label={t("Synced")} icon="circleCheck" tone="success" size="S" />
               ) : (
                 <Toggle
                   value={healthOn}
@@ -49,46 +51,46 @@ export default function Devices() {
         ))}
       </Card>
 
-      <Section title="Available" gap={0}>
+      <Section title={t("Available")} gap={0}>
         {devices.available.map((d, i) => (
           <View key={d.key}>
             {i > 0 ? <Divider /> : null}
-            <DeviceRow letter={d.letter} name={d.name} sub={d.sub}>
-              <Button label="Connect" variant="inverse" size="S" full={false} onPress={() => setComing(d.name)} />
+            <DeviceRow letter={d.letter} name={d.name} sub={t(d.sub)}>
+              <Button label={t("Connect")} variant="inverse" size="S" full={false} onPress={() => setComing(d.name)} />
             </DeviceRow>
           </View>
         ))}
       </Section>
 
       <View style={{ gap: 8 }}>
-        <Button label="Review Health permissions" variant="tertiary" size="M" onPress={() => setSheet(true)} />
+        <Button label={t("Review Health permissions")} variant="tertiary" size="M" onPress={() => setSheet(true)} />
         <Txt variant="labelS" tone="tertiary" align="center">
-          Google Health Connect appears here on Android. Brand marks are placeholders until logo licences are confirmed.
+          {t("Google Health Connect appears here on Android. Brand marks are placeholders until logo licences are confirmed.")}
         </Txt>
       </View>
 
-      <BottomSheet visible={!!coming} onClose={() => setComing(null)} title={`Connect ${coming ?? ""}`} subtitle="Connecting other apps needs the CresQ build for iPhone and Android, which is on its way. Expo Go cannot talk to other apps yet.">
+      <BottomSheet visible={!!coming} onClose={() => setComing(null)} title={t("Connect {name}", { name: coming ?? "" })} subtitle={t("Connecting other apps needs the CresQ build for iPhone and Android, which is on its way. Expo Go cannot talk to other apps yet.")}>
         <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
-          <Button label="Got it" variant="secondary" size="M" onPress={() => setComing(null)} />
+          <Button label={t("Got it")} variant="secondary" size="M" onPress={() => setComing(null)} />
         </View>
       </BottomSheet>
-      <BottomSheet visible={sheet} onClose={() => setSheet(false)} title="Connect Apple Health" subtitle="Pick what CresQ may read. Each one powers a feature; the rest stays off.">
+      <BottomSheet visible={sheet} onClose={() => setSheet(false)} title={t("Connect Apple Health")} subtitle={t("Pick what CresQ may read. Each one powers a feature; the rest stays off.")}>
         {devices.permissions.map((p, i) => (
           <View key={p.key}>
             {i > 0 ? <Divider inset={50} /> : null}
             <Row gap={14} style={{ paddingVertical: 12, paddingHorizontal: 8 }}>
               <Icon name={p.icon} size={20} color={colors.text.secondary} strokeWidth={1.8} />
               <View style={{ flex: 1, gap: 1 }}>
-                <Txt variant="labelL">{p.name}</Txt>
+                <Txt variant="labelL">{t(p.name)}</Txt>
                 <Txt variant="bodyS" tone="tertiary">
-                  {p.sub}
+                  {t(p.sub)}
                 </Txt>
               </View>
               <Toggle value={!!perms[p.key]} onChange={(v) => setPerms((s) => ({ ...s, [p.key]: v }))} />
             </Row>
           </View>
         ))}
-        <Button label="Allow selected" onPress={() => setSheet(false)} style={{ marginTop: 12 }} />
+        <Button label={t("Allow selected")} onPress={() => setSheet(false)} style={{ marginTop: 12 }} />
       </BottomSheet>
     </Screen>
   );

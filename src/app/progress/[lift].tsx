@@ -14,6 +14,7 @@ import { Tabs } from "@/components/ui/Tabs";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
 import { LineChart } from "@/components/LineChart";
+import { useT } from "@/i18n";
 
 const RANGES: Record<string, number> = { "1m": 30, "3m": 91, "6m": 182, "1y": 365, all: 100000 };
 
@@ -24,6 +25,7 @@ const RANGES: Record<string, number> = { "1m": 30, "3m": 91, "6m": 182, "1y": 36
 export default function LiftDetail() {
   const { colors } = useTheme();
   const router = useRouter();
+  const t = useT();
   const { db } = useDb();
   const { lift: id } = useLocalSearchParams<{ lift: string }>();
   const exercise = db.exercises.find((e) => e.id === id) ?? db.exercises[0];
@@ -50,20 +52,20 @@ export default function LiftDetail() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title={exercise.name} subtitle={`${exercise.muscles} · ${exercise.equipment}`} right={<IconButton name="share" onPress={() => Share.share({ message: `${exercise.name}: estimated 1RM ${current} kg, ${delta >= 0 ? "+" : ""}${delta} kg over ${shown.length} sessions. Logged with CresQ.` })} accessibilityLabel="Share" />} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={exercise.name} subtitle={`${exercise.muscles}, ${exercise.equipment}`} right={<IconButton name="share" onPress={() => Share.share({ message: `${exercise.name}: ${t("Estimated 1RM")} ${current} kg, ${delta >= 0 ? "+" : ""}${delta} kg. CresQ.` })} accessibilityLabel={t("Share")} />} />
 
       {all.length === 0 ? (
         <View style={{ gap: 6, paddingTop: 8 }}>
-          <Txt variant="displayL">No sessions yet</Txt>
+          <Txt variant="displayL">{t("No sessions yet")}</Txt>
           <Txt variant="bodyM" tone="secondary">
-            Log {exercise.name.toLowerCase()} in a session and the trend, records and forecast appear here.
+            {t("Log {name} in a session and the trend, records and forecast appear here.", { name: exercise.name.toLowerCase() })}
           </Txt>
         </View>
       ) : (
         <>
           <View style={{ gap: 4, paddingTop: 8 }}>
             <Txt variant="labelM" tone="tertiary">
-              Estimated one-rep max
+              {t("Estimated one-rep max")}
             </Txt>
             <Row gap={6} align="baseline">
               <Txt variant="numberXL" tabular>
@@ -80,7 +82,7 @@ export default function LiftDetail() {
                 {delta} kg
               </Txt>
               <Txt variant="bodyS" tone="secondary">
-                over {shown.length} sessions in {weeks} week{weeks === 1 ? "" : "s"}
+                {t(weeks === 1 ? "over {n} sessions in {w} week" : "over {n} sessions in {w} weeks", { n: shown.length, w: weeks })}
               </Txt>
             </Row>
           </View>
@@ -90,9 +92,9 @@ export default function LiftDetail() {
               value={tab}
               onChange={setTab}
               tabs={[
-                { key: "trend", label: "Trend" },
-                { key: "records", label: "Records", count: bestRecords.length },
-                { key: "history", label: "History", count: history.length },
+                { key: "trend", label: t("Trend") },
+                { key: "records", label: t("Records"), count: bestRecords.length },
+                { key: "history", label: t("History"), count: history.length },
               ]}
             />
 
@@ -102,11 +104,11 @@ export default function LiftDetail() {
                   <Segmented size="M" value={range} onChange={setRange} segments={[{ key: "1m", label: "1M" }, { key: "3m", label: "3M" }, { key: "6m", label: "6M" }, { key: "1y", label: "1Y" }, { key: "all", label: "All" }]} />
                   <Card padding={18} gap={12}>
                     <Row gap={14}>
-                      <Legend color={colors.accent.ember} label="Estimated 1RM" />
-                      <Legend color={colors.pr.gold} label="Record" />
-                      {fc ? <Legend color={colors.fuel.sage} label="Forecast" /> : null}
+                      <Legend color={colors.accent.ember} label={t("Estimated 1RM")} />
+                      <Legend color={colors.pr.gold} label={t("Record")} />
+                      {fc ? <Legend color={colors.fuel.sage} label={t("Forecast")} /> : null}
                     </Row>
-                    <LineChart points={shown} forecast={fc?.values} target={fc?.target} height={170} labels={[shortDate(shown[0].date), "", "", "Now", fc ? `${fc.target} kg` : ""]} scrubLabels={shown.map((p) => shortDate(p.date))} />
+                    <LineChart points={shown} forecast={fc?.values} target={fc?.target} height={170} labels={[shortDate(shown[0].date), "", "", t("Now"), fc ? `${fc.target} kg` : ""]} scrubLabels={shown.map((p) => shortDate(p.date))} />
                   </Card>
                 </View>
 
@@ -117,23 +119,23 @@ export default function LiftDetail() {
                   <View style={{ flex: 1, gap: 6 }}>
                     {fc && fc.weeksToTarget ? (
                       <>
-                        <Txt variant="displayS">{fc.target} kg is close</Txt>
+                        <Txt variant="displayS">{t("{kg} kg is close", { kg: fc.target })}</Txt>
                         <Txt variant="bodyM" tone="secondary">
-                          Your estimated max has risen about {Math.round(fc.slopePerWeek * 10) / 10} kg a week over the last {Math.min(6, all.length)} sessions. Keep the same frequency and you are likely to reach {fc.target} kg in about {fc.weeksToTarget} week{fc.weeksToTarget === 1 ? "" : "s"}.
+                          {t(fc.weeksToTarget === 1 ? "Your estimated max has risen about {kg} kg a week over the last {n} sessions. Keep the same frequency and you are likely to reach {target} kg in about {w} week." : "Your estimated max has risen about {kg} kg a week over the last {n} sessions. Keep the same frequency and you are likely to reach {target} kg in about {w} weeks.", { kg: Math.round(fc.slopePerWeek * 10) / 10, n: Math.min(6, all.length), target: fc.target, w: fc.weeksToTarget })}
                         </Txt>
                       </>
                     ) : (
                       <>
-                        <Txt variant="displayS">Holding steady</Txt>
+                        <Txt variant="displayS">{t("Holding steady")}</Txt>
                         <Txt variant="bodyM" tone="secondary">
-                          {all.length < 3 ? "Three sessions are needed before a forecast is worth showing." : "The last sessions moved less than a kilo a week. A small jump in weight or an extra rep on the top set is usually enough to get the line moving."}
+                          {all.length < 3 ? t("Three sessions are needed before a forecast is worth showing.") : t("The last sessions moved less than a kilo a week. A small jump in weight or an extra rep on the top set is usually enough to get the line moving.")}
                         </Txt>
                       </>
                     )}
                     <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setHow(true)}>
                       <Row gap={4}>
                         <Txt variant="labelM" tone="secondary">
-                          How this is calculated
+                          {t("How this is calculated")}
                         </Txt>
                         <Icon name="chevronRight" size={14} color={colors.text.secondary} strokeWidth={2} />
                       </Row>
@@ -160,7 +162,7 @@ export default function LiftDetail() {
                           </Txt>
                         </Row>
                         <Txt variant="bodyS" tone="tertiary">
-                          {i === 0 ? `Current record · ${shortDate(r.date)}` : shortDate(r.date)}
+                          {i === 0 ? t("Current record, {date}", { date: shortDate(r.date) }) : shortDate(r.date)}
                         </Txt>
                       </View>
                     </Row>
@@ -168,7 +170,7 @@ export default function LiftDetail() {
                 ))}
                 {bestRecords.length === 0 ? (
                   <Txt variant="bodyS" tone="tertiary">
-                    No weighted sets logged yet.
+                    {t("No weighted sets logged yet.")}
                   </Txt>
                 ) : null}
               </View>
@@ -181,9 +183,9 @@ export default function LiftDetail() {
                     {i > 0 ? <Divider /> : null}
                     <Row gap={14} style={{ paddingVertical: 12 }}>
                       <View style={{ flex: 1, gap: 2 }}>
-                        <Txt variant="labelL">{h.top ? `${h.top.kg ? `${h.top.kg} kg × ` : ""}${h.top.reps}` : "no working sets"}</Txt>
+                        <Txt variant="labelL">{h.top ? `${h.top.kg ? `${h.top.kg} kg × ` : ""}${h.top.reps}` : t("no working sets")}</Txt>
                         <Txt variant="bodyS" tone="tertiary">
-                          {shortDate(h.date)} · {h.planName} · {h.sets} sets · {fmtKg(h.volume)} kg
+                          {shortDate(h.date)}, {h.planName}, {t("{n} sets", { n: h.sets })}, {fmtKg(h.volume)} kg
                         </Txt>
                       </View>
                     </Row>
@@ -195,21 +197,21 @@ export default function LiftDetail() {
         </>
       )}
 
-      <BottomSheet visible={how} onClose={() => setHow(false)} title="How this is calculated" subtitle="Two simple formulas, nothing hidden.">
+      <BottomSheet visible={how} onClose={() => setHow(false)} title={t("How this is calculated")} subtitle={t("Two simple formulas, nothing hidden.")}>
         <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
           <View style={{ gap: 4 }}>
-            <Txt variant="labelL">Estimated one-rep max</Txt>
+            <Txt variant="labelL">{t("Estimated one-rep max")}</Txt>
             <Txt variant="bodyM" tone="secondary">
-              Your best working set of the session, weight × (1 + reps ÷ 30). This is the Epley formula. A set of 100 kg × 5 counts as about 117 kg.
+              {t("Your best working set of the session, weight × (1 + reps ÷ 30). This is the Epley formula. A set of 100 kg × 5 counts as about 117 kg.")}
             </Txt>
           </View>
           <View style={{ gap: 4 }}>
-            <Txt variant="labelL">Forecast</Txt>
+            <Txt variant="labelL">{t("Forecast")}</Txt>
             <Txt variant="bodyM" tone="secondary">
-              A straight line through your last six sessions. The next record is the next 5 kg step above your current estimate; the weeks are how long the line takes to get there at the same pace. It is a projection, not a promise.
+              {t("A straight line through your last six sessions. The next record is the next 5 kg step above your current estimate; the weeks are how long the line takes to get there at the same pace. It is a projection, not a promise.")}
             </Txt>
           </View>
-          <Button label="Got it" variant="secondary" size="M" onPress={() => setHow(false)} />
+          <Button label={t("Got it")} variant="secondary" size="M" onPress={() => setHow(false)} />
         </View>
       </BottomSheet>
     </Screen>

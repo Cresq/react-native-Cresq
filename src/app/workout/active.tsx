@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Pressable, TextInput, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Pressable, TextInput, View, type LayoutChangeEvent } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { FadeInDown, FadeOutDown, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import { project, rubberband, springs } from "@/motion";
@@ -9,10 +9,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
 import { fmtKg, fmtTime, sessionStats, useWorkout } from "@/store/workout";
 import type { ExerciseEntry, SetEntry, SetType } from "@/db/types";
+import { haptic } from "@/haptics";
+import { useT } from "@/i18n";
 import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
-import { Card, Divider } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
@@ -20,87 +22,91 @@ import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { Field } from "@/components/ui/Field";
 import { fontFamily } from "../../../constants/theme";
 
-import { haptic } from "@/haptics";
-
 const setLabel = (s: SetEntry, workingIndex: number) => (s.type === "warmup" ? "W" : s.type === "drop" ? "D" : s.type === "failure" ? "F" : String(workingIndex));
 
-/** One collapsed exercise row is about this tall; dragging that far moves one place. */
-const ROW_STEP = 64;
-
-type Sheet = null | { kind: "finish" } | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry } | { kind: "note"; ex: ExerciseEntry };
+type Sheet = null | { kind: "finish" } | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry } | { kind: "note"; ex: ExerciseEntry } | { kind: "superset"; ex: ExerciseEntry };
+type Slot = { id: string; y: number; h: number };
 
 /**
- * Active workout. Built for one-handed input between sets: the exercise you
- * are on is the only surface (both exercises when it is a superset), done and
- * upcoming exercises are plain rows above and below, the rest timer docks at
- * the bottom. Set rows swipe left to delete; the handle at the top-left of
- * an exercise drags it up or down the list.
+ * Active workout. Every exercise is a card you open or close; open cards stay
+ * open. The one you are on is lit. Drag the handle at the top-left and a line
+ * shows where the exercise will land. Set rows swipe left to delete; the rest
+ * timer docks at the bottom.
  */
 export default function ActiveWorkout() {
   const { colors, radius, shadow } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const t = useT();
   const w = useWorkout();
   const { session, rest } = w;
   const [, force] = useState(0);
   const [sheet, setSheet] = useState<Sheet>(null);
   const [noteText, setNoteText] = useState("");
   const [blocked, setBlocked] = useState<{ id: string; msg: string } | null>(null);
+  const [open, setOpen] = useState<string[] | null>(null);
+  const [pick, setPick] = useState<string[]>([]);
+  const [drop, setDrop] = useState<{ index: number; dragging: string } | null>(null);
+  const slots = useRef<Record<string, Slot>>({});
 
   useEffect(() => {
-    const t = setInterval(() => force((n) => n + 1), 1000);
-    return () => clearInterval(t);
+    const i = setInterval(() => force((n) => n + 1), 1000);
+    return () => clearInterval(i);
   }, []);
+
+  const current = session?.exercises[session.currentIndex];
+  // First render: the current exercise (and its superset partners) start open.
+  useEffect(() => {
+    if (open === null && session && current) setOpen(session.exercises.filter((e) => e.id === current.id || (current.supersetGroup && e.supersetGroup === current.supersetGroup)).map((e) => e.id));
+  }, [open, session, current]);
+  // A newly current exercise opens; nothing closes on its own.
+  useEffect(() => {
+    if (current && open && !open.includes(current.id)) setOpen((o) => [...(o ?? []), current.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current?.id]);
 
   if (!session) {
     return (
       <Screen>
-        <Txt variant="displayL">No session running</Txt>
-        <Button label="Back" variant="secondary" onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))} />
+        <Txt variant="displayL">{t("No session running")}</Txt>
+        <Button label={t("Back")} variant="secondary" onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))} />
       </Screen>
     );
   }
 
   const stats = sessionStats(session);
-  const current = session.exercises[session.currentIndex];
+  const leave = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)"));
   if (!current) {
     return (
       <Screen>
-        <Header left={<IconButton name="chevronDown" onPress={() => router.back()} accessibilityLabel="Minimise" />} title={session.planName} subtitle="Empty session" />
+        <Header left={<IconButton name="chevronDown" onPress={leave} accessibilityLabel={t("Minimise")} />} title={session.planName} subtitle={t("Empty session")} />
         <Txt variant="bodyM" tone="secondary">
-          Add an exercise from the library to start logging.
+          {t("Add an exercise from the library to start logging.")}
         </Txt>
-        <Button label="Add exercise" icon="addPlus" onPress={() => router.push("/exercises?session=1")} />
-        <Button label="Discard session" variant="tertiary" size="M" onPress={() => { w.discard(); router.back(); }} />
+        <Button label={t("Add exercise")} icon="addPlus" onPress={() => router.push("/exercises?session=1")} />
+        <Button label={t("Discard session")} variant="tertiary" size="M" onPress={() => { w.discard(); leave(); }} />
       </Screen>
     );
   }
 
-  const items = session.exercises.map((ex, index) => ({ ex, index }));
-  const group = current.supersetGroup ? items.filter((it) => it.ex.supersetGroup === current.supersetGroup) : [{ ex: current, index: session.currentIndex }];
-  const groupIds = new Set(group.map((g) => g.ex.id));
-  const firstIdx = group[0].index;
-  const before = items.filter((it) => it.index < firstIdx && !groupIds.has(it.ex.id));
-  const after = items.filter((it) => it.index > firstIdx && !groupIds.has(it.ex.id));
-  const upNextIndex = after[0]?.index;
   const openSets = stats.setsTotal - stats.setsDone;
+  const isOpen = (id: string) => (open ?? []).includes(id);
+  const toggle = (id: string) => setOpen((o) => ((o ?? []).includes(id) ? (o ?? []).filter((x) => x !== id) : [...(o ?? []), id]));
 
   const finish = () => {
     w.finish();
     router.replace("/workout/summary");
   };
-  /** Stops at once. The strip above the tab bar offers Undo for a few seconds. */
   const stop = () => {
     haptic("error");
     w.discard();
-    if (router.canGoBack()) router.back();
-    else router.replace("/(tabs)");
+    leave();
   };
   const complete = (ex: ExerciseEntry, s: SetEntry, i: number) => {
     const firstOpen = ex.sets.findIndex((x) => !x.done);
     if (!s.done && firstOpen !== -1 && firstOpen < i) {
       haptic("error");
-      setBlocked({ id: s.id, msg: `Finish set ${firstOpen + 1} first, sets count in order` });
+      setBlocked({ id: s.id, msg: t("Finish set {n} first, sets count in order", { n: firstOpen + 1 }) });
       setTimeout(() => setBlocked((b) => (b?.id === s.id ? null : b)), 2500);
       return;
     }
@@ -112,112 +118,113 @@ export default function ActiveWorkout() {
     setNoteText(ex.note ?? "");
     setSheet({ kind: "note", ex });
   };
-  const move = (ex: ExerciseEntry, steps: number) => {
-    if (steps) {
-      haptic("tap");
-      w.moveExercise(ex.id, steps);
-    }
+  const openSuperset = (ex: ExerciseEntry) => {
+    setPick(session.exercises.filter((e) => e.id !== ex.id && ex.supersetGroup && e.supersetGroup === ex.supersetGroup).map((e) => e.id));
+    setSheet({ kind: "superset", ex });
   };
 
-  const card = (ex: ExerciseEntry, isCurrentEx: boolean) => (
-    <ExerciseCard
-      key={ex.id}
-      ex={ex}
-      isCurrentEx={isCurrentEx}
-      blocked={blocked}
-      onMove={(steps) => move(ex, steps)}
-      onNote={() => openNote(ex)}
-      onRest={() => setSheet({ kind: "rest", ex })}
-      onMore={() => setSheet({ kind: "exercise", ex })}
-      onSetType={(s, i) => setSheet({ kind: "set", ex, set: s, index: i })}
-      onChange={(s, patch) => w.updateSet(ex.id, s.id, patch)}
-      onDone={(s, i) => complete(ex, s, i)}
-      onRemoveSet={(s) => { haptic("tap"); w.removeSet(ex.id, s.id); }}
-      onAddSet={() => w.addSet(ex.id)}
-    />
-  );
+  /** Where a card dragged by `dy` from its slot would land, by walking the measured slots. */
+  const targetIndex = (id: string, dy: number) => {
+    const order = session.exercises.map((e) => e.id);
+    const from = order.indexOf(id);
+    const mine = slots.current[id];
+    if (!mine) return from;
+    const centre = mine.y + mine.h / 2 + dy;
+    let idx = from;
+    if (dy < 0) {
+      for (let i = from - 1; i >= 0; i--) {
+        const s = slots.current[order[i]];
+        if (s && centre < s.y + s.h / 2) idx = i;
+      }
+    } else {
+      for (let i = from + 1; i < order.length; i++) {
+        const s = slots.current[order[i]];
+        if (s && centre > s.y + s.h / 2) idx = i;
+      }
+    }
+    return idx;
+  };
+  const onDragMove = (id: string, dy: number) => {
+    const idx = targetIndex(id, dy);
+    setDrop((d) => (d && d.index === idx && d.dragging === id ? d : { index: idx, dragging: id }));
+  };
+  const onDragEnd = (id: string, dy: number) => {
+    const from = session.exercises.findIndex((e) => e.id === id);
+    const to = targetIndex(id, dy);
+    setDrop(null);
+    if (to !== from) {
+      haptic("tap");
+      w.moveExercise(id, to - from);
+    }
+  };
+  const measure = (id: string) => (e: LayoutChangeEvent) => {
+    const { y, height } = e.nativeEvent.layout;
+    slots.current[id] = { id, y, h: height };
+  };
+  const dragFrom = drop ? session.exercises.findIndex((e) => e.id === drop.dragging) : -1;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg.ground }}>
       <Screen bottom={rest ? 110 : 20} contentStyle={{ gap: 20 }}>
         <Header
-          left={<IconButton name="chevronDown" onPress={() => router.back()} accessibilityLabel="Minimise" />}
+          left={<IconButton name="chevronDown" onPress={leave} accessibilityLabel={t("Minimise")} />}
           title={session.planName}
-          subtitle={`Exercise ${session.currentIndex + 1} of ${session.exercises.length}`}
+          subtitle={t("Exercise {a} of {b}", { a: session.currentIndex + 1, b: session.exercises.length })}
           right={
             <Row gap={6}>
-              <IconButton name="trash" size={34} iconSize={17} tone="danger" onPress={stop} accessibilityLabel="Stop and discard session" />
-              <Button label="Finish" variant="inverse" size="S" full={false} onPress={() => setSheet({ kind: "finish" })} />
+              <IconButton name="trash" size={34} iconSize={17} tone="danger" onPress={stop} accessibilityLabel={t("Stop and discard session")} />
+              <Button label={t("Finish")} variant="inverse" size="S" full={false} onPress={() => setSheet({ kind: "finish" })} />
             </Row>
           }
         />
 
         <Row gap={0}>
-          <Strip label="Elapsed" value={stats.elapsed} />
-          <Strip label="Volume" value={fmtKg(stats.volume)} unit="kg" />
-          <Strip label="Sets" value={String(stats.setsDone)} unit={`of ${stats.setsTotal}`} />
+          <Strip label={t("Elapsed")} value={stats.elapsed} />
+          <Strip label={t("Volume")} value={fmtKg(stats.volume)} unit="kg" />
+          <Strip label={t("Sets")} value={String(stats.setsDone)} unit={t("of {n}", { n: stats.setsTotal })} />
         </Row>
 
-        {before.length ? (
-          <View>
-            {before.map((it, i) => (
-              <View key={it.ex.id}>
-                {i > 0 ? <Divider inset={42} /> : null}
-                <CollapsedExercise ex={it.ex} index={it.index} onPress={() => w.setCurrent(it.index)} onMore={() => setSheet({ kind: "exercise", ex: it.ex })} onMove={(steps) => move(it.ex, steps)} />
-              </View>
-            ))}
-          </View>
-        ) : null}
-
-        {group.length > 1 ? (
-          <View style={{ gap: 8 }}>
-            <Row gap={6} style={{ paddingHorizontal: 4 }}>
-              <Icon name="link" size={13} color={colors.accent.ember} strokeWidth={2} />
-              <Txt variant="labelS" tone="ember">
-                Superset · alternate, no rest between
-              </Txt>
-            </Row>
-            <View style={{ gap: 8, borderLeftWidth: 2, borderLeftColor: colors.accent.ember, paddingLeft: 8, marginLeft: -10 }}>
-              {group.map((it) => card(it.ex, true))}
-            </View>
-          </View>
-        ) : (
-          card(current, true)
-        )}
-
-        <View>
-          {groupSupersets(after).map((g, gi) => (
-            <View key={g[0].ex.id}>
-              {gi > 0 ? <Divider inset={42} /> : null}
-              {g.length === 1 ? (
-                <CollapsedExercise ex={g[0].ex} index={g[0].index} upNext={g[0].index === upNextIndex} onPress={() => w.setCurrent(g[0].index)} onMore={() => setSheet({ kind: "exercise", ex: g[0].ex })} onMove={(steps) => move(g[0].ex, steps)} />
-              ) : (
-                <View style={{ borderLeftWidth: 2, borderLeftColor: colors.border.strong, paddingLeft: 12, marginLeft: 6, marginVertical: 6 }}>
-                  <Row gap={6} style={{ paddingTop: 4, paddingBottom: 2 }}>
-                    <Icon name="link" size={13} color={colors.text.tertiary} strokeWidth={1.8} />
-                    <Txt variant="labelS" tone="tertiary">
-                      Superset · no rest between
+        <View style={{ gap: 8 }}>
+          {session.exercises.map((ex, index) => {
+            const lineAbove = drop && drop.index === index && dragFrom > index;
+            const lineBelow = drop && drop.index === index && dragFrom !== -1 && dragFrom < index;
+            const groupStart = ex.supersetGroup && (index === 0 || session.exercises[index - 1].supersetGroup !== ex.supersetGroup);
+            return (
+              <View key={ex.id} onLayout={measure(ex.id)} style={{ gap: 8 }}>
+                {lineAbove ? <DropLine /> : null}
+                {groupStart ? (
+                  <Row gap={6} style={{ paddingHorizontal: 4, paddingTop: 4 }}>
+                    <Icon name="link" size={13} color={colors.accent.ember} strokeWidth={2} />
+                    <Txt variant="labelS" tone="ember">
+                      {t("Superset, alternate, no rest between")}
                     </Txt>
                   </Row>
-                  {g.map((it, ii) => (
-                    <View key={it.ex.id}>
-                      {ii > 0 ? <Divider inset={42} /> : null}
-                      <CollapsedExercise ex={it.ex} index={it.index} upNext={it.index === upNextIndex} onPress={() => w.setCurrent(it.index)} onMore={() => setSheet({ kind: "exercise", ex: it.ex })} onMove={(steps) => move(it.ex, steps)} />
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          ))}
-          {after.length ? <Divider inset={42} /> : null}
-          <Pressable accessibilityRole="button" accessibilityLabel="Add exercise" onPress={() => router.push("/exercises?session=1")} style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14 }}>
-            <View style={{ width: 28, alignItems: "center" }}>
-              <Icon name="addPlus" size={16} color={colors.text.secondary} strokeWidth={2} />
-            </View>
-            <Txt variant="labelM" tone="secondary">
-              Add exercise
-            </Txt>
-          </Pressable>
+                ) : null}
+                <ExerciseCard
+                  ex={ex}
+                  index={index}
+                  isCurrent={ex.id === current.id}
+                  expanded={isOpen(ex.id)}
+                  blocked={blocked}
+                  onToggle={() => toggle(ex.id)}
+                  onFocus={() => w.setCurrent(index)}
+                  onDragMove={(dy) => onDragMove(ex.id, dy)}
+                  onDragEnd={(dy) => onDragEnd(ex.id, dy)}
+                  onNote={() => openNote(ex)}
+                  onRest={() => setSheet({ kind: "rest", ex })}
+                  onRemove={() => { haptic("error"); w.removeExercise(ex.id); }}
+                  onMore={() => setSheet({ kind: "exercise", ex })}
+                  onSetType={(s, i) => setSheet({ kind: "set", ex, set: s, index: i })}
+                  onChange={(s, patch) => w.updateSet(ex.id, s.id, patch)}
+                  onDone={(s, i) => complete(ex, s, i)}
+                  onRemoveSet={(s) => { haptic("tap"); w.removeSet(ex.id, s.id); }}
+                  onAddSet={() => w.addSet(ex.id)}
+                />
+                {lineBelow ? <DropLine /> : null}
+              </View>
+            );
+          })}
+          <Button label={t("Add exercise")} variant="secondary" size="M" icon="addPlus" onPress={() => router.push("/exercises?session=1")} style={{ marginTop: 4 }} />
         </View>
       </Screen>
 
@@ -231,7 +238,7 @@ export default function ActiveWorkout() {
                   {fmtTime(rest.left)}
                 </Txt>
                 <Txt variant="labelM" tone="secondary">
-                  rest
+                  {t("rest")}
                 </Txt>
               </Row>
               <Txt variant="bodyS" tone="tertiary" numberOfLines={1}>
@@ -240,22 +247,37 @@ export default function ActiveWorkout() {
             </View>
             <SmallPill label="−15" onPress={() => w.adjustRest(-15)} />
             <SmallPill label="+15" onPress={() => w.adjustRest(15)} />
-            <SmallPill label="Skip" inverse onPress={w.skipRest} />
+            <SmallPill label={t("Skip")} inverse onPress={w.skipRest} />
           </View>
         </Animated.View>
       ) : null}
 
-      <BottomSheet visible={sheet?.kind === "exercise"} onClose={() => setSheet(null)} title={sheet?.kind === "exercise" ? sheet.ex.name : ""} subtitle={sheet?.kind === "exercise" ? `Exercise ${session.exercises.indexOf(sheet.ex) + 1} of ${session.exercises.length}` : undefined}>
+      <BottomSheet visible={sheet?.kind === "exercise"} onClose={() => setSheet(null)} title={sheet?.kind === "exercise" ? sheet.ex.name : ""} subtitle={sheet?.kind === "exercise" ? t("Exercise {a} of {b}", { a: session.exercises.indexOf(sheet.ex) + 1, b: session.exercises.length }) : undefined}>
         {sheet?.kind === "exercise" ? (
           <>
-            <SheetOption icon="reload" label="Swap exercise" sub="Keep the sets, change the movement" onPress={() => { const id = sheet.ex.id; setSheet(null); router.push(`/exercises?swap=${id}`); }} />
-            <SheetOption icon="link" label={sheet.ex.supersetGroup ? "Remove from superset" : "Add to superset"} sub={sheet.ex.supersetGroup ? "Rest between them again" : "Pair with the next exercise, no rest between"} onPress={() => { w.toggleSuperset(sheet.ex.id); setSheet(null); }} />
-            <SheetOption icon="trash" label="Remove from workout" sub="Its sets leave this session" danger onPress={() => { w.removeExercise(sheet.ex.id); setSheet(null); }} />
+            <SheetOption icon="reload" label={t("Swap exercise")} sub={t("Keep the sets, change the movement")} onPress={() => { const id = sheet.ex.id; setSheet(null); router.push(`/exercises?swap=${id}`); }} />
+            <SheetOption icon="link" label={sheet.ex.supersetGroup ? t("Edit superset") : t("Make a superset")} sub={t("Choose which exercises alternate")} onPress={() => openSuperset(sheet.ex)} />
+            {sheet.ex.supersetGroup ? <SheetOption icon="close" label={t("Remove from superset")} sub={t("Rest between them again")} onPress={() => { w.toggleSuperset(sheet.ex.id); setSheet(null); }} /> : null}
+            <SheetOption icon="trash" label={t("Remove from workout")} sub={t("Its sets leave this session")} danger onPress={() => { w.removeExercise(sheet.ex.id); setSheet(null); }} />
           </>
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={sheet?.kind === "set"} onClose={() => setSheet(null)} title={sheet?.kind === "set" ? `Set ${sheet.index + 1}` : ""} subtitle={sheet?.kind === "set" ? `${sheet.ex.name} · ${sheet.set.kg} kg × ${sheet.set.reps}` : undefined}>
+      <BottomSheet visible={sheet?.kind === "superset"} onClose={() => setSheet(null)} title={t("Superset")} subtitle={sheet?.kind === "superset" ? t("Pick the exercises to alternate with {name}. No rest between them.", { name: sheet.ex.name }) : undefined}>
+        {sheet?.kind === "superset" ? (
+          <View style={{ gap: 4 }}>
+            {session.exercises.filter((e) => e.id !== sheet.ex.id).map((e) => {
+              const on = pick.includes(e.id);
+              return <SheetOption key={e.id} icon={on ? "circleCheck" : "addPlus"} label={e.name} sub={e.supersetGroup && e.supersetGroup !== sheet.ex.supersetGroup ? t("Already in another superset") : undefined} selected={on} onPress={() => setPick((p) => (p.includes(e.id) ? p.filter((x) => x !== e.id) : [...p, e.id]))} />;
+            })}
+            <View style={{ paddingHorizontal: 8, paddingTop: 8 }}>
+              <Button label={pick.length ? t("Save superset") : t("Remove superset")} onPress={() => { w.groupExercises([sheet.ex.id, ...pick]); setSheet(null); }} />
+            </View>
+          </View>
+        ) : null}
+      </BottomSheet>
+
+      <BottomSheet visible={sheet?.kind === "set"} onClose={() => setSheet(null)} title={sheet?.kind === "set" ? t("Set {n}", { n: sheet.index + 1 }) : ""} subtitle={sheet?.kind === "set" ? `${sheet.ex.name}, ${sheet.set.kg} kg × ${sheet.set.reps}` : undefined}>
         {sheet?.kind === "set" ? (
           <>
             {(
@@ -266,30 +288,30 @@ export default function ActiveWorkout() {
                 ["failure", "star", "Failure set", "Reps until you can't do another"],
               ] as const
             ).map(([type, icon, label, sub]) => (
-              <SheetOption key={type} icon={icon} label={label} sub={sub} selected={sheet.set.type === type} onPress={() => { w.setSetType(sheet.ex.id, sheet.set.id, type as SetType); setSheet(null); }} />
+              <SheetOption key={type} icon={icon} label={t(label)} sub={t(sub)} selected={sheet.set.type === type} onPress={() => { w.setSetType(sheet.ex.id, sheet.set.id, type as SetType); setSheet(null); }} />
             ))}
-            <SheetOption icon="trash" label="Remove set" sub="Removes only this set" danger onPress={() => { w.removeSet(sheet.ex.id, sheet.set.id); setSheet(null); }} />
+            <SheetOption icon="trash" label={t("Remove set")} sub={t("Removes only this set")} danger onPress={() => { w.removeSet(sheet.ex.id, sheet.set.id); setSheet(null); }} />
           </>
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={sheet?.kind === "note"} onClose={() => setSheet(null)} title="Note" subtitle={sheet?.kind === "note" ? `${sheet.ex.name} · shown under the name, and next time you do it` : undefined}>
+      <BottomSheet visible={sheet?.kind === "note"} onClose={() => setSheet(null)} title={t("Note")} subtitle={sheet?.kind === "note" ? t("{name}, shown under the name, and next time you do it", { name: sheet.ex.name }) : undefined}>
         {sheet?.kind === "note" ? (
           <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
-            <Field label="Note" value={noteText} onChangeText={setNoteText} placeholder="Feet planted, pause on the chest" multiline autoFocus />
-            <Button label="Save note" onPress={() => { w.setNote(sheet.ex.id, noteText.trim()); setSheet(null); }} />
+            <Field label={t("Note")} value={noteText} onChangeText={setNoteText} placeholder={t("Feet planted, pause on the chest")} multiline autoFocus />
+            <Button label={t("Save note")} onPress={() => { w.setNote(sheet.ex.id, noteText.trim()); setSheet(null); }} />
           </View>
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={sheet?.kind === "finish"} onClose={() => setSheet(null)} title="Finish this session?" subtitle={openSets > 0 ? `${stats.setsDone} of ${stats.setsTotal} sets done, ${openSets} still open. Open sets are not counted.` : `All ${stats.setsTotal} sets done in ${stats.elapsed}.`}>
+      <BottomSheet visible={sheet?.kind === "finish"} onClose={() => setSheet(null)} title={t("Finish this session?")} subtitle={openSets > 0 ? t("{a} of {b} sets done, {c} still open. Open sets are not counted.", { a: stats.setsDone, b: stats.setsTotal, c: openSets }) : t("All {n} sets done in {time}.", { n: stats.setsTotal, time: stats.elapsed })}>
         <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
-          <Button label="Finish session" onPress={() => { setSheet(null); haptic("done"); finish(); }} />
-          <Button label="Keep training" variant="secondary" size="M" onPress={() => setSheet(null)} />
+          <Button label={t("Finish session")} onPress={() => { setSheet(null); haptic("done"); finish(); }} />
+          <Button label={t("Keep training")} variant="secondary" size="M" onPress={() => setSheet(null)} />
         </View>
       </BottomSheet>
 
-      <BottomSheet visible={sheet?.kind === "rest"} onClose={() => setSheet(null)} title="Rest timer" subtitle={sheet?.kind === "rest" ? `After each set of ${sheet.ex.name}` : undefined}>
+      <BottomSheet visible={sheet?.kind === "rest"} onClose={() => setSheet(null)} title={t("Rest timer")} subtitle={sheet?.kind === "rest" ? t("After each set of {name}", { name: sheet.ex.name }) : undefined}>
         {sheet?.kind === "rest" ? (
           <Row gap={8} style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
             {[60, 90, 120, 150, 180].map((s) => (
@@ -302,78 +324,133 @@ export default function ActiveWorkout() {
   );
 }
 
+/** The ember line that shows where a dragged exercise will land. */
+function DropLine() {
+  const { colors } = useTheme();
+  return <Animated.View entering={FadeInDown.duration(120)} style={{ height: 3, borderRadius: 2, backgroundColor: colors.accent.ember, marginHorizontal: 8 }} />;
+}
+
+type CardProps = {
+  ex: ExerciseEntry;
+  index: number;
+  isCurrent: boolean;
+  expanded: boolean;
+  blocked: { id: string; msg: string } | null;
+  onToggle: () => void;
+  onFocus: () => void;
+  onDragMove: (dy: number) => void;
+  onDragEnd: (dy: number) => void;
+  onNote: () => void;
+  onRest: () => void;
+  onRemove: () => void;
+  onMore: () => void;
+  onSetType: (s: SetEntry, i: number) => void;
+  onChange: (s: SetEntry, patch: Partial<Pick<SetEntry, "kg" | "reps">>) => void;
+  onDone: (s: SetEntry, i: number) => void;
+  onRemoveSet: (s: SetEntry) => void;
+  onAddSet: () => void;
+};
+
 /**
- * The open exercise. Drag the handle at the top-left to move it in the list;
- * the card lifts and follows, and on release it lands one place per row
- * travelled. Tap the line under the name to write or edit the note.
+ * One exercise: a header row that is always there (handle, position, name,
+ * note line, chevron) and, when open, the rest pill, a delete button, the
+ * options button, the set table and an Add set button.
  */
-function ExerciseCard({ ex, isCurrentEx, blocked, onMove, onNote, onRest, onMore, onSetType, onChange, onDone, onRemoveSet, onAddSet }: { ex: ExerciseEntry; isCurrentEx: boolean; blocked: { id: string; msg: string } | null; onMove: (steps: number) => void; onNote: () => void; onRest: () => void; onMore: () => void; onSetType: (s: SetEntry, i: number) => void; onChange: (s: SetEntry, patch: Partial<Pick<SetEntry, "kg" | "reps">>) => void; onDone: (s: SetEntry, i: number) => void; onRemoveSet: (s: SetEntry) => void; onAddSet: () => void }) {
+function ExerciseCard({ ex, index, isCurrent, expanded, blocked, onToggle, onFocus, onDragMove, onDragEnd, onNote, onRest, onRemove, onMore, onSetType, onChange, onDone, onRemoveSet, onAddSet }: CardProps) {
   const { colors, radius } = useTheme();
-  const { drag, style } = useDrag(onMove);
+  const t = useT();
+  const { drag, style } = useDrag(onDragMove, onDragEnd);
+  const done = ex.sets.length > 0 && ex.sets.every((s) => s.done);
+  const doneCount = ex.sets.filter((s) => s.done).length;
   let working = 0;
   return (
     <Animated.View style={style}>
-      <Card padding={16} gap={6}>
-        <Row gap={10} align="flex-start">
+      <Card padding={expanded ? 16 : 10} gap={6} style={isCurrent ? { borderWidth: 1.5, borderColor: colors.accent.ember } : undefined}>
+        <Row gap={10} align="center">
           <GestureDetector gesture={drag}>
-            <Animated.View accessibilityRole="button" accessibilityLabel="Drag to reorder" style={{ width: 28, height: 28, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg.raised, marginTop: 1 }}>
+            <Animated.View accessibilityRole="button" accessibilityLabel={t("Drag to reorder")} style={{ width: 28, height: 28, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg.raised }}>
               <Icon name="dragVertical" size={16} color={colors.text.secondary} strokeWidth={2} />
             </Animated.View>
           </GestureDetector>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Txt variant="displayM">{ex.name}</Txt>
-            <Pressable accessibilityRole="button" accessibilityLabel={ex.note ? "Edit note" : "Add a note"} onPress={onNote} hitSlop={6} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-              <Txt variant="bodyS" tone={ex.note ? "secondary" : "tertiary"} italic numberOfLines={2}>
-                {ex.note || "Add a note"}
+          <View style={{ width: 26, height: 26, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: done ? colors.status.success : isCurrent ? colors.accent.ember : colors.bg.raised }}>
+            {done ? (
+              <Icon name="check" size={14} color={colors.accent.on} strokeWidth={2.4} />
+            ) : (
+              <Txt variant="labelM" style={{ color: isCurrent ? colors.accent.on : colors.text.secondary }}>
+                {index + 1}
               </Txt>
-            </Pressable>
+            )}
           </View>
-          <Pressable accessibilityRole="button" accessibilityLabel="Rest timer" onPress={onRest} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingLeft: 10, paddingRight: 8, height: 34, borderRadius: radius.pill, backgroundColor: colors.bg.raised }}>
-            <Icon name="timer" size={14} color={colors.text.secondary} strokeWidth={1.9} />
-            <Txt variant="labelM">{fmtTime(ex.restSeconds)}</Txt>
-            <Icon name="chevronDown" size={12} color={colors.text.tertiary} strokeWidth={2.2} />
+          <View style={{ flex: 1, gap: 1 }}>
+            <Pressable accessibilityRole="button" accessibilityState={{ expanded }} accessibilityLabel={ex.name} onPress={() => { onToggle(); if (!expanded && !done) onFocus(); }} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+              <Txt variant={expanded ? "displayM" : "labelL"}>{ex.name}</Txt>
+              {expanded ? null : (
+                <Txt variant="bodyS" tone="tertiary">
+                  {done ? t("Done") : t("{n} of {m} sets", { n: doneCount, m: ex.sets.length })}
+                </Txt>
+              )}
+            </Pressable>
+            {expanded ? (
+              <Pressable accessibilityRole="button" accessibilityLabel={ex.note ? t("Edit note") : t("Add a note")} onPress={onNote} hitSlop={6}>
+                <Txt variant="bodyS" tone={ex.note ? "secondary" : "tertiary"} italic numberOfLines={2}>
+                  {ex.note || t("Add a note")}
+                </Txt>
+              </Pressable>
+            ) : null}
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel={expanded ? t("Collapse") : t("Expand")} hitSlop={10} onPress={onToggle} style={{ width: 28, height: 28, alignItems: "center", justifyContent: "center", transform: [{ rotate: expanded ? "180deg" : "0deg" }] }}>
+            <Icon name="chevronDown" size={18} color={colors.text.tertiary} strokeWidth={2} />
           </Pressable>
-          <IconButton name="moreHorizontal" size={34} iconSize={18} tone="raised" onPress={onMore} accessibilityLabel="Exercise options" />
         </Row>
 
-        <Row gap={8} style={{ paddingHorizontal: 6, paddingTop: 10 }}>
-          <Txt variant="labelS" tone="tertiary" style={{ width: 28 }}>
-            Set
-          </Txt>
-          <Txt variant="labelS" tone="tertiary" style={{ width: 72 }} align="center">
-            Previous
-          </Txt>
-          <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} align="center">
-            kg
-          </Txt>
-          <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} align="center">
-            Reps
-          </Txt>
-          <View style={{ width: 40 }} />
-        </Row>
+        {expanded ? (
+          <>
+            <Row gap={8} style={{ paddingTop: 8 }}>
+              <Pressable accessibilityRole="button" accessibilityLabel={t("Rest timer")} onPress={onRest} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingLeft: 10, paddingRight: 8, height: 34, borderRadius: radius.pill, backgroundColor: colors.bg.raised }}>
+                <Icon name="timer" size={14} color={colors.text.secondary} strokeWidth={1.9} />
+                <Txt variant="labelM">{fmtTime(ex.restSeconds)}</Txt>
+                <Icon name="chevronDown" size={12} color={colors.text.tertiary} strokeWidth={2.2} />
+              </Pressable>
+              <View style={{ flex: 1 }} />
+              <IconButton name="trash" size={34} iconSize={17} tone="danger" onPress={onRemove} accessibilityLabel={t("Remove from workout")} />
+              <IconButton name="moreHorizontal" size={34} iconSize={18} tone="raised" onPress={onMore} accessibilityLabel={t("Exercise options")} />
+            </Row>
 
-        <View style={{ gap: 4 }}>
-          {ex.sets.map((s, i) => {
-            if (s.type === "working") working++;
-            const label = setLabel(s, working);
-            const isCurrent = isCurrentEx && !s.done && ex.sets.findIndex((x) => !x.done) === i;
-            return <SetRow key={s.id} set={s} label={label} isCurrent={isCurrent} error={blocked?.id === s.id ? blocked.msg : undefined} onType={() => onSetType(s, i)} onChange={(patch) => onChange(s, patch)} onDone={() => onDone(s, i)} onRemove={() => onRemoveSet(s)} />;
-          })}
-        </View>
+            <Row gap={8} style={{ paddingHorizontal: 6, paddingTop: 10 }}>
+              <Txt variant="labelS" tone="tertiary" style={{ width: 28 }}>
+                {t("Set")}
+              </Txt>
+              <Txt variant="labelS" tone="tertiary" style={{ width: 72 }} align="center">
+                {t("Previous")}
+              </Txt>
+              <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} align="center">
+                kg
+              </Txt>
+              <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} align="center">
+                {t("Reps")}
+              </Txt>
+              <View style={{ width: 40 }} />
+            </Row>
 
-        <Pressable accessibilityRole="button" onPress={onAddSet} hitSlop={6} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 10, paddingHorizontal: 6 }}>
-          <Icon name="addPlus" size={14} color={colors.text.secondary} strokeWidth={2.2} />
-          <Txt variant="labelM" tone="secondary">
-            Add set
-          </Txt>
-        </Pressable>
+            <View style={{ gap: 4 }}>
+              {ex.sets.map((s, i) => {
+                if (s.type === "working") working++;
+                const label = setLabel(s, working);
+                const current = isCurrent && !s.done && ex.sets.findIndex((x) => !x.done) === i;
+                return <SetRow key={s.id} set={s} label={label} isCurrent={current} error={blocked?.id === s.id ? blocked.msg : undefined} onType={() => onSetType(s, i)} onChange={(patch) => onChange(s, patch)} onDone={() => onDone(s, i)} onRemove={() => onRemoveSet(s)} />;
+              })}
+            </View>
+
+            <Button label={t("Add set")} variant="secondary" size="S" icon="addPlus" onPress={onAddSet} style={{ marginTop: 8 }} />
+          </>
+        ) : null}
       </Card>
     </Animated.View>
   );
 }
 
-/** Vertical drag that lifts the element, follows the finger, and reports how many rows it travelled. */
-function useDrag(onMove: (steps: number) => void) {
+/** Vertical drag that lifts the element, follows the finger, reports where it is, and where it let go. */
+function useDrag(onMove: (dy: number) => void, onEnd: (dy: number) => void) {
   const ty = useSharedValue(0);
   const lift = useSharedValue(0);
   const drag = Gesture.Pan()
@@ -384,17 +461,17 @@ function useDrag(onMove: (steps: number) => void) {
     })
     .onUpdate((e) => {
       ty.value = e.translationY;
+      runOnJS(onMove)(e.translationY);
     })
     .onEnd((e) => {
-      const steps = Math.round(e.translationY / ROW_STEP);
       lift.value = withSpring(0, springs.snappy);
       ty.value = withSpring(0, springs.base);
-      runOnJS(onMove)(steps);
+      runOnJS(onEnd)(e.translationY);
     })
     .onFinalize(() => {
       lift.value = withSpring(0, springs.snappy);
     });
-  const style = useAnimatedStyle(() => ({ zIndex: lift.value > 0.01 ? 10 : 0, transform: [{ translateY: ty.value }, { scale: 1 + lift.value * 0.02 }], opacity: 1 - lift.value * 0.08 }));
+  const style = useAnimatedStyle(() => ({ zIndex: lift.value > 0.01 ? 10 : 0, transform: [{ translateY: ty.value }, { scale: 1 + lift.value * 0.02 }], opacity: 1 - lift.value * 0.1 }));
   return { drag, style };
 }
 
@@ -427,6 +504,7 @@ const REVEAL = 72;
  */
 function SetRow({ set, label, isCurrent, error, onType, onChange, onDone, onRemove }: { set: SetEntry; label: string; isCurrent: boolean; error?: string; onType: () => void; onChange: (p: Partial<Pick<SetEntry, "kg" | "reps">>) => void; onDone: () => void; onRemove: () => void }) {
   const { colors, radius } = useTheme();
+  const t = useT();
   const dim = !set.done && !isCurrent;
   const boxBg = isCurrent ? colors.bg.ground : colors.bg.raised;
   const hasPrev = set.prevKg !== null;
@@ -469,27 +547,27 @@ function SetRow({ set, label, isCurrent, error, onType, onChange, onDone, onRemo
     <View>
       <View style={{ position: "relative", overflow: "hidden", borderRadius: radius.setRow }}>
         <Animated.View style={[{ position: "absolute", right: 0, top: 0, bottom: 0, width: REVEAL, alignItems: "center", justifyContent: "center" }, trashAnim]}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Delete set" onPress={() => { close(); onRemove(); }} style={({ pressed }) => ({ width: 44, height: 40, borderRadius: radius.input, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? colors.status.warning : colors.status.danger })}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("Delete set")} onPress={() => { close(); onRemove(); }} style={({ pressed }) => ({ width: 44, height: 40, borderRadius: radius.input, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? colors.status.warning : colors.status.danger })}>
             <Icon name="trash" size={18} color={colors.text.primary} strokeWidth={2} />
           </Pressable>
         </Animated.View>
         <GestureDetector gesture={pan}>
           <Animated.View style={[{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4, paddingHorizontal: 6, borderRadius: radius.setRow, backgroundColor: isCurrent ? colors.accent.soft : colors.bg.surface, opacity: dim && !error ? 0.6 : 1, borderWidth: error ? 1.5 : 0, borderColor: error ? colors.status.danger : "transparent" }, rowAnim]}>
-            <Pressable accessibilityRole="button" onPress={onType} hitSlop={6} style={{ width: 28 }} accessibilityLabel="Set type">
+            <Pressable accessibilityRole="button" onPress={onType} hitSlop={6} style={{ width: 28 }} accessibilityLabel={t("Set type")}>
               <Txt variant="labelL" tone={isCurrent ? "ember" : set.type === "warmup" ? "tertiary" : "primary"}>
                 {label}
               </Txt>
             </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel={hasPrev ? `Use previous, ${prev}` : "No previous set"} disabled={!hasPrev} onPress={() => { haptic("tap"); onChange({ kg: set.prevKg ?? set.kg, reps: set.prevReps ?? set.reps }); }} hitSlop={4} style={({ pressed }) => ({ width: 72, alignItems: "center", opacity: pressed ? 0.6 : 1 })}>
+            <Pressable accessibilityRole="button" accessibilityLabel={hasPrev ? t("Use previous, {prev}", { prev }) : t("No previous set")} disabled={!hasPrev} onPress={() => { haptic("tap"); onChange({ kg: set.prevKg ?? set.kg, reps: set.prevReps ?? set.reps }); }} hitSlop={4} style={({ pressed }) => ({ width: 72, alignItems: "center", opacity: pressed ? 0.6 : 1 })}>
               <Txt style={{ fontFamily: fontFamily.displaySemi, fontSize: 15, lineHeight: 20, letterSpacing: -0.1, color: hasPrev ? colors.text.secondary : colors.text.tertiary }} tabular>
                 {prev}
               </Txt>
             </Pressable>
             <View style={{ flex: 1, height: 40, borderRadius: radius.input, backgroundColor: boxBg, justifyContent: "center" }}>
-              <TextInput value={String(set.kg)} onChangeText={(t) => onChange({ kg: Number(t.replace(",", ".")) || 0 })} keyboardType="decimal-pad" selectTextOnFocus style={inputStyle} />
+              <TextInput value={String(set.kg)} onChangeText={(v) => onChange({ kg: Number(v.replace(",", ".")) || 0 })} keyboardType="decimal-pad" selectTextOnFocus style={inputStyle} />
             </View>
             <View style={{ flex: 1, height: 40, borderRadius: radius.input, backgroundColor: boxBg, justifyContent: "center" }}>
-              <TextInput value={String(set.reps)} onChangeText={(t) => onChange({ reps: Number(t) || 0 })} keyboardType="number-pad" selectTextOnFocus style={inputStyle} />
+              <TextInput value={String(set.reps)} onChangeText={(v) => onChange({ reps: Number(v) || 0 })} keyboardType="number-pad" selectTextOnFocus style={inputStyle} />
             </View>
             <Animated.View style={checkAnim}>
               <Pressable
@@ -497,7 +575,7 @@ function SetRow({ set, label, isCurrent, error, onType, onChange, onDone, onRemo
                 onPressIn={() => { pop.value = withSpring(0.9, springs.snappy); }}
                 onPressOut={() => { pop.value = withSpring(1, springs.snappy); }}
                 accessibilityRole="button"
-                accessibilityLabel={set.done ? "Undo set" : "Complete set"}
+                accessibilityLabel={set.done ? t("Undo set") : t("Complete set")}
                 style={{ width: 40, height: 40, borderRadius: radius.input, alignItems: "center", justifyContent: "center", backgroundColor: set.done ? colors.status.success : isCurrent ? colors.accent.ember : colors.bg.raised }}
               >
                 {set.done || isCurrent ? <Icon name="check" size={18} color={colors.accent.on} strokeWidth={2.6} /> : null}
@@ -516,64 +594,6 @@ function SetRow({ set, label, isCurrent, error, onType, onChange, onDone, onRemo
       ) : null}
     </View>
   );
-}
-
-/** A done or upcoming exercise as one row: drag handle, position, name, detail, options. */
-function CollapsedExercise({ ex, index, upNext, onPress, onMore, onMove }: { ex: ExerciseEntry; index: number; upNext?: boolean; onPress: () => void; onMore: () => void; onMove: (steps: number) => void }) {
-  const { colors } = useTheme();
-  const { drag, style } = useDrag(onMove);
-  const done = ex.sets.length > 0 && ex.sets.every((s) => s.done);
-  const working = ex.sets.filter((s) => s.type !== "warmup");
-  const top = working[0] ?? ex.sets[0];
-  const detail = `${working.length || ex.sets.length} × ${top?.reps ?? 0}${top?.kg ? ` · ${top.kg} kg` : " · bodyweight"}`;
-  return (
-    <Animated.View style={[{ flexDirection: "row", alignItems: "center", gap: 10, opacity: done ? 0.6 : 1, backgroundColor: colors.bg.ground }, style]}>
-      <GestureDetector gesture={drag}>
-        <Animated.View accessibilityRole="button" accessibilityLabel="Drag to reorder" style={{ width: 28, height: 44, alignItems: "center", justifyContent: "center" }}>
-          <Icon name="dragVertical" size={16} color={colors.text.tertiary} strokeWidth={2} />
-        </Animated.View>
-      </GestureDetector>
-      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Go to ${ex.name}`} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
-        <View style={{ width: 28, height: 28, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: done ? colors.status.success : colors.bg.surface }}>
-          {done ? (
-            <Icon name="check" size={15} color={colors.accent.on} strokeWidth={2.4} />
-          ) : (
-            <Txt variant="labelM" tone="secondary">
-              {index + 1}
-            </Txt>
-          )}
-        </View>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Row gap={8}>
-            <Txt variant="labelL" tone={done ? "secondary" : "primary"}>
-              {ex.name}
-            </Txt>
-            {upNext ? (
-              <Txt variant="labelS" tone="ember">
-                Up next
-              </Txt>
-            ) : null}
-          </Row>
-          <Txt variant="bodyS" tone="tertiary">
-            {done ? "Done" : detail}
-          </Txt>
-        </View>
-      </Pressable>
-      <Pressable accessibilityRole="button" onPress={onMore} hitSlop={10} accessibilityLabel="Options" style={{ paddingVertical: 12 }}>
-        <Icon name="moreHorizontal" size={18} color={colors.text.tertiary} />
-      </Pressable>
-    </Animated.View>
-  );
-}
-
-function groupSupersets(list: { ex: ExerciseEntry; index: number }[]) {
-  const groups: { ex: ExerciseEntry; index: number }[][] = [];
-  list.forEach((item) => {
-    const last = groups[groups.length - 1];
-    if (item.ex.supersetGroup && last && last[0].ex.supersetGroup === item.ex.supersetGroup) last.push(item);
-    else groups.push([item]);
-  });
-  return groups;
 }
 
 function RestRing({ progress }: { progress: number }) {

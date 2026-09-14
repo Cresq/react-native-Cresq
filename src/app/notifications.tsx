@@ -11,6 +11,7 @@ import { Divider } from "@/components/ui/Card";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Avatar } from "@/components/ui/PhotoSlot";
 import { Button } from "@/components/ui/Button";
+import { useT } from "@/i18n";
 
 const kindIcon: Record<Notification["kind"], IconName> = { like: "heart", comment: "chatCircle", follow: "user", record: "trophy", reminder: "calendar", device: "watch" };
 
@@ -21,16 +22,17 @@ const kindIcon: Record<Notification["kind"], IconName> = { like: "heart", commen
 export default function Notifications() {
   const { colors } = useTheme();
   const router = useRouter();
+  const t = useT();
   const [read, setRead] = useState<Record<string, boolean>>({});
   const unread = data.flatMap((g) => g.items).filter((n) => n.unread && !read[n.id]).length;
   const markAll = () => setRead(Object.fromEntries(data.flatMap((g) => g.items).map((n) => [n.id, true])));
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title="Notifications" subtitle={unread ? `${unread} new` : "All caught up"} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Notifications")} subtitle={unread ? t("{n} new", { n: unread }) : t("All caught up")} />
 
       {data.map((group) => (
-        <Section key={group.group} title={group.group} gap={0}>
+        <Section key={group.group} title={t(group.group)} gap={0}>
           {group.items.map((n, i) => {
             const isUnread = !!n.unread && !read[n.id];
             const gold = n.kind === "record";
@@ -69,7 +71,7 @@ export default function Notifications() {
       ))}
 
       <Row justify="center">
-        <Button label="Mark all as read" variant="tertiary" size="M" full={false} onPress={markAll} disabled={unread === 0} />
+        <Button label={t("Mark all as read")} variant="tertiary" size="M" full={false} onPress={markAll} disabled={unread === 0} />
       </Row>
     </Screen>
   );

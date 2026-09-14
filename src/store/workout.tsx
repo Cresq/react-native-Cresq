@@ -36,6 +36,7 @@ type WorkoutState = {
   setPhoto: (photo: string | null) => void;
   swapExercise: (entryId: string, ex: Exercise) => void;
   toggleSuperset: (entryId: string) => void;
+  groupExercises: (ids: string[]) => void;
   adjustRest: (delta: number) => void;
   skipRest: () => void;
 };
@@ -125,7 +126,7 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
         const sessions = hasWork ? [...d.sessions, done] : d.sessions;
         const dayIdx = d.split.days.findIndex((x) => x.planId === done.planId || x.name === done.planName);
         const split = hasWork && dayIdx === d.split.nextIndex ? { ...d.split, nextIndex: d.split.days.length ? (d.split.nextIndex + 1) % d.split.days.length : 0 } : d.split;
-        return { ...d, sessions, split, activeSession: null };
+        return { ...d, sessions, split: { ...split, overridePlanId: undefined }, activeSession: null };
       });
     },
     [update],
@@ -142,7 +143,7 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
       mutate((cur) => mapEx(cur, exerciseId, (e) => ({ ...e, sets: e.sets.map((x) => (x.id === setId ? { ...x, done: !x.done } : x)) })));
       if (wasDone) return;
       const next = ex.sets.slice(idx + 1).find((x) => !x.done);
-      const label = next ? `Set ${ex.sets.indexOf(next) + 1} · ${next.kg ? `${next.kg} kg × ` : ""}${next.reps}` : "Next exercise";
+      const label = next ? `Set ${ex.sets.indexOf(next) + 1}, ${next.kg ? `${next.kg} kg × ` : ""}${next.reps}` : "Next exercise";
       setRest({ total: ex.restSeconds, left: ex.restSeconds, nextLabel: label });
     },
     [mutate],
@@ -183,6 +184,18 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
       }),
     [mutate],
   );
+  /** Put exactly these exercises in one superset (ungrouping them from anything else). Fewer than two clears it. */
+  const groupExercises = useCallback(
+    (ids: string[]) =>
+      mutate((s) => {
+        const used = new Set(s.exercises.filter((e) => e.supersetGroup && !ids.includes(e.id)).map((e) => e.supersetGroup as string));
+        let g = "A";
+        while (used.has(g)) g = String.fromCharCode(g.charCodeAt(0) + 1);
+        const group = ids.length >= 2 ? g : undefined;
+        return { ...s, exercises: s.exercises.map((e) => (ids.includes(e.id) ? { ...e, supersetGroup: group } : e)) };
+      }),
+    [mutate],
+  );
   const removeExercise = useCallback((exerciseId: string) => mutate((s) => ({ ...s, exercises: s.exercises.filter((e) => e.id !== exerciseId), currentIndex: Math.max(0, Math.min(s.currentIndex, s.exercises.length - 2)) })), [mutate]);
   /** Move an exercise by any number of places; the current exercise stays the current one. */
   const moveExercise = useCallback(
@@ -209,8 +222,8 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
   const skipRest = useCallback(() => setRest(null), []);
 
   const value = useMemo<WorkoutState>(
-    () => ({ session, rest, lastDiscarded, undoDiscard, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, adjustRest, skipRest }),
-    [session, rest, lastDiscarded, undoDiscard, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, adjustRest, skipRest],
+    () => ({ session, rest, lastDiscarded, undoDiscard, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, adjustRest, skipRest }),
+    [session, rest, lastDiscarded, undoDiscard, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, adjustRest, skipRest],
   );
   return <WorkoutContext.Provider value={value}>{children}</WorkoutContext.Provider>;
 }

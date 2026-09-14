@@ -15,11 +15,13 @@ import { Button } from "@/components/ui/Button";
 import { PostCard } from "@/components/PostCard";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Field } from "@/components/ui/Field";
+import { useT } from "@/i18n";
 
 /** Posted. The session is filed as shared when you leave; Undo returns to the summary with nothing filed yet. */
 export default function Posted() {
   const { colors } = useTheme();
   const router = useRouter();
+  const t = useT();
   const { followers } = useSocial();
   const { db } = useDb();
   const { session, file, setCaption } = useWorkout();
@@ -42,7 +44,7 @@ export default function Posted() {
   const footer = (
     <>
       <Button
-        label="Undo post"
+        label={t("Undo post")}
         variant="secondary"
         size="M"
         icon="reload"
@@ -54,20 +56,20 @@ export default function Posted() {
           </Txt>
         }
       />
-      <Button label="Done" onPress={done} />
+      <Button label={t("Done")} onPress={done} />
     </>
   );
 
   return (
     <Screen bottom={130} footer={footer}>
-      <Header left={<IconButton name="close" onPress={done} accessibilityLabel="Close" />} />
+      <Header left={<IconButton name="close" onPress={done} accessibilityLabel={t("Close")} />} />
       <View style={{ alignItems: "center", gap: 10, paddingVertical: 8 }}>
         <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.accent.soft, alignItems: "center", justifyContent: "center" }}>
           <Icon name="check" size={30} color={colors.accent.ember} strokeWidth={2.4} />
         </View>
-        <Txt variant="displayL">Posted to your feed</Txt>
+        <Txt variant="displayL">{t("Posted to your feed")}</Txt>
         <Txt variant="bodyM" tone="secondary">
-          Visible to {followers.length} followers
+          {t("Visible to {n} followers", { n: followers.length })}
         </Txt>
       </View>
 
@@ -76,17 +78,17 @@ export default function Posted() {
         post={{
           id: "new",
           name: db.profile.name,
-          meta: `${session?.planName ?? "Session"} · just now · ${db.profile.city}`,
+          meta: `${session?.planName ?? t("Session")}, ${t("just now")}, ${db.profile.city}`,
           avatar: photos.selfie,
           photo: session?.photo ? { uri: session.photo } : undefined,
           photoHeight: 300,
-          exercises: session ? sessionRows(session) : [],
-          record: record ? `New record · ${record.name} ${record.kg} kg` : undefined,
-          caption: session?.caption || (record ? `${record.name} ${record.kg} kg. Up ${record.previous ? Math.round((record.kg - record.previous) * 10) / 10 : record.kg} kg.` : `${session?.planName ?? "Session"} done. Every set counted.`),
+          exercises: session ? sessionRows(session).map((r) => ({ name: r.name, detail: t(r.count === 1 ? "{n} set" : "{n} sets", { n: r.count }) })) : [],
+          record: record ? t("New record, {name} {kg} kg", { name: record.name, kg: record.kg }) : undefined,
+          caption: session?.caption || (record ? `${record.name} ${record.kg} kg. ${t("Up {kg} kg.", { kg: record.previous ? Math.round((record.kg - record.previous) * 10) / 10 : record.kg })}` : t("{plan} done. Every set counted.", { plan: session?.planName ?? t("Session") })),
           stats: [
             { value: String(stats.minutes), unit: "min" },
             { value: fmtKg(stats.volume), unit: "kg" },
-            { value: String(stats.setsDone), unit: "sets" },
+            { value: String(stats.setsDone), unit: t("sets") },
           ],
           likes: 0,
           comments: 0,
@@ -96,15 +98,15 @@ export default function Posted() {
         <Row gap={6}>
           <Icon name="noteEdit" size={14} color={colors.text.secondary} strokeWidth={1.7} />
           <Txt variant="labelM" tone="secondary">
-            Edit caption
+            {t("Edit caption")}
           </Txt>
         </Row>
       </Pressable>
 
-      <BottomSheet visible={editing} onClose={() => setEditing(false)} title="Caption" subtitle="Leave it empty and CresQ writes one from your session.">
+      <BottomSheet visible={editing} onClose={() => setEditing(false)} title={t("Caption")} subtitle={t("Leave it empty and CresQ writes one from your session.")}>
         <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
-          <Field label="Caption" value={captionText} onChangeText={setCaptionText} placeholder="How did it go?" multiline autoFocus />
-          <Button label="Save caption" onPress={() => { setCaption(captionText.trim()); setEditing(false); }} />
+          <Field label={t("Caption")} value={captionText} onChangeText={setCaptionText} placeholder={t("How did it go?")} multiline autoFocus />
+          <Button label={t("Save caption")} onPress={() => { setCaption(captionText.trim()); setEditing(false); }} />
         </View>
       </BottomSheet>
     </Screen>

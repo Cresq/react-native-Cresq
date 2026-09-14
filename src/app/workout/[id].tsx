@@ -14,6 +14,7 @@ import { Chip } from "@/components/ui/Chip";
 import { Avatar, PhotoSlot } from "@/components/ui/PhotoSlot";
 import { Stat, StatDivider } from "@/components/StatCard";
 import { SessionBreakdown, type BreakdownExercise } from "@/components/SessionBreakdown";
+import { useT } from "@/i18n";
 
 /**
  * One workout, read-only: the figures, any records, the photo, then every
@@ -23,6 +24,7 @@ import { SessionBreakdown, type BreakdownExercise } from "@/components/SessionBr
 export default function SessionDetail() {
   const { colors } = useTheme();
   const router = useRouter();
+  const t = useT();
   const { db } = useDb();
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = db.sessions.find((s) => s.id === id) ?? (db.activeSession?.id === id ? db.activeSession : undefined);
@@ -32,9 +34,9 @@ export default function SessionDetail() {
   if (!session && !post) {
     return (
       <Screen>
-        <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title="Workout" />
+        <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Workout")} />
         <Txt variant="bodyM" tone="secondary">
-          This workout is no longer available.
+          {t("This workout is no longer available.")}
         </Txt>
       </Screen>
     );
@@ -43,17 +45,17 @@ export default function SessionDetail() {
   if (post) {
     const author = post.userId ? person(post.userId) : undefined;
     const exercises: BreakdownExercise[] = post.workout ?? (post.exercises ?? []).map((e) => ({ name: e.name, sets: [] }));
-    const [title, ...rest] = post.meta.split(" · ");
+    const [title, ...rest] = post.meta.split(", ");
     return (
       <Screen>
-        <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title={title} subtitle={rest.join(" · ")} />
+        <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={title} subtitle={rest.join(", ")} />
         <Row gap={12}>
           <Avatar source={post.avatar ?? author?.avatar} size={40} initial={post.name[0]} />
           <View style={{ flex: 1, gap: 1 }}>
             <Txt variant="labelL">{post.name}</Txt>
             {author ? (
               <Txt variant="bodyS" tone="tertiary">
-                {author.handle} · {author.city}
+                {author.handle}, {author.city}
               </Txt>
             ) : null}
           </View>
@@ -62,7 +64,7 @@ export default function SessionDetail() {
           {post.stats.map((s, i) => (
             <View key={i} style={{ flexDirection: "row", flex: 1 }}>
               {i > 0 ? <StatDivider /> : null}
-              <Stat label={s.unit === "min" ? "Duration" : s.unit === "kg" ? "Volume" : "Sets"} value={s.value} unit={s.unit === "sets" ? undefined : s.unit} />
+              <Stat label={s.unit === "min" ? t("Duration") : s.unit === "kg" ? t("Volume") : t("Sets")} value={s.value} unit={s.unit === "sets" ? undefined : s.unit} />
             </View>
           ))}
         </Row>
@@ -80,14 +82,14 @@ export default function SessionDetail() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title={s.planName} subtitle={longDate(s.startedAt)} right={<IconButton name="share" onPress={() => Share.share({ message: `${s.planName}, ${longDate(s.startedAt)}: ${stats.setsDone} sets, ${fmtKg(stats.volume)} kg in ${stats.minutes} min. Logged with CresQ.` })} accessibilityLabel="Share" />} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={s.planName} subtitle={longDate(s.startedAt)} right={<IconButton name="share" onPress={() => Share.share({ message: `${s.planName}, ${longDate(s.startedAt)}: ${t("{n} sets", { n: stats.setsDone })}, ${fmtKg(stats.volume)} kg, ${stats.minutes} min. CresQ.` })} accessibilityLabel={t("Share")} />} />
 
       <Row gap={12} align="stretch">
-        <Stat label="Duration" value={String(stats.minutes)} unit="min" />
+        <Stat label={t("Duration")} value={String(stats.minutes)} unit="min" />
         <StatDivider />
-        <Stat label="Volume" value={fmtKg(stats.volume)} unit="kg" />
+        <Stat label={t("Volume")} value={fmtKg(stats.volume)} unit="kg" />
         <StatDivider />
-        <Stat label="Sets" value={String(stats.setsDone)} unit={`of ${stats.setsTotal}`} />
+        <Stat label={t("Sets")} value={String(stats.setsDone)} unit={t("of {n}", { n: stats.setsTotal })} />
       </Row>
 
       {s.photo ? <PhotoSlot source={{ uri: s.photo }} height={320} radius={18} /> : null}
@@ -107,8 +109,8 @@ export default function SessionDetail() {
       <Row gap={6}>
         <Icon name={s.shared ? "users" : "lock"} size={13} color={colors.text.tertiary} strokeWidth={1.8} />
         <Txt variant="labelS" tone="tertiary">
-          {s.shared ? "Shared to your feed" : "Private"}
-          {s.sample ? " · sample session" : ""}
+          {s.shared ? t("Shared to your feed") : t("Private")}
+          {s.sample ? `, ${t("sample session")}` : ""}
         </Txt>
       </Row>
     </Screen>

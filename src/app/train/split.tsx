@@ -14,6 +14,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { useT } from "@/i18n";
 
 /**
  * Split editor. The order is the content: numbered rows, the next day marked,
@@ -22,6 +23,7 @@ import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 export default function SplitEditor() {
   const { colors } = useTheme();
   const router = useRouter();
+  const t = useT();
   const { split, nextDay, rename, addDay, removeDay, moveDay, setNext } = useSplit();
   const [renaming, setRenaming] = useState(false);
   const [nameText, setNameText] = useState(split.name);
@@ -31,20 +33,20 @@ export default function SplitEditor() {
   const training = split.days.filter((d) => !d.rest).length;
 
   return (
-    <Screen bottom={90} footer={<Button label="Save split" onPress={() => router.back()} />}>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel="Back" />} title="Your split" right={<IconButton name="noteEdit" onPress={() => { setNameText(split.name); setRenaming(true); }} accessibilityLabel="Rename split" />} />
+    <Screen bottom={90} footer={<Button label={t("Save split")} onPress={() => router.back()} />}>
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Your split")} right={<IconButton name="noteEdit" onPress={() => { setNameText(split.name); setRenaming(true); }} accessibilityLabel={t("Rename split")} />} />
 
-      <BottomSheet visible={renaming} onClose={() => setRenaming(false)} title="Rename your split">
+      <BottomSheet visible={renaming} onClose={() => setRenaming(false)} title={t("Rename your split")}>
         <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
-          <Field label="Name" value={nameText} onChangeText={setNameText} placeholder="Push Pull Legs" autoFocus />
-          <Button label="Save name" onPress={() => { if (nameText.trim()) rename(nameText.trim()); setRenaming(false); }} disabled={!nameText.trim()} />
+          <Field label={t("Name")} value={nameText} onChangeText={setNameText} placeholder="Push Pull Legs" autoFocus />
+          <Button label={t("Save name")} onPress={() => { if (nameText.trim()) rename(nameText.trim()); setRenaming(false); }} disabled={!nameText.trim()} />
         </View>
       </BottomSheet>
 
       <View style={{ gap: 4 }}>
         <Txt variant="displayL">{split.name}</Txt>
         <Txt variant="bodyM" tone="secondary">
-          {training} training days{split.days.length - training ? `, ${split.days.length - training} rest` : ""}. It repeats, so day {split.days.length} leads back to day 1.
+          {t("{n} training days", { n: training })}{split.days.length - training ? `, ${t("{n} rest", { n: split.days.length - training })}` : ""}. {t("It repeats, so day {n} leads back to day 1.", { n: split.days.length })}
         </Txt>
       </View>
 
@@ -67,15 +69,15 @@ export default function SplitEditor() {
                     </Txt>
                     {isNext ? (
                       <Txt variant="labelS" tone="ember">
-                        Up next
+                        {t("Up next")}
                       </Txt>
                     ) : null}
                   </Row>
                   <Txt variant="bodyS" tone="tertiary">
-                    {d.rest ? d.focus : `${d.focus} · ${d.exercises} exercises · ${d.minutes} min`}
+                    {d.rest ? d.focus : `${d.focus}, ${t("{n} exercises", { n: d.exercises ?? 0 })}, ${t("{n} min", { n: d.minutes ?? 0 })}`}
                   </Txt>
                 </Pressable>
-                <Pressable accessibilityRole="button" accessibilityLabel="Day options" hitSlop={10} onPress={() => setSheet({ kind: "day", day: d })}>
+                <Pressable accessibilityRole="button" accessibilityLabel={t("Day options")} hitSlop={10} onPress={() => setSheet({ kind: "day", day: d })}>
                   <Icon name="moreHorizontal" size={18} color={colors.text.tertiary} />
                 </Pressable>
               </View>
@@ -88,12 +90,12 @@ export default function SplitEditor() {
             <Icon name="addPlus" size={16} color={colors.text.secondary} strokeWidth={2} />
           </View>
           <Txt variant="labelM" tone="secondary">
-            Add a day
+            {t("Add a day")}
           </Txt>
         </Pressable>
       </Card>
 
-      <Section title="How it flows">
+      <Section title={t("How it flows")}>
         <Row gap={6} style={{ flexWrap: "wrap" }}>
           {split.days.map((d, i) => (
             <Row key={d.id} gap={6}>
@@ -106,21 +108,21 @@ export default function SplitEditor() {
         </Row>
       </Section>
 
-      <BottomSheet visible={sheet?.kind === "day"} onClose={() => setSheet(null)} title={sheet?.kind === "day" ? sheet.day.name : ""} subtitle={sheet?.kind === "day" ? `Day ${split.days.findIndex((d) => d.id === sheet.day.id) + 1} of ${split.days.length}` : undefined}>
+      <BottomSheet visible={sheet?.kind === "day"} onClose={() => setSheet(null)} title={sheet?.kind === "day" ? sheet.day.name : ""} subtitle={sheet?.kind === "day" ? t("Day {a} of {b}", { a: split.days.findIndex((d) => d.id === sheet.day.id) + 1, b: split.days.length }) : undefined}>
         {sheet?.kind === "day" ? (
           <>
-            <SheetOption icon="circleCheck" label="Do this next" sub="Move the pointer to this day" onPress={() => { setNext(sheet.day.id); setSheet(null); }} />
-            <SheetOption icon="dragVertical" label="Move up" onPress={() => { moveDay(sheet.day.id, -1); setSheet(null); }} />
-            <SheetOption icon="dragVertical" label="Move down" onPress={() => { moveDay(sheet.day.id, 1); setSheet(null); }} />
-            <SheetOption icon="reload" label="Swap for another day" sub="Keep the position, change the workout" onPress={() => setSheet({ kind: "add" })} />
-            <SheetOption icon="trash" label="Remove from split" danger onPress={() => { removeDay(sheet.day.id); setSheet(null); }} />
+            <SheetOption icon="circleCheck" label={t("Do this next")} sub={t("Move the pointer to this day")} onPress={() => { setNext(sheet.day.id); setSheet(null); }} />
+            <SheetOption icon="dragVertical" label={t("Move up")} onPress={() => { moveDay(sheet.day.id, -1); setSheet(null); }} />
+            <SheetOption icon="dragVertical" label={t("Move down")} onPress={() => { moveDay(sheet.day.id, 1); setSheet(null); }} />
+            <SheetOption icon="reload" label={t("Swap for another day")} sub={t("Keep the position, change the workout")} onPress={() => setSheet({ kind: "add" })} />
+            <SheetOption icon="trash" label={t("Remove from split")} danger onPress={() => { removeDay(sheet.day.id); setSheet(null); }} />
           </>
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={sheet?.kind === "add"} onClose={() => setSheet(null)} title="Add a day" subtitle="Pick a workout or a rest day. You can reorder afterwards.">
-        {splitTemplates.map((t) => (
-          <SheetOption key={t.name} icon={t.rest ? "sun" : "dumbbell"} label={t.name} sub={t.rest ? t.focus : `${t.focus} · ${t.exercises} exercises`} onPress={() => { addDay(t); setSheet(null); }} />
+      <BottomSheet visible={sheet?.kind === "add"} onClose={() => setSheet(null)} title={t("Add a day")} subtitle={t("Pick a workout or a rest day. You can reorder afterwards.")}>
+        {splitTemplates.map((tpl) => (
+          <SheetOption key={tpl.name} icon={tpl.rest ? "sun" : "dumbbell"} label={tpl.rest ? t("Rest day") : tpl.name} sub={tpl.rest ? tpl.focus : `${tpl.focus}, ${t("{n} exercises", { n: tpl.exercises ?? 0 })}`} onPress={() => { addDay(tpl); setSheet(null); }} />
         ))}
       </BottomSheet>
     </Screen>

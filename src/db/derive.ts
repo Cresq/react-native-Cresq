@@ -8,11 +8,22 @@ export const isWorking = (s: SetEntry) => s.done && s.type !== "warmup";
 
 export const fmtKg = (kg: number) => (kg >= 1000 ? `${(kg / 1000).toFixed(1)}k` : `${Math.round(kg * 10) / 10}`);
 export const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-export const shortDate = (t: number) => new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-export const longDate = (t: number) => new Date(t).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+/** Locale for dates and relative words. Set once from the profile language; "nl-NL" by default. */
+export let locale = "nl-NL";
+export const setLocale = (l: string) => {
+  locale = l;
+};
+export const shortDate = (t: number) => new Date(t).toLocaleDateString(locale, { day: "numeric", month: "short" }).replace(".", "");
+export const longDate = (t: number) => new Date(t).toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
 export const relativeDay = (t: number) => {
   const days = Math.floor((startOfDay(Date.now()) - startOfDay(t)) / 86400000);
-  return days <= 0 ? "today" : days === 1 ? "yesterday" : days < 7 ? `${days} days ago` : days < 14 ? "last week" : `${Math.floor(days / 7)} weeks ago`;
+  const nl = locale.startsWith("nl");
+  if (days <= 0) return nl ? "vandaag" : "today";
+  if (days === 1) return nl ? "gisteren" : "yesterday";
+  if (days < 7) return nl ? `${days} dagen geleden` : `${days} days ago`;
+  if (days < 14) return nl ? "vorige week" : "last week";
+  const w = Math.floor(days / 7);
+  return nl ? `${w} weken geleden` : `${w} weeks ago`;
 };
 
 export function startOfDay(t: number) {
@@ -141,7 +152,7 @@ export function compareToLast(session: Session, sessions: Session[]): { previous
   const rows: Comparison[] = session.exercises.map((e) => {
     const top = bestSet(session, e.exerciseId);
     const working = e.sets.filter(isWorking);
-    const detail = top ? `${working.length} × ${top.reps}${top.kg ? ` · ${top.kg} kg` : ""}` : "not done";
+    const detail = top ? `${working.length} × ${top.reps}${top.kg ? `, ${top.kg} kg` : ""}` : "not done";
     if (!top) return { name: e.name, detail, delta: "skipped", tone: "neutral" };
     if (!previous) return { name: e.name, detail, delta: "first time", tone: "neutral" };
     const prevTop = bestSet(previous, e.exerciseId);
@@ -163,7 +174,7 @@ export type DayState = "done" | "rest" | "missed" | "today" | "future";
 export function weekDays(sessions: Session[], now = Date.now()) {
   const start = startOfWeek(now);
   const today = startOfDay(now);
-  const letters = ["M", "T", "W", "T", "F", "S", "S"];
+  const letters = locale.startsWith("nl") ? ["M", "D", "W", "D", "V", "Z", "Z"] : ["M", "T", "W", "T", "F", "S", "S"];
   return letters.map((letter, i) => {
     const day = start + i * 86400000;
     const session = sessions.find((s) => s.finishedAt && startOfDay(s.startedAt) === day);
@@ -256,7 +267,7 @@ export function exerciseHistory(sessions: Session[], exerciseId: string) {
     .reverse();
 }
 
-/** One line per exercise for a post without a photo: "3 × 5 · 100 kg". */
+/** One line per exercise for a post without a photo: "3 × 5, 100 kg". */
 export function sessionRows(session: Session) {
   return session.exercises
     .map((e) => {
@@ -264,7 +275,7 @@ export function sessionRows(session: Session) {
       if (!done.length) return null;
       const top = done.reduce((a, b) => (b.kg > a.kg ? b : a), done[0]);
       const reps = done.every((s) => s.reps === done[0].reps) ? String(done[0].reps) : `${Math.min(...done.map((s) => s.reps))}–${Math.max(...done.map((s) => s.reps))}`;
-      return { name: e.name, detail: `${done.length} × ${reps}${top.kg ? ` · ${top.kg} kg` : ""}` };
+      return { name: e.name, count: done.length, detail: `${done.length} × ${reps}${top.kg ? `, ${top.kg} kg` : ""}` };
     })
-    .filter((r): r is { name: string; detail: string } => !!r);
+    .filter((r): r is { name: string; count: number; detail: string } => !!r);
 }

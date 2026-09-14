@@ -42,7 +42,7 @@ export type Session = {
 
 export type SplitDay = { id: string; name: string; focus: string; planId?: string; exercises?: number; minutes?: number; rest?: boolean };
 
-export type Split = { name: string; days: SplitDay[]; nextIndex: number };
+export type Split = { name: string; days: SplitDay[]; nextIndex: number; /** A workout chosen for today instead of the split's next day; cleared when a session is filed. */ overridePlanId?: string };
 
 export type Profile = {
   name: string;
@@ -63,6 +63,11 @@ export type Profile = {
   birthYear?: number;
   privateAccount?: boolean;
   showCity?: boolean;
+  /** Let followers watch a session while it runs. Off by default. */
+  shareLive?: boolean;
+  language?: "nl" | "en";
+  /** When the feed was last opened; Home lists what followed people did since. */
+  lastFeedSeen?: number;
 };
 
 /**

@@ -18,6 +18,7 @@ import { Stat, StatDivider } from "@/components/StatCard";
 import { PhotoSlot } from "@/components/ui/PhotoSlot";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { pickPhoto } from "@/photo";
+import { useT } from "@/i18n";
 
 /**
  * Session complete. The hero is typographic: the record, or the plain fact
@@ -27,6 +28,7 @@ import { pickPhoto } from "@/photo";
 export default function Summary() {
   const { colors } = useTheme();
   const router = useRouter();
+  const t = useT();
   const { db } = useDb();
   const { session, file, setPhoto } = useWorkout();
   const [photoSheet, setPhotoSheet] = useState(false);
@@ -53,39 +55,39 @@ export default function Summary() {
 
   const footer = (
     <>
-      <Button label="Share to feed" icon="share" onPress={() => router.replace("/workout/posted")} />
+      <Button label={t("Share to feed")} icon="share" onPress={() => router.replace("/workout/posted")} />
       <Row gap={10}>
-        <Button label="Save privately" variant="secondary" size="M" icon="lock" onPress={savePrivately} style={{ flex: 1 }} />
-        <Button label="View session" variant="tertiary" size="M" iconRight="chevronRight" onPress={viewSession} style={{ flex: 1 }} />
+        <Button label={t("Save privately")} variant="secondary" size="M" icon="lock" onPress={savePrivately} style={{ flex: 1 }} />
+        <Button label={t("View session")} variant="tertiary" size="M" iconRight="chevronRight" onPress={viewSession} style={{ flex: 1 }} />
       </Row>
       <Txt variant="labelS" tone="tertiary" align="center">
-        Shared posts go to your followers. Undo within 60 seconds.
+        {t("Shared posts go to your followers. Undo within 60 seconds.")}
       </Txt>
     </>
   );
 
   return (
     <Screen bottom={170} footer={footer}>
-      <Header left={<IconButton name="close" onPress={savePrivately} accessibilityLabel="Close" />} title="Session complete" subtitle={`${session?.planName ?? "Session"} · ${longDate(session?.startedAt ?? Date.now())}`} />
+      <Header left={<IconButton name="close" onPress={savePrivately} accessibilityLabel={t("Close")} />} title={t("Session complete")} subtitle={`${session?.planName ?? t("Session")}, ${longDate(session?.startedAt ?? Date.now())}`} />
 
       <Animated.View entering={FadeInUp.duration(360).delay(60)} style={{ gap: 10, paddingTop: 8 }}>
         {record ? (
           <>
-            <Chip label={recs.length > 1 ? `${recs.length} new personal records` : "New personal record"} icon="trophy" tone="gold" size="S" style={{ alignSelf: "flex-start" }} />
+            <Chip label={recs.length > 1 ? t("{n} new personal records", { n: recs.length }) : t("New personal record")} icon="trophy" tone="gold" size="S" style={{ alignSelf: "flex-start" }} />
             <Txt variant="displayXL">
               {record.name} {record.kg} kg
             </Txt>
             <Txt variant="bodyM" tone="secondary">
-              {record.reps > 1 ? `${record.reps} reps at ${record.kg} kg` : `1 × ${record.reps} at ${record.kg} kg`}
-              {record.previous ? `, up ${Math.round((record.kg - record.previous) * 10) / 10} kg on your previous best.` : ", your first logged best for this lift."}
-              {recs.length > 1 ? ` Also ${recs.slice(1).map((r) => `${r.name.toLowerCase()} ${r.kg} kg`).join(", ")}.` : ""}
+              {t("{reps} reps at {kg} kg", { reps: record.reps, kg: record.kg })}
+              {record.previous ? t(", up {kg} kg on your previous best.", { kg: Math.round((record.kg - record.previous) * 10) / 10 }) : t(", your first logged best for this lift.")}
+              {recs.length > 1 ? ` ${t("Also {list}.", { list: recs.slice(1).map((r) => `${r.name.toLowerCase()} ${r.kg} kg`).join(", ") })}` : ""}
             </Txt>
           </>
         ) : (
           <>
-            <Txt variant="displayXL">Logged and counted</Txt>
+            <Txt variant="displayXL">{t("Logged and counted")}</Txt>
             <Txt variant="bodyM" tone="secondary">
-              Every set is in your history. Your estimates update from this session.
+              {t("Every set is in your history. Your estimates update from this session.")}
             </Txt>
           </>
         )}
@@ -93,11 +95,11 @@ export default function Summary() {
 
       <Animated.View entering={FadeInDown.duration(360).delay(180)}>
       <Row gap={12} align="stretch">
-        <Stat label="Duration" value={String(stats.minutes)} unit="min" />
+        <Stat label={t("Duration")} value={String(stats.minutes)} unit="min" />
         <StatDivider />
-        <Stat label="Volume" value={fmtKg(stats.volume)} unit="kg" />
+        <Stat label={t("Volume")} value={fmtKg(stats.volume)} unit="kg" />
         <StatDivider />
-        <Stat label="Sets" value={String(stats.setsDone)} unit={`of ${stats.setsTotal}`} />
+        <Stat label={t("Sets")} value={String(stats.setsDone)} unit={t("of {n}", { n: stats.setsTotal })} />
       </Row>
       </Animated.View>
 
@@ -105,17 +107,17 @@ export default function Summary() {
         <View style={{ gap: 10 }}>
           <PhotoSlot source={{ uri: session.photo }} height={300} radius={18} />
           <Row gap={10}>
-            <Button label="Change photo" variant="secondary" size="S" full={false} icon="camera" onPress={() => setPhotoSheet(true)} />
-            <Button label="Remove" variant="tertiary" size="S" full={false} onPress={() => setPhoto(null)} />
+            <Button label={t("Change photo")} variant="secondary" size="S" full={false} icon="camera" onPress={() => setPhotoSheet(true)} />
+            <Button label={t("Remove")} variant="tertiary" size="S" full={false} onPress={() => setPhoto(null)} />
           </Row>
         </View>
       ) : (
-        <Button label="Add a photo" variant="secondary" size="M" icon="camera" onPress={() => setPhotoSheet(true)} />
+        <Button label={t("Add a photo")} variant="secondary" size="M" icon="camera" onPress={() => setPhotoSheet(true)} />
       )}
 
-      <BottomSheet visible={photoSheet} onClose={() => setPhotoSheet(false)} title="Add a photo" subtitle="It goes on this session, and on your post if you share it.">
-        <SheetOption icon="camera" label="Take a photo" onPress={() => choose("camera")} />
-        <SheetOption icon="rows" label="Choose from library" onPress={() => choose("library")} />
+      <BottomSheet visible={photoSheet} onClose={() => setPhotoSheet(false)} title={t("Add a photo")} subtitle={t("It goes on this session, and on your post if you share it.")}>
+        <SheetOption icon="camera" label={t("Take a photo")} onPress={() => choose("camera")} />
+        <SheetOption icon="rows" label={t("Choose from library")} onPress={() => choose("library")} />
       </BottomSheet>
 
       <View style={{ gap: 4 }}>
@@ -123,15 +125,15 @@ export default function Summary() {
           value={tab}
           onChange={setTab}
           tabs={[
-            { key: "exercises", label: "Exercises", count: cmp.rows.length },
-            { key: "heart", label: "Heart rate" },
+            { key: "exercises", label: t("Exercises"), count: cmp.rows.length },
+            { key: "heart", label: t("Heart rate") },
           ]}
         />
 
         {tab === "exercises" ? (
           <View>
             <Txt variant="labelS" tone="tertiary" style={{ paddingTop: 12, paddingBottom: 4 }}>
-              {cmp.previous ? `Compared to last ${session?.planName} · ${shortDate(cmp.previous.startedAt)}` : "First session of its kind, nothing to compare yet"}
+              {cmp.previous ? `${t("Compared to last {plan}", { plan: session?.planName ?? "" })}, ${shortDate(cmp.previous.startedAt)}` : t("First session of its kind, nothing to compare yet")}
             </Txt>
             {cmp.rows.map((r, i) => (
               <View key={r.name + i}>
@@ -151,9 +153,9 @@ export default function Summary() {
         ) : (
           <View style={{ gap: 16, paddingTop: 16 }}>
             <Row gap={16} align="stretch">
-              <HR icon="heart" label="Average" value="126" unit="bpm" color={colors.status.danger} />
-              <HR icon="pulse" label="Max" value="158" unit="bpm" color={colors.text.secondary} />
-              <HR icon="flame" label="Energy" value="412" unit="kcal" color={colors.accent.ember} />
+              <HR icon="heart" label={t("Average")} value="126" unit="bpm" color={colors.status.danger} />
+              <HR icon="pulse" label={t("Max")} value="158" unit="bpm" color={colors.text.secondary} />
+              <HR icon="flame" label={t("Energy")} value="412" unit="kcal" color={colors.accent.ember} />
             </Row>
             <View style={{ gap: 8 }}>
               <Row gap={3}>
@@ -170,13 +172,13 @@ export default function Summary() {
                 ))}
               </Row>
               <Txt variant="labelS" tone="tertiary">
-                Minutes per zone, easy to hard.
+                {t("Minutes per zone, easy to hard.")}
               </Txt>
             </View>
             <Row gap={6}>
               <Icon name="watch" size={13} color={colors.text.tertiary} strokeWidth={1.8} />
               <Txt variant="labelS" tone="tertiary">
-                Sample data until a watch is connected.
+                {t("Sample data until a watch is connected.")}
               </Txt>
             </Row>
           </View>

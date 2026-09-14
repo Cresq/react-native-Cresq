@@ -14,6 +14,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import { useT } from "@/i18n";
 
 /**
  * Exercise library. Browse (tap opens the lift), add to a workout (?plan=ID),
@@ -23,6 +24,7 @@ import { BottomSheet } from "@/components/ui/BottomSheet";
 export default function Exercises() {
   const { colors } = useTheme();
   const router = useRouter();
+  const t = useT();
   const { db, update } = useDb();
   const { addExercise, swapExercise } = useWorkout();
   const { plan: planId, session: forSession, favourite, swap } = useLocalSearchParams<{ plan?: string; session?: string; favourite?: string; swap?: string }>();
@@ -70,13 +72,13 @@ export default function Exercises() {
     if (mode !== "browse") pick(id);
   };
 
-  const titles = { plan: "Add to workout", session: "Add exercise", swap: "Swap exercise", favourite: "Favourite lifts", browse: "Exercises" } as const;
-  const subtitle = mode === "favourite" ? `${favourites.length} on Home · tap to add or remove` : mode === "swap" ? "Sets and numbers stay, the movement changes" : `${db.exercises.length} in your library`;
+  const titles = { plan: t("Add to workout"), session: t("Add exercise"), swap: t("Swap exercise"), favourite: t("Favourite lifts"), browse: t("Exercises") };
+  const subtitle = mode === "favourite" ? t("{n} on Home, tap to add or remove", { n: favourites.length }) : mode === "swap" ? t("Sets and numbers stay, the movement changes") : t("{n} in your library", { n: db.exercises.length });
 
   return (
-    <Screen bottom={mode === "favourite" ? 80 : 0} footer={mode === "favourite" ? <Button label="Done" variant="inverse" size="M" onPress={() => router.back()} /> : undefined}>
-      <Header left={<IconButton name={mode === "browse" ? "chevronLeft" : "close"} onPress={() => router.back()} accessibilityLabel="Back" />} title={titles[mode]} subtitle={subtitle} />
-      <Field label="Search" value={q} onChangeText={setQ} placeholder="Name, muscle or equipment" icon="search" autoCorrect={false} />
+    <Screen bottom={mode === "favourite" ? 80 : 0} footer={mode === "favourite" ? <Button label={t("Done")} variant="inverse" size="M" onPress={() => router.back()} /> : undefined}>
+      <Header left={<IconButton name={mode === "browse" ? "chevronLeft" : "close"} onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={titles[mode]} subtitle={subtitle} />
+      <Field label={t("Search")} value={q} onChangeText={setQ} placeholder={t("Name, muscle or equipment")} icon="search" autoCorrect={false} />
 
       <View>
         {list.map((e, i) => {
@@ -88,7 +90,7 @@ export default function Exercises() {
                 <View style={{ flex: 1, gap: 2 }}>
                   <Txt variant="labelL">{e.name}</Txt>
                   <Txt variant="bodyS" tone="tertiary">
-                    {e.muscles} · {e.equipment}
+                    {e.muscles}, {e.equipment}
                   </Txt>
                 </View>
                 {mode === "favourite" ? (
@@ -102,18 +104,18 @@ export default function Exercises() {
         })}
         {list.length === 0 ? (
           <Txt variant="bodyM" tone="secondary" style={{ paddingVertical: 12 }}>
-            Nothing called “{q}” yet. Create it below.
+            {t("Nothing called “{q}” yet. Create it below.", { q })}
           </Txt>
         ) : null}
       </View>
 
-      <Button label="New exercise" variant="secondary" size="M" icon="addPlus" onPress={() => { setName(q); setCreating(true); }} />
+      <Button label={t("New exercise")} variant="secondary" size="M" icon="addPlus" onPress={() => { setName(q); setCreating(true); }} />
 
-      <BottomSheet visible={creating} onClose={() => setCreating(false)} title="New exercise" subtitle="It goes into your library and can be used in any workout.">
+      <BottomSheet visible={creating} onClose={() => setCreating(false)} title={t("New exercise")} subtitle={t("It goes into your library and can be used in any workout.")}>
         <View style={{ gap: 10, paddingHorizontal: 8, paddingVertical: 8 }}>
-          <Field label="Name" value={name} onChangeText={setName} placeholder="Seated cable row" autoFocus />
-          <Field label="Muscles" value={muscles} onChangeText={setMuscles} placeholder="Back, biceps" />
-          <Button label="Add exercise" onPress={create} disabled={!name.trim()} style={{ marginTop: 4 }} />
+          <Field label={t("Name")} value={name} onChangeText={setName} placeholder="Seated cable row" autoFocus />
+          <Field label={t("Muscles")} value={muscles} onChangeText={setMuscles} placeholder={t("Back, biceps")} />
+          <Button label={t("Add exercise")} onPress={create} disabled={!name.trim()} style={{ marginTop: 4 }} />
         </View>
       </BottomSheet>
     </Screen>

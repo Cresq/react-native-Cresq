@@ -7,6 +7,7 @@ import { useSplit } from "@/store/split";
 import { finished, relativeDay } from "@/db/derive";
 import { estimateMinutes } from "@/db/seed";
 import { uid } from "@/db/storage";
+import { useT } from "@/i18n";
 import { Screen, Row, Section } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { Card, Divider } from "@/components/ui/Card";
@@ -22,6 +23,7 @@ import { IconButton } from "@/components/ui/IconButton";
 export default function Train() {
   const { colors } = useTheme();
   const router = useRouter();
+  const t = useT();
   const { db, update } = useDb();
   const { session, start } = useWorkout();
   const { split, nextDay } = useSplit();
@@ -36,7 +38,7 @@ export default function Train() {
   };
   const newWorkout = () => {
     const id = uid();
-    update((d) => ({ ...d, plans: [...d.plans, { id, name: "New workout", focus: "", exercises: [], createdAt: Date.now() }] }));
+    update((d) => ({ ...d, plans: [...d.plans, { id, name: t("New workout"), focus: "", exercises: [], createdAt: Date.now() }] }));
     router.push(`/train/plan/${id}`);
   };
 
@@ -44,13 +46,13 @@ export default function Train() {
     <Screen tabs>
       <Row gap={10}>
         <Txt variant="displayXL" style={{ flex: 1 }}>
-          Train
+          {t("Train")}
         </Txt>
-        <IconButton name="search" onPress={() => router.push("/exercises")} accessibilityLabel="Exercise library" />
+        <IconButton name="search" onPress={() => router.push("/exercises")} accessibilityLabel={t("Exercise library")} />
       </Row>
 
-      <Section title="Your split" action="Edit" onAction={() => router.push("/train/split")}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Edit your split" onPress={() => router.push("/train/split")} style={({ pressed }) => ({ gap: 10, opacity: pressed ? 0.8 : 1 })}>
+      <Section title={t("Your split")} action={t("Edit")} onAction={() => router.push("/train/split")}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t("Edit your split")} onPress={() => router.push("/train/split")} style={({ pressed }) => ({ gap: 10, opacity: pressed ? 0.8 : 1 })}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, alignItems: "center", paddingRight: 20 }} style={{ marginHorizontal: -20, paddingHorizontal: 20 }}>
             {split.days.map((d, i) => {
               const isNext = i === split.nextIndex;
@@ -58,7 +60,7 @@ export default function Train() {
                 <Row key={d.id} gap={6}>
                   <View style={{ paddingVertical: 9, paddingHorizontal: 13, borderRadius: 999, backgroundColor: isNext ? colors.accent.ember : colors.bg.surface }}>
                     <Txt variant="labelM" style={{ color: isNext ? colors.accent.on : d.rest ? colors.text.tertiary : colors.text.secondary }}>
-                      {d.name}
+                      {d.rest ? t("Rest day") : d.name}
                     </Txt>
                   </View>
                   {i < split.days.length - 1 ? <Icon name="chevronRight" size={12} color={colors.text.tertiary} strokeWidth={2.2} /> : null}
@@ -67,32 +69,32 @@ export default function Train() {
             })}
           </ScrollView>
           <Txt variant="bodyS" tone="tertiary">
-            {split.name} · day {split.nextIndex + 1} of {split.days.length}. Finishing a session moves you to the next day.
+            {t("{name}, day {a} of {b}. Finishing a session moves you to the next day.", { name: split.name, a: split.nextIndex + 1, b: split.days.length })}
           </Txt>
         </Pressable>
       </Section>
 
       <Card padding={20} gap={14}>
         <Txt variant="labelM" tone={running ? "ember" : "tertiary"}>
-          {running ? "Session running" : "Up next"}
+          {running ? t("Session running") : t("Up next")}
         </Txt>
         <View style={{ gap: 4 }}>
-          <Txt variant="displayL">{running ? session?.planName : (nextDay?.name ?? "Quick session")}</Txt>
+          <Txt variant="displayL">{running ? session?.planName : (nextDay?.rest ? t("Rest day") : nextDay?.name) ?? t("Quick session")}</Txt>
           <Txt variant="bodyM" tone="secondary">
-            {running ? `${session?.exercises.length} exercises` : (nextDay?.focus ?? "Pick any workout below")}
+            {running ? t("{n} exercises", { n: session?.exercises.length ?? 0 }) : (nextDay?.focus ?? t("Pick any workout below"))}
           </Txt>
         </View>
         {nextPlan && !running ? (
           <Row gap={16}>
-            <Meta icon="calendar" text={`${nextPlan.exercises.length} exercises`} />
-            <Meta icon="clock" text={`${estimateMinutes(nextPlan)} min`} />
-            {lastDone(nextPlan.name) ? <Meta icon="check" text={`Last ${relativeDay(lastDone(nextPlan.name)!.startedAt)}`} /> : null}
+            <Meta icon="calendar" text={t("{n} exercises", { n: nextPlan.exercises.length })} />
+            <Meta icon="clock" text={t("{n} min", { n: estimateMinutes(nextPlan) })} />
+            {lastDone(nextPlan.name) ? <Meta icon="check" text={t("Last {when}", { when: relativeDay(lastDone(nextPlan.name)!.startedAt) })} /> : null}
           </Row>
         ) : null}
-        <Button label={running ? "Continue session" : nextDay?.rest ? "Rest day · start anyway" : "Start session"} iconRight="arrowRight" onPress={() => begin(nextPlan?.id, nextDay?.name)} style={{ marginTop: 4 }} />
+        <Button label={running ? t("Continue session") : nextDay?.rest ? t("Rest day, start anyway") : t("Start session")} iconRight="arrowRight" onPress={() => begin(nextPlan?.id, nextDay?.name)} style={{ marginTop: 4 }} />
       </Card>
 
-      <Section title="Workouts" action="New" actionIcon="addPlus" onAction={newWorkout} gap={0}>
+      <Section title={t("Workouts")} action={t("New")} actionIcon="addPlus" onAction={newWorkout} gap={0}>
         {db.plans.map((p, i) => {
           const last = lastDone(p.name);
           return (
@@ -102,11 +104,11 @@ export default function Train() {
                 <View style={{ flex: 1, gap: 3 }}>
                   <Txt variant="labelL">{p.name}</Txt>
                   <Txt variant="bodyS" tone="tertiary">
-                    {[p.focus, `${p.exercises.length} exercises`, `${estimateMinutes(p)} min`].filter(Boolean).join(" · ")}
+                    {[p.focus, t("{n} exercises", { n: p.exercises.length }), t("{n} min", { n: estimateMinutes(p) })].filter(Boolean).join(", ")}
                   </Txt>
                 </View>
                 <Txt variant="labelS" tone="tertiary">
-                  {last ? relativeDay(last.startedAt) : "not yet"}
+                  {last ? relativeDay(last.startedAt) : t("not yet")}
                 </Txt>
                 <Icon name="chevronRight" size={18} color={colors.text.tertiary} />
               </Pressable>
@@ -115,7 +117,7 @@ export default function Train() {
         })}
         {db.plans.length === 0 ? (
           <Txt variant="bodyM" tone="secondary" style={{ paddingVertical: 8 }}>
-            No workouts yet. Tap New to build one.
+            {t("No workouts yet. Tap New to build one.")}
           </Txt>
         ) : null}
       </Section>

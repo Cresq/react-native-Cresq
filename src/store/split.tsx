@@ -35,8 +35,9 @@ export function useSplit() {
     [set],
   );
   const setNext = useCallback((id: string) => set((s) => ({ ...s, nextIndex: Math.max(0, s.days.findIndex((d) => d.id === id)) })), [set]);
+  const setOverride = useCallback((planId?: string) => set((s) => ({ ...s, overridePlanId: planId })), [set]);
   const advance = useCallback(() => set((s) => ({ ...s, nextIndex: s.days.length ? (s.nextIndex + 1) % s.days.length : 0 })), [set]);
 
   const nextDay = split.days[split.nextIndex] ?? split.days[0];
-  return useMemo(() => ({ split, nextDay, rename, addDay, removeDay, moveDay, setNext, advance }), [split, nextDay, rename, addDay, removeDay, moveDay, setNext, advance]);
+  return useMemo(() => ({ split, nextDay, rename, addDay, removeDay, moveDay, setNext, setOverride, advance }), [split, nextDay, rename, addDay, removeDay, moveDay, setNext, setOverride, advance]);
 }

@@ -8,6 +8,7 @@ import { Icon } from "./ui/Icon";
 import { Avatar, PhotoSlot } from "./ui/PhotoSlot";
 import { Chip } from "./ui/Chip";
 import { Row } from "./ui/Screen";
+import { useT } from "@/i18n";
 import type { BreakdownExercise } from "./SessionBreakdown";
 
 export type Post = {
@@ -38,12 +39,13 @@ export type Post = {
 export function PostCard({ post, preview, onPress, onMore, onComment }: { post: Post; preview?: boolean; onPress?: () => void; onMore?: () => void; onComment?: () => void }) {
   const { colors } = useTheme();
   const router = useRouter();
+  const t = useT();
   const [liked, setLiked] = useState(!!post.liked);
   const likes = post.likes + (liked && !post.liked ? 1 : !liked && post.liked ? -1 : 0);
   return (
     <Card padding={0} gap={0} style={{ overflow: "hidden" }}>
       <Row style={{ paddingHorizontal: 16, paddingVertical: 14 }} gap={10}>
-        <Pressable accessibilityRole="button" accessibilityLabel={`${post.name}'s profile`} disabled={!post.userId} onPress={() => router.push(`/user/${post.userId}`)} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t("{name}'s profile", { name: post.name })} disabled={!post.userId} onPress={() => router.push(`/user/${post.userId}`)} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Avatar source={post.avatar} size={36} initial={post.name[0]} />
           <View style={{ flex: 1, gap: 1 }}>
             <Txt variant="labelL">{post.name}</Txt>
@@ -53,7 +55,7 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
           </View>
         </Pressable>
         {onMore ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Post options" hitSlop={10} onPress={onMore}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("Post options")} hitSlop={10} onPress={onMore}>
             <Icon name="moreHorizontal" size={20} color={colors.text.tertiary} />
           </Pressable>
         ) : null}
@@ -88,7 +90,7 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
       )}
       </Pressable>
       <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16, gap: 12 }}>
-        <Pressable accessibilityRole={onPress ? "button" : undefined} accessibilityLabel="Open this workout" disabled={!onPress} onPress={onPress} style={{ gap: 12 }}>
+        <Pressable accessibilityRole={onPress ? "button" : undefined} accessibilityLabel={t("Open this workout")} disabled={!onPress} onPress={onPress} style={{ gap: 12 }}>
           <Txt variant="displayS">{post.caption}</Txt>
           <Row gap={16}>
             {post.stats.map((s, i) => (
@@ -105,24 +107,24 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
         </Pressable>
         {preview ? (
           <Txt variant="labelS" tone="tertiary">
-            Reactions from followers show up here
+            {t("Reactions from followers show up here")}
           </Txt>
         ) : (
           <Row gap={20}>
-            <Pressable onPress={() => setLiked((v) => !v)} accessibilityRole="button" accessibilityLabel="Like" hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Pressable onPress={() => setLiked((v) => !v)} accessibilityRole="button" accessibilityLabel={t("Like")} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <Icon name="heart" size={20} color={liked ? colors.accent.ember : colors.text.secondary} fill={liked ? colors.accent.ember : undefined} strokeWidth={1.8} />
               <Txt variant="labelM" tone={liked ? "ember" : "secondary"}>
                 {likes}
               </Txt>
             </Pressable>
-            <Pressable onPress={onComment} disabled={!onComment} accessibilityRole="button" accessibilityLabel="Comments" hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Pressable onPress={onComment} disabled={!onComment} accessibilityRole="button" accessibilityLabel={t("Comments")} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <Icon name="chatCircle" size={20} color={colors.text.secondary} strokeWidth={1.8} />
               <Txt variant="labelM" tone="secondary">
                 {post.comments}
               </Txt>
             </Pressable>
             <View style={{ flex: 1 }} />
-            <Pressable onPress={() => Share.share({ message: `${post.name}: ${post.caption} · ${post.stats.map((s) => `${s.value} ${s.unit}`).join(", ")} · on CresQ` })} accessibilityRole="button" accessibilityLabel="Share post" hitSlop={8}>
+            <Pressable onPress={() => Share.share({ message: `${post.name}: ${post.caption}, ${post.stats.map((s) => `${s.value} ${s.unit}`).join(", ")}, on CresQ` })} accessibilityRole="button" accessibilityLabel={t("Share post")} hitSlop={8}>
               <Icon name="share" size={20} color={colors.text.secondary} strokeWidth={1.8} />
             </Pressable>
           </Row>

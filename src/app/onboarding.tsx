@@ -14,12 +14,13 @@ import { Chip } from "@/components/ui/Chip";
 import { Field } from "@/components/ui/Field";
 import { Toggle } from "@/components/ui/Toggle";
 import { Divider } from "@/components/ui/Card";
+import { useT } from "@/i18n";
 
 type Answers = Pick<Profile, "goal" | "experience" | "daysPerWeek" | "limitations" | "birthYear">;
 type Choices = Pick<Consent, "analytics" | "ageStats">;
 
 const STEPS = [
-  { key: "birth", title: "What year were you born?", sub: `CresQ is for people aged ${MIN_AGE} and over. We only ask the year, and only for this check.` },
+  { key: "birth", title: "What year were you born?", sub: "CresQ is for people aged {n} and over. We only ask the year, and only for this check." },
   { key: "goal", title: "What are you here for?", sub: "One answer. It sets the default rep ranges and rest." },
   { key: "experience", title: "How long have you trained?", sub: "This decides how fast your plans progress." },
   { key: "days", title: "How many days a week?", sub: "Your split will match it. You can change it any time." },
@@ -36,6 +37,7 @@ const LIMITS = ["Shoulder", "Knee", "Lower back", "Wrist", "Elbow", "Hip"];
 export default function Onboarding() {
   const { colors } = useTheme();
   const router = useRouter();
+  const t = useT();
   const { db, update } = useDb();
   const { edit } = useLocalSearchParams<{ edit?: string }>();
   const [i, setI] = useState(0);
@@ -43,6 +45,8 @@ export default function Onboarding() {
   const [c, setC] = useState<Choices>({ analytics: db.consent.analytics, ageStats: db.consent.ageStats });
   const [yearText, setYearText] = useState(db.profile.birthYear ? String(db.profile.birthYear) : "");
   const step = STEPS[i];
+  const stepTitle = t(step.title);
+  const stepSub = t(step.sub, { n: MIN_AGE });
   const year = new Date().getFullYear();
   const tooYoung = !!a.birthYear && a.birthYear > year - MIN_AGE;
   const can = step.key === "birth" ? !!a.birthYear && !tooYoung && a.birthYear > year - 120 : step.key === "goal" ? !!a.goal : step.key === "experience" ? !!a.experience : step.key === "days" ? !!a.daysPerWeek : true;
@@ -55,25 +59,25 @@ export default function Onboarding() {
   const next = () => (i < STEPS.length - 1 ? setI(i + 1) : finish());
 
   return (
-    <Screen bottom={90} footer={<Button label={i < STEPS.length - 1 ? "Continue" : edit ? "Save" : "Start training"} iconRight={i < STEPS.length - 1 ? "arrowRight" : undefined} onPress={next} disabled={!can} />}>
-      <Header left={i > 0 || edit ? <IconButton name="chevronLeft" onPress={() => (i > 0 ? setI(i - 1) : router.back())} accessibilityLabel="Back" /> : undefined} />
-      <ProgressBar value={0.2 + (i / STEPS.length) * 0.8} label={`Step ${i + 1} of ${STEPS.length}`} right={`${Math.round((0.2 + (i / STEPS.length) * 0.8) * 100)}%`} />
+    <Screen bottom={90} footer={<Button label={i < STEPS.length - 1 ? t("Continue") : edit ? t("Save") : t("Start training")} iconRight={i < STEPS.length - 1 ? "arrowRight" : undefined} onPress={next} disabled={!can} />}>
+      <Header left={i > 0 || edit ? <IconButton name="chevronLeft" onPress={() => (i > 0 ? setI(i - 1) : router.back())} accessibilityLabel={t("Back")} /> : undefined} />
+      <ProgressBar value={0.2 + (i / STEPS.length) * 0.8} label={t("Step {a} of {b}", { a: i + 1, b: STEPS.length })} right={`${Math.round((0.2 + (i / STEPS.length) * 0.8) * 100)}%`} />
 
       <View style={{ gap: 6 }}>
-        <Txt variant="displayL">{step.title}</Txt>
+        <Txt variant="displayL">{stepTitle}</Txt>
         <Txt variant="bodyM" tone="secondary">
-          {step.sub}
+          {stepSub}
         </Txt>
       </View>
 
       {step.key === "birth" ? (
         <View style={{ gap: 10 }}>
-          <Field label="Year of birth" value={yearText} onChangeText={(t) => { const v = t.replace(/\D/g, "").slice(0, 4); setYearText(v); setA({ ...a, birthYear: v.length === 4 ? Number(v) : undefined }); }} keyboardType="number-pad" maxLength={4} placeholder="1998" autoFocus />
+          <Field label={t("Year of birth")} value={yearText} onChangeText={(t) => { const v = t.replace(/\D/g, "").slice(0, 4); setYearText(v); setA({ ...a, birthYear: v.length === 4 ? Number(v) : undefined }); }} keyboardType="number-pad" maxLength={4} placeholder="1998" autoFocus />
           {tooYoung ? (
             <Row gap={8} align="flex-start">
               <Icon name="info" size={16} color={colors.status.warning} strokeWidth={2} />
               <Txt variant="bodyS" tone="warning" style={{ flex: 1 }}>
-                Sorry, CresQ is for people aged {MIN_AGE} and over. You are welcome back when you are {MIN_AGE}.
+                {t("Sorry, CresQ is for people aged {n} and over. You are welcome back when you are {n}.", { n: MIN_AGE })}
               </Txt>
             </Row>
           ) : null}
@@ -81,16 +85,16 @@ export default function Onboarding() {
       ) : null}
       {step.key === "goal" ? (
         <View style={{ gap: 8 }}>
-          <Option icon="dumbbell" label="Get stronger" sub="Heavier top sets, longer rest" on={a.goal === "strength"} onPress={() => setA({ ...a, goal: "strength" })} />
-          <Option icon="trendingUp" label="Build muscle" sub="More sets in the 8 to 12 range" on={a.goal === "muscle"} onPress={() => setA({ ...a, goal: "muscle" })} />
-          <Option icon="heart" label="Stay healthy" sub="Full body, shorter sessions" on={a.goal === "health"} onPress={() => setA({ ...a, goal: "health" })} />
+          <Option icon="dumbbell" label={t("Get stronger")} sub={t("Heavier top sets, longer rest")} on={a.goal === "strength"} onPress={() => setA({ ...a, goal: "strength" })} />
+          <Option icon="trendingUp" label={t("Build muscle")} sub={t("More sets in the 8 to 12 range")} on={a.goal === "muscle"} onPress={() => setA({ ...a, goal: "muscle" })} />
+          <Option icon="heart" label={t("Stay healthy")} sub={t("Full body, shorter sessions")} on={a.goal === "health"} onPress={() => setA({ ...a, goal: "health" })} />
         </View>
       ) : null}
       {step.key === "experience" ? (
         <View style={{ gap: 8 }}>
-          <Option icon="star" label="I'm new" sub="Less than a year" on={a.experience === "new"} onPress={() => setA({ ...a, experience: "new" })} />
-          <Option icon="calendar" label="A while" sub="One to three years" on={a.experience === "some"} onPress={() => setA({ ...a, experience: "some" })} />
-          <Option icon="trophy" label="Years" sub="I know my numbers" on={a.experience === "years"} onPress={() => setA({ ...a, experience: "years" })} />
+          <Option icon="star" label={t("I'm new")} sub={t("Less than a year")} on={a.experience === "new"} onPress={() => setA({ ...a, experience: "new" })} />
+          <Option icon="calendar" label={t("A while")} sub={t("One to three years")} on={a.experience === "some"} onPress={() => setA({ ...a, experience: "some" })} />
+          <Option icon="trophy" label={t("Years")} sub={t("I know my numbers")} on={a.experience === "years"} onPress={() => setA({ ...a, experience: "years" })} />
         </View>
       ) : null}
       {step.key === "days" ? (
@@ -108,18 +112,18 @@ export default function Onboarding() {
         <Row gap={8} style={{ flexWrap: "wrap" }}>
           {LIMITS.map((l) => {
             const on = a.limitations?.includes(l);
-            return <Chip key={l} label={l} selected={on} onPress={() => setA({ ...a, limitations: on ? a.limitations!.filter((x) => x !== l) : [...(a.limitations ?? []), l] })} />;
+            return <Chip key={l} label={t(l)} selected={on} onPress={() => setA({ ...a, limitations: on ? a.limitations!.filter((x) => x !== l) : [...(a.limitations ?? []), l] })} />;
           })}
-          <Chip label="Nothing" selected={a.limitations?.length === 0} onPress={() => setA({ ...a, limitations: [] })} />
+          <Chip label={t("Nothing")} selected={a.limitations?.length === 0} onPress={() => setA({ ...a, limitations: [] })} />
         </Row>
       ) : null}
       {step.key === "data" ? (
         <View>
           <Row gap={14} style={{ paddingVertical: 12 }}>
             <View style={{ flex: 1, gap: 2 }}>
-              <Txt variant="labelL">Anonymous usage statistics</Txt>
+              <Txt variant="labelL">{t("Anonymous usage statistics")}</Txt>
               <Txt variant="bodyS" tone="tertiary">
-                Which screens are used and how often. No names, no log data.
+                {t("Which screens are used and how often. No names, no log data.")}
               </Txt>
             </View>
             <Toggle value={c.analytics} onChange={(v) => setC({ ...c, analytics: v })} />
@@ -127,9 +131,9 @@ export default function Onboarding() {
           <Divider />
           <Row gap={14} style={{ paddingVertical: 12 }}>
             <View style={{ flex: 1, gap: 2 }}>
-              <Txt variant="labelL">Age statistics</Txt>
+              <Txt variant="labelL">{t("Age statistics")}</Txt>
               <Txt variant="bodyS" tone="tertiary">
-                Your age as a band, such as 25 to 34, to see who CresQ serves.
+                {t("Your age as a band, such as 25 to 34, to see who CresQ serves.")}
               </Txt>
             </View>
             <Toggle value={c.ageStats} onChange={(v) => setC({ ...c, ageStats: v })} />
@@ -138,7 +142,7 @@ export default function Onboarding() {
           <Pressable accessibilityRole="link" onPress={() => router.push("/legal/privacy")} hitSlop={8} style={{ paddingVertical: 12 }}>
             <Row gap={4}>
               <Txt variant="labelM" tone="secondary">
-                Read the Privacy Policy
+                {t("Read the Privacy Policy")}
               </Txt>
               <Icon name="chevronRight" size={14} color={colors.text.secondary} strokeWidth={2} />
             </Row>
