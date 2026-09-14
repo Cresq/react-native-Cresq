@@ -1,4 +1,5 @@
-import { Pressable, View, type StyleProp, type ViewStyle } from "react-native";
+import { View, type StyleProp, type ViewStyle } from "react-native";
+import { Press } from "./Press";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Txt } from "./Text";
 import { Icon, type IconName } from "./Icon";
@@ -58,8 +59,8 @@ export function Chip({
   };
   if (!onPress) return <View style={[base, style]}>{content}</View>;
   return (
-    <Pressable accessibilityRole="button" accessibilityState={{ selected: !!selected }} onPress={onPress} style={({ pressed }) => [base, pressed ? { opacity: 0.8 } : null, style]}>
+    <Press accessibilityRole="button" accessibilityState={{ selected: !!selected }} onPress={onPress} scaleTo={0.95} wrapperStyle={style} style={({ pressed }) => [base, pressed ? { opacity: 0.85 } : null]}>
       {content}
-    </Pressable>
+    </Press>
   );
 }

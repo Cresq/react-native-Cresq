@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { View } from "react-native";
+import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
@@ -58,7 +59,7 @@ export default function Summary() {
     <Screen bottom={170} footer={footer}>
       <Header left={<IconButton name="close" onPress={savePrivately} accessibilityLabel="Close" />} title="Session complete" subtitle={`${session?.planName ?? "Session"} · ${longDate(session?.startedAt ?? Date.now())}`} />
 
-      <View style={{ gap: 10, paddingTop: 8 }}>
+      <Animated.View entering={FadeInUp.duration(360).delay(60)} style={{ gap: 10, paddingTop: 8 }}>
         {record ? (
           <>
             <Chip label={recs.length > 1 ? `${recs.length} new personal records` : "New personal record"} icon="trophy" tone="gold" size="S" style={{ alignSelf: "flex-start" }} />
@@ -79,8 +80,9 @@ export default function Summary() {
             </Txt>
           </>
         )}
-      </View>
+      </Animated.View>
 
+      <Animated.View entering={FadeInDown.duration(360).delay(180)}>
       <Row gap={12} align="stretch">
         <Stat label="Duration" value={String(stats.minutes)} unit="min" />
         <StatDivider />
@@ -88,6 +90,7 @@ export default function Summary() {
         <StatDivider />
         <Stat label="Sets" value={String(stats.setsDone)} unit={`of ${stats.setsTotal}`} />
       </Row>
+      </Animated.View>
 
       <View style={{ gap: 4 }}>
         <Tabs

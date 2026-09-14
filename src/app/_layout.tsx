@@ -5,6 +5,7 @@ import { useFonts } from "expo-font";
 import { ThemeProvider } from "@/theme/ThemeProvider";
 import { DbProvider } from "@/db/DbProvider";
 import { WorkoutProvider } from "@/store/workout";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { darkColors } from "../../constants/theme";
 
 SplashScreen.preventAutoHideAsync();
@@ -52,11 +53,12 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <ThemeProvider scheme="dark">
       <DbProvider>
         <WorkoutProvider>
           <StatusBar style="light" />
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: darkColors.bg.ground }, animation: "fade" }}>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: darkColors.bg.ground }, animation: "slide_from_right", animationDuration: 320, gestureEnabled: true, fullScreenGestureEnabled: true }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="onboarding" options={{ animation: "slide_from_right" }} />
@@ -82,5 +84,6 @@ export default function RootLayout() {
         </WorkoutProvider>
       </DbProvider>
     </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

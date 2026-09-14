@@ -1,4 +1,5 @@
-import { Image, Pressable, View, type ImageSourcePropType } from "react-native";
+import { Image, View, type ImageSourcePropType } from "react-native";
+import { Press } from "./ui/Press";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Txt } from "./ui/Text";
 import { Icon } from "./ui/Icon";
@@ -20,7 +21,7 @@ export function abbreviate(name: string) {
 export function WorkoutTile({ name, date, photo, records, size, onPress }: { name: string; date: string; photo?: ImageSourcePropType; records?: number; size: number; onPress?: () => void }) {
   const { colors } = useTheme();
   return (
-    <Pressable accessibilityRole={onPress ? "button" : undefined} disabled={!onPress} accessibilityLabel={`${name}, ${date}`} onPress={onPress} style={({ pressed }) => ({ width: size, height: size, borderRadius: 14, overflow: "hidden", backgroundColor: colors.bg.surface, opacity: pressed ? 0.8 : 1 })}>
+    <Press accessibilityRole={onPress ? "button" : undefined} disabled={!onPress} accessibilityLabel={`${name}, ${date}`} onPress={onPress} scaleTo={0.96} style={{ width: size, height: size, borderRadius: 14, overflow: "hidden", backgroundColor: colors.bg.surface }}>
       {photo ? <Image source={photo} style={{ width: size, height: size }} resizeMode="cover" /> : null}
       {!photo ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
@@ -39,6 +40,6 @@ export function WorkoutTile({ name, date, photo, records, size, onPress }: { nam
           <Icon name="trophy" size={14} color={colors.pr.gold} strokeWidth={2} />
         </View>
       ) : null}
-    </Pressable>
+    </Press>
   );
 }

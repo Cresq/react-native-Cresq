@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { Pressable, TextInput, View } from "react-native";
+import { Platform, Pressable, TextInput, View } from "react-native";
+import * as Haptics from "expo-haptics";
+import Animated, { FadeInDown, FadeOutDown, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
+import { springs } from "@/motion";
 import { useRouter } from "expo-router";
 import Svg, { Circle } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,6 +19,13 @@ import { Button } from "@/components/ui/Button";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { Field } from "@/components/ui/Field";
 import { fontFamily } from "../../../constants/theme";
+
+const haptic = (kind: "tap" | "done" | "error") => {
+  if (Platform.OS === "web") return;
+  if (kind === "tap") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  else if (kind === "done") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+};
 
 const setLabel = (s: SetEntry, workingIndex: number) => (s.type === "warmup" ? "W" : s.type === "drop" ? "D" : s.type === "failure" ? "F" : String(workingIndex));
 
@@ -146,11 +156,13 @@ export default function ActiveWorkout() {
               const complete = () => {
                 const firstOpen = current.sets.findIndex((x) => !x.done);
                 if (!s.done && firstOpen !== -1 && firstOpen < i) {
+                  haptic("error");
                   setBlocked({ id: s.id, msg: `Finish set ${firstOpen + 1} first, sets count in order` });
                   setTimeout(() => setBlocked((b) => (b?.id === s.id ? null : b)), 2500);
                   return;
                 }
                 setBlocked(null);
+                haptic(s.done ? "tap" : "done");
                 w.completeSet(current.id, s.id);
               };
               return <SetRow key={s.id} set={s} label={label} isCurrent={isCurrent} error={blocked?.id === s.id ? blocked.msg : undefined} onType={() => setSheet({ kind: "set", ex: current, set: s, index: i })} onChange={(patch) => w.updateSet(current.id, s.id, patch)} onDone={complete} />;
@@ -202,7 +214,7 @@ export default function ActiveWorkout() {
       </Screen>
 
       {rest ? (
-        <View style={{ position: "absolute", left: 16, right: 16, bottom: Math.max(insets.bottom, 16) + 8 }}>
+        <Animated.View entering={FadeInDown.springify().damping(18).stiffness(180)} exiting={FadeOutDown.duration(180)} style={{ position: "absolute", left: 16, right: 16, bottom: Math.max(insets.bottom, 16) + 8 }}>
           <View style={[{ flexDirection: "row", alignItems: "center", gap: 12, padding: 12, paddingLeft: 14, borderRadius: radius.bar, backgroundColor: colors.bg.raised }, shadow.floating]}>
             <RestRing progress={rest.left / rest.total} />
             <View style={{ flex: 1, gap: 1 }}>
@@ -222,7 +234,7 @@ export default function ActiveWorkout() {
             <SmallPill label="+15" onPress={() => w.adjustRest(15)} />
             <SmallPill label="Skip" inverse onPress={w.skipRest} />
           </View>
-        </View>
+        </Animated.View>
       ) : null}
 
       <BottomSheet visible={sheet?.kind === "exercise"} onClose={() => setSheet(null)} title={sheet?.kind === "exercise" ? sheet.ex.name : ""} subtitle={sheet?.kind === "exercise" ? `Exercise ${session.exercises.indexOf(sheet.ex) + 1} of ${session.exercises.length}` : undefined}>
@@ -319,9 +331,19 @@ function SetRow({ set, label, isCurrent, error, onType, onChange, onDone }: { se
   const boxBg = isCurrent ? colors.bg.ground : colors.bg.raised;
   const prev = set.prevKg === null ? "–" : `${set.prevKg || "BW"} × ${set.prevReps}`;
   const inputStyle = { width: "100%" as const, textAlign: "center" as const, color: dim ? colors.text.tertiary : colors.text.primary, fontFamily: fontFamily.displaySemi, fontSize: 20, paddingVertical: 0 };
+  const shake = useSharedValue(0);
+  const pop = useSharedValue(1);
+  useEffect(() => {
+    if (error) shake.value = withSequence(withTiming(-6, { duration: 50 }), withTiming(6, { duration: 50 }), withTiming(-4, { duration: 50 }), withTiming(0, { duration: 60 }));
+  }, [error, shake]);
+  useEffect(() => {
+    if (set.done) pop.value = withSequence(withTiming(1.18, { duration: 90 }), withSpring(1, springs.bouncy));
+  }, [set.done, pop]);
+  const rowAnim = useAnimatedStyle(() => ({ transform: [{ translateX: shake.value }] }));
+  const checkAnim = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
   return (
     <View>
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4, paddingHorizontal: 6, borderRadius: radius.setRow, backgroundColor: isCurrent ? colors.accent.soft : "transparent", opacity: dim && !error ? 0.6 : 1, borderWidth: error ? 1.5 : 0, borderColor: error ? colors.status.danger : "transparent" }}>
+    <Animated.View style={[{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4, paddingHorizontal: 6, borderRadius: radius.setRow, backgroundColor: isCurrent ? colors.accent.soft : "transparent", opacity: dim && !error ? 0.6 : 1, borderWidth: error ? 1.5 : 0, borderColor: error ? colors.status.danger : "transparent" }, rowAnim]}>
       <Pressable accessibilityRole="button" onPress={onType} hitSlop={6} style={{ width: 28 }} accessibilityLabel="Set type">
         <Txt variant="labelL" tone={isCurrent ? "ember" : set.type === "warmup" ? "tertiary" : "primary"}>
           {label}
@@ -336,15 +358,19 @@ function SetRow({ set, label, isCurrent, error, onType, onChange, onDone }: { se
       <View style={{ flex: 1, height: 40, borderRadius: radius.input, backgroundColor: boxBg, justifyContent: "center" }}>
         <TextInput value={String(set.reps)} onChangeText={(t) => onChange({ reps: Number(t) || 0 })} keyboardType="number-pad" selectTextOnFocus style={inputStyle} />
       </View>
-      <Pressable
-        onPress={onDone}
-        accessibilityRole="button"
-        accessibilityLabel={set.done ? "Undo set" : "Complete set"}
-        style={{ width: 40, height: 40, borderRadius: radius.input, alignItems: "center", justifyContent: "center", backgroundColor: set.done ? colors.status.success : isCurrent ? colors.accent.ember : colors.bg.raised }}
-      >
-        {set.done || isCurrent ? <Icon name="check" size={18} color={colors.accent.on} strokeWidth={2.6} /> : null}
-      </Pressable>
-    </View>
+      <Animated.View style={checkAnim}>
+        <Pressable
+          onPress={onDone}
+          onPressIn={() => { pop.value = withSpring(0.9, springs.snappy); }}
+          onPressOut={() => { pop.value = withSpring(1, springs.snappy); }}
+          accessibilityRole="button"
+          accessibilityLabel={set.done ? "Undo set" : "Complete set"}
+          style={{ width: 40, height: 40, borderRadius: radius.input, alignItems: "center", justifyContent: "center", backgroundColor: set.done ? colors.status.success : isCurrent ? colors.accent.ember : colors.bg.raised }}
+        >
+          {set.done || isCurrent ? <Icon name="check" size={18} color={colors.accent.on} strokeWidth={2.6} /> : null}
+        </Pressable>
+      </Animated.View>
+    </Animated.View>
     {error ? (
       <Row gap={6} style={{ paddingHorizontal: 8, paddingTop: 4, paddingBottom: 2 }}>
         <Icon name="info" size={13} color={colors.status.danger} strokeWidth={2.2} />

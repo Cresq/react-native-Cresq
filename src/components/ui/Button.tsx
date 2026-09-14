@@ -1,5 +1,6 @@
-import { ActivityIndicator, Pressable, StyleSheet, View, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
+import { ActivityIndicator, StyleSheet, View, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
+import { Press } from "./Press";
 import { Txt } from "./Text";
 import { Icon, type IconName } from "./Icon";
 
@@ -9,6 +10,7 @@ import { Icon, type IconName } from "./Icon";
  *   secondary – a filled, quiet alternative (surface). No outline.
  *   tertiary  – text only. For "not now", "see all", links inside copy.
  * inverse and gold are reserved: inverse for Finish/Connect pills, gold for record moments.
+ * Feedback is instant and physical: colour on touch-down, a 3 % settle, a spring back.
  */
 type Variant = "primary" | "secondary" | "tertiary" | "inverse" | "danger" | "gold";
 type Size = "L" | "M" | "S";
@@ -40,22 +42,13 @@ export function Button({ label, variant = "primary", size = "L", icon, iconRight
   const height = size === "L" ? 56 : size === "M" ? 48 : 40;
   const textVariant = size === "L" ? "buttonL" : "buttonM";
   return (
-    <Pressable
+    <Press
       accessibilityRole="button"
       disabled={disabled || loading}
+      scaleTo={0.97}
+      wrapperStyle={[{ alignSelf: full ? "stretch" : "flex-start", opacity: disabled ? 0.4 : 1 }, style]}
       {...rest}
-      style={({ pressed }) => [
-        styles.base,
-        {
-          height,
-          borderRadius: size === "S" ? radius.pill : radius.button,
-          backgroundColor: pressed ? p.pressed : p.bg,
-          alignSelf: full ? "stretch" : "flex-start",
-          paddingHorizontal: size === "L" ? 20 : 16,
-          opacity: disabled ? 0.4 : 1,
-        },
-        style,
-      ]}
+      style={({ pressed }) => [styles.base, { height, borderRadius: size === "S" ? radius.pill : radius.button, backgroundColor: pressed ? p.pressed : p.bg, paddingHorizontal: size === "L" ? 20 : 16 }]}
     >
       {loading ? (
         <ActivityIndicator color={p.fg} />
@@ -70,7 +63,7 @@ export function Button({ label, variant = "primary", size = "L", icon, iconRight
           {trailing}
         </View>
       )}
-    </Pressable>
+    </Press>
   );
 }
 
