@@ -38,13 +38,12 @@ SplashScreen.preventAutoHideAsync();
  */
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    "Bricolage-SemiBold": require("@/assets/fonts/BricolageGrotesque-SemiBold.ttf"),
-    "Bricolage-Bold": require("@/assets/fonts/BricolageGrotesque-Bold.ttf"),
-    "Instrument-Regular": require("@/assets/fonts/InstrumentSans-Regular.ttf"),
-    "Instrument-Medium": require("@/assets/fonts/InstrumentSans-Medium.ttf"),
-    "Instrument-SemiBold": require("@/assets/fonts/InstrumentSans-SemiBold.ttf"),
-    "Instrument-Bold": require("@/assets/fonts/InstrumentSans-Bold.ttf"),
-    "Instrument-Italic": require("@/assets/fonts/InstrumentSans-Italic.ttf"),
+    "Inter-Regular": require("@/assets/fonts/Inter-Regular.ttf"),
+    "Inter-Medium": require("@/assets/fonts/Inter-Medium.ttf"),
+    "Inter-SemiBold": require("@/assets/fonts/Inter-SemiBold.ttf"),
+    "Inter-Bold": require("@/assets/fonts/Inter-Bold.ttf"),
+    "Inter-ExtraBold": require("@/assets/fonts/Inter-ExtraBold.ttf"),
+    "Inter-Italic": require("@/assets/fonts/Inter-Italic.ttf"),
   });
 
   useEffect(() => {

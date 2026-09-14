@@ -74,7 +74,7 @@ export const legalDocs: LegalDoc[] = [
     reviewed: true,
     sections: [
       { h: "Icons", p: ["coolicons by Kryston Schwarze, licensed under CC BY 4.0 (creativecommons.org/licenses/by/4.0). A few icons (dumbbell, trophy, pulse, flame, watch) were drawn by us in the same style."] },
-      { h: "Typefaces", p: ["Bricolage Grotesque and Instrument Sans, both under the SIL Open Font License 1.1."] },
+      { h: "Typefaces", p: ["Inter by Rasmus Andersson, under the SIL Open Font License 1.1."] },
       { h: "Software", p: ["Built with Expo, React Native and open-source packages under the MIT and similar licences. A full list ships with the source."] },
       { h: "Trademarks", p: ["Apple, the Apple logo, Google and the Google logo are trademarks of their owners and appear only on the sign-in buttons, as their guidelines allow. Garmin, Fitbit, Whoop, Oura and Strava are trademarks of their owners; CresQ is not affiliated with them."] },
       { h: "Photos", p: ["All photos in the app are our own or were added by the person whose profile shows them."] },

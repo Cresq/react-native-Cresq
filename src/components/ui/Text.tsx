@@ -9,7 +9,7 @@ export type TxtProps = TextProps & {
   tone?: TextTone;
   align?: "left" | "center" | "right";
   italic?: boolean;
-  /** Tabular figures for numbers that sit in columns. */
+  /** Tabular figures for numbers that sit in columns. Number variants get them by default. */
   tabular?: boolean;
 };
 
@@ -36,7 +36,7 @@ export function Txt({ variant = "bodyM", tone = "primary", align, italic, tabula
         base,
         { color: toneColor[tone], textAlign: align },
         italic ? { fontFamily: fontFamily.italic } : null,
-        tabular ? { fontVariant: ["tabular-nums"] } : null,
+        tabular || variant.startsWith("number") ? { fontVariant: ["tabular-nums"] } : null,
         style,
       ]}
     />

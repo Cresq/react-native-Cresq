@@ -61,14 +61,16 @@ export const layout = {
   tabBarClearance: 130,
 } as const;
 
+/** One family, Inter, chosen 14 Sep 2026. Titles lean on weight and tighter tracking, not on a second face. */
 export const fontFamily = {
-  displaySemi: "Bricolage-SemiBold",
-  displayBold: "Bricolage-Bold",
-  regular: "Instrument-Regular",
-  medium: "Instrument-Medium",
-  semibold: "Instrument-SemiBold",
-  bold: "Instrument-Bold",
-  italic: "Instrument-Italic",
+  displaySemi: "Inter-SemiBold",
+  displayBold: "Inter-Bold",
+  displayHeavy: "Inter-ExtraBold",
+  regular: "Inter-Regular",
+  medium: "Inter-Medium",
+  semibold: "Inter-SemiBold",
+  bold: "Inter-Bold",
+  italic: "Inter-Italic",
 } as const;
 
 export type TypeStyle = { fontFamily: string; fontSize: number; lineHeight: number; letterSpacing: number };
@@ -82,13 +84,13 @@ const t = (fontFamilyName: string, fontSize: number, lineHeight: number, letterS
 
 /** Mirrors the Figma text styles one to one. */
 export const type = {
-  displayXL: t(fontFamily.displayBold, 34, 40, -0.5),
-  displayL: t(fontFamily.displayBold, 26, 31, -0.3),
-  displayM: t(fontFamily.displaySemi, 20, 25, -0.2),
-  displayS: t(fontFamily.displaySemi, 17, 22, -0.1),
-  numberXL: t(fontFamily.displayBold, 44, 48, -0.8),
-  numberL: t(fontFamily.displayBold, 28, 31, -0.4),
-  numberM: t(fontFamily.displaySemi, 20, 23, -0.2),
+  displayXL: t(fontFamily.displayHeavy, 34, 40, -0.9),
+  displayL: t(fontFamily.displayBold, 26, 31, -0.6),
+  displayM: t(fontFamily.displaySemi, 20, 25, -0.4),
+  displayS: t(fontFamily.displaySemi, 17, 22, -0.25),
+  numberXL: t(fontFamily.displayHeavy, 44, 48, -1.2),
+  numberL: t(fontFamily.displayBold, 28, 31, -0.7),
+  numberM: t(fontFamily.displaySemi, 20, 23, -0.4),
   bodyL: t(fontFamily.regular, 16, 23),
   bodyM: t(fontFamily.regular, 15, 21),
   bodyS: t(fontFamily.regular, 13, 18),
