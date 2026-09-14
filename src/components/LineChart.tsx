@@ -114,8 +114,9 @@ export function LineChart({ points, forecast, height = 96, labels, target, scrub
           </Txt>
         )}
       </View>
+      <View onLayout={onLayout} style={{ height }}>
       <GestureDetector gesture={pan}>
-        <Animated.View onLayout={onLayout} style={{ height }}>
+        <Animated.View style={{ height }}>
           {width > 0 ? (
             <Svg width={width} height={height}>
               {[0.2, 0.5, 0.8].map((f) => (
@@ -139,6 +140,7 @@ export function LineChart({ points, forecast, height = 96, labels, target, scrub
           ) : null}
         </Animated.View>
       </GestureDetector>
+      </View>
       {labels ? (
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           {labels.map((l, i) => (
