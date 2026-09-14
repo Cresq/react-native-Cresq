@@ -36,7 +36,14 @@
         }
       ],
       "expo-image",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "CresQ shows the photo you pick on your session. Nothing else is read.",
+          "cameraPermission": "CresQ takes the photo you choose to add to your session."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false,

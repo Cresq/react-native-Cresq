@@ -11,6 +11,7 @@ import { Divider } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Chip } from "@/components/ui/Chip";
 import { Stat, StatDivider } from "@/components/StatCard";
+import { PhotoSlot } from "@/components/ui/PhotoSlot";
 
 /** One logged session, read-only: the figures, any records, then every exercise with its sets. */
 export default function SessionDetail() {
@@ -44,6 +45,8 @@ export default function SessionDetail() {
         <StatDivider />
         <Stat label="Sets" value={String(stats.setsDone)} unit={`of ${stats.setsTotal}`} />
       </Row>
+
+      {session.photo ? <PhotoSlot source={{ uri: session.photo }} height={320} radius={18} /> : null}
 
       {recs.length ? (
         <Row gap={8} style={{ flexWrap: "wrap" }}>

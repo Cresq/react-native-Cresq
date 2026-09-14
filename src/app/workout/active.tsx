@@ -30,7 +30,7 @@ export const haptic = (kind: "tap" | "done" | "error") => {
 
 const setLabel = (s: SetEntry, workingIndex: number) => (s.type === "warmup" ? "W" : s.type === "drop" ? "D" : s.type === "failure" ? "F" : String(workingIndex));
 
-type Sheet = null | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry } | { kind: "session" } | { kind: "discard" } | { kind: "note"; ex: ExerciseEntry };
+type Sheet = null | { kind: "finish" } | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry } | { kind: "session" } | { kind: "discard" } | { kind: "note"; ex: ExerciseEntry };
 
 /**
  * Active workout. Built for one-handed input between sets: the exercise you
@@ -90,6 +90,7 @@ export default function ActiveWorkout() {
     w.finish();
     router.replace("/workout/summary");
   };
+  const openSets = stats.setsTotal - stats.setsDone;
   const complete = (ex: ExerciseEntry, s: SetEntry, i: number) => {
     const firstOpen = ex.sets.findIndex((x) => !x.done);
     if (!s.done && firstOpen !== -1 && firstOpen < i) {
@@ -181,7 +182,7 @@ export default function ActiveWorkout() {
           right={
             <Row gap={6}>
               <IconButton name="moreHorizontal" size={34} iconSize={18} tone="raised" onPress={() => setSheet({ kind: "session" })} accessibilityLabel="Session options" />
-              <Button label="Finish" variant="inverse" size="S" full={false} onPress={finish} />
+              <Button label="Finish" variant="inverse" size="S" full={false} onPress={() => setSheet({ kind: "finish" })} />
             </Row>
           }
         />
@@ -323,8 +324,15 @@ export default function ActiveWorkout() {
       <BottomSheet visible={sheet?.kind === "session"} onClose={() => setSheet(null)} title={session.planName} subtitle={`${stats.elapsed} elapsed · ${stats.setsDone} of ${stats.setsTotal} sets`}>
         <SheetOption icon="addPlus" label="Add exercise" sub="From your library" onPress={() => { setSheet(null); router.push("/exercises?session=1"); }} />
         <SheetOption icon="chevronDown" label="Minimise" sub="Keep it running, look around the app" onPress={() => { setSheet(null); router.back(); }} />
-        <SheetOption icon="circleCheck" label="Finish session" sub="Go to the summary" onPress={() => { setSheet(null); finish(); }} />
+        <SheetOption icon="circleCheck" label="Finish session" sub="Go to the summary" onPress={() => setSheet({ kind: "finish" })} />
         <SheetOption icon="trash" label="Discard session" sub="Nothing from this session is saved" danger onPress={() => setSheet({ kind: "discard" })} />
+      </BottomSheet>
+
+      <BottomSheet visible={sheet?.kind === "finish"} onClose={() => setSheet(null)} title="Finish this session?" subtitle={openSets > 0 ? `${stats.setsDone} of ${stats.setsTotal} sets done, ${openSets} still open. Open sets are not counted.` : `All ${stats.setsTotal} sets done in ${stats.elapsed}.`}>
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
+          <Button label="Finish session" onPress={() => { setSheet(null); haptic("done"); finish(); }} />
+          <Button label="Keep training" variant="secondary" size="M" onPress={() => setSheet(null)} />
+        </View>
       </BottomSheet>
 
       <BottomSheet visible={sheet?.kind === "discard"} onClose={() => setSheet(null)} title="Discard this session?" subtitle={`${stats.setsDone} completed set${stats.setsDone === 1 ? "" : "s"} will be lost. This cannot be undone.`}>

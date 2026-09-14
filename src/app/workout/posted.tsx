@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useWorkout } from "@/store/workout";
-import { fmtKg, newRecords, sessionStats } from "@/db/derive";
+import { fmtKg, newRecords, sessionRows, sessionStats } from "@/db/derive";
 import { photos } from "@/data/mock";
 import { useSocial } from "@/store/social";
 import { Screen, Row, Header } from "@/components/ui/Screen";
@@ -78,8 +78,9 @@ export default function Posted() {
           name: db.profile.name,
           meta: `${session?.planName ?? "Session"} · just now · ${db.profile.city}`,
           avatar: photos.selfie,
-          photo: photos.gym1,
-          photoHeight: 210,
+          photo: session?.photo ? { uri: session.photo } : undefined,
+          photoHeight: 300,
+          exercises: session ? sessionRows(session) : [],
           record: record ? `New record · ${record.name} ${record.kg} kg` : undefined,
           caption: session?.caption || (record ? `${record.name} ${record.kg} kg. Up ${record.previous ? Math.round((record.kg - record.previous) * 10) / 10 : record.kg} kg.` : `${session?.planName ?? "Session"} done. Every set counted.`),
           stats: [

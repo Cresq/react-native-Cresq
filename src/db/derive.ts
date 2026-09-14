@@ -255,3 +255,16 @@ export function exerciseHistory(sessions: Session[], exerciseId: string) {
     .filter((r): r is NonNullable<typeof r> => !!r)
     .reverse();
 }
+
+/** One line per exercise for a post without a photo: "3 × 5 · 100 kg". */
+export function sessionRows(session: Session) {
+  return session.exercises
+    .map((e) => {
+      const done = e.sets.filter((s) => s.done && s.type !== "warmup");
+      if (!done.length) return null;
+      const top = done.reduce((a, b) => (b.kg > a.kg ? b : a), done[0]);
+      const reps = done.every((s) => s.reps === done[0].reps) ? String(done[0].reps) : `${Math.min(...done.map((s) => s.reps))}–${Math.max(...done.map((s) => s.reps))}`;
+      return { name: e.name, detail: `${done.length} × ${reps}${top.kg ? ` · ${top.kg} kg` : ""}` };
+    })
+    .filter((r): r is { name: string; detail: string } => !!r);
+}

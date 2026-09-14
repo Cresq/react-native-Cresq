@@ -15,6 +15,9 @@ import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import { Stat, StatDivider } from "@/components/StatCard";
+import { PhotoSlot } from "@/components/ui/PhotoSlot";
+import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { pickPhoto } from "@/photo";
 
 /**
  * Session complete. The hero is typographic: the record, or the plain fact
@@ -25,7 +28,13 @@ export default function Summary() {
   const { colors } = useTheme();
   const router = useRouter();
   const { db } = useDb();
-  const { session, file } = useWorkout();
+  const { session, file, setPhoto } = useWorkout();
+  const [photoSheet, setPhotoSheet] = useState(false);
+  const choose = async (source: "library" | "camera") => {
+    setPhotoSheet(false);
+    const uri = await pickPhoto(source);
+    if (uri) setPhoto(uri);
+  };
   const [tab, setTab] = useState("exercises");
   const stats = sessionStats(session);
   const recs = useMemo(() => (session ? newRecords(session, db.sessions).sort((a, b) => b.kg - a.kg) : []), [session, db.sessions]);
@@ -91,6 +100,23 @@ export default function Summary() {
         <Stat label="Sets" value={String(stats.setsDone)} unit={`of ${stats.setsTotal}`} />
       </Row>
       </Animated.View>
+
+      {session?.photo ? (
+        <View style={{ gap: 10 }}>
+          <PhotoSlot source={{ uri: session.photo }} height={300} radius={18} />
+          <Row gap={10}>
+            <Button label="Change photo" variant="secondary" size="S" full={false} icon="camera" onPress={() => setPhotoSheet(true)} />
+            <Button label="Remove" variant="tertiary" size="S" full={false} onPress={() => setPhoto(null)} />
+          </Row>
+        </View>
+      ) : (
+        <Button label="Add a photo" variant="secondary" size="M" icon="camera" onPress={() => setPhotoSheet(true)} />
+      )}
+
+      <BottomSheet visible={photoSheet} onClose={() => setPhotoSheet(false)} title="Add a photo" subtitle="It goes on this session, and on your post if you share it.">
+        <SheetOption icon="camera" label="Take a photo" onPress={() => choose("camera")} />
+        <SheetOption icon="rows" label="Choose from library" onPress={() => choose("library")} />
+      </BottomSheet>
 
       <View style={{ gap: 4 }}>
         <Tabs

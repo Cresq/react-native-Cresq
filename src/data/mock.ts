@@ -14,8 +14,10 @@ export const photos: Record<string, ImageSourcePropType> = {
 };
 
 export const otherPosts: Post[] = [
-  { id: "p2", userId: "u2", name: "Sara de Vries", meta: "Legs · yesterday", photo: photos.gym2, photoHeight: 260, caption: "Pause squats, 5 × 5 at 90 kg.", stats: [{ value: "64", unit: "min" }, { value: "9.8k", unit: "kg" }, { value: "16", unit: "sets" }], likes: 12, comments: 3 },
-  { id: "p3", userId: "u3", name: "Tom Bakker", meta: "Arms · yesterday", photo: photos.gym3, photoHeight: 260, caption: "Preacher curls to finish. Forearms gone.", stats: [{ value: "41", unit: "min" }, { value: "4.2k", unit: "kg" }, { value: "14", unit: "sets" }], likes: 8, comments: 1 },
+  { id: "p2", userId: "u2", name: "Sara de Vries", meta: "Legs · yesterday", photo: photos.gym2, caption: "Pause squats, 5 × 5 at 90 kg.", stats: [{ value: "64", unit: "min" }, { value: "9.8k", unit: "kg" }, { value: "16", unit: "sets" }], likes: 12, comments: 3 },
+  { id: "p4", userId: "u4", name: "Lisa Jansen", meta: "Full body · today", caption: "Third session this week. Deadlift finally moved.", record: "New record · Deadlift 90 kg", exercises: [{ name: "Deadlift", detail: "3 × 5 · 90 kg" }, { name: "Bench press", detail: "3 × 8 · 45 kg" }, { name: "Lat pulldown", detail: "3 × 10 · 40 kg" }, { name: "Plank", detail: "3 × 45 s" }], stats: [{ value: "48", unit: "min" }, { value: "4.1k", unit: "kg" }, { value: "12", unit: "sets" }], likes: 15, comments: 4 },
+  { id: "p3", userId: "u3", name: "Tom Bakker", meta: "Arms · yesterday", photo: photos.gym3, caption: "Preacher curls to finish. Forearms gone.", stats: [{ value: "41", unit: "min" }, { value: "4.2k", unit: "kg" }, { value: "14", unit: "sets" }], likes: 8, comments: 1 },
+  { id: "p5", userId: "u7", name: "Noah de Groot", meta: "Push · 2 days ago", caption: "Deload week. Light, fast, done in forty.", exercises: [{ name: "Bench press", detail: "4 × 6 · 80 kg" }, { name: "Overhead press", detail: "3 × 8 · 45 kg" }, { name: "Incline dumbbell press", detail: "3 × 10 · 26 kg" }, { name: "Cable fly", detail: "2 × 15 · 15 kg" }, { name: "Triceps pushdown", detail: "3 × 12 · 30 kg" }], stats: [{ value: "41", unit: "min" }, { value: "6.2k", unit: "kg" }, { value: "15", unit: "sets" }], likes: 6, comments: 0 },
 ];
 
 export type Notification = { id: string; kind: "like" | "comment" | "follow" | "record" | "reminder" | "device"; title: string; body?: string; when: string; unread?: boolean; avatar?: ImageSourcePropType; /** Where a tap goes. */ href?: string };

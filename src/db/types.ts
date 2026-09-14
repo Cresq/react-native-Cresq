@@ -36,6 +36,8 @@ export type Session = {
   sample?: boolean;
   /** Caption written when sharing to the feed. */
   caption?: string;
+  /** Local uri of the photo added after finishing. */
+  photo?: string;
 };
 
 export type SplitDay = { id: string; name: string; focus: string; planId?: string; exercises?: number; minutes?: number; rest?: boolean };

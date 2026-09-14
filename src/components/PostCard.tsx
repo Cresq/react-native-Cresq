@@ -18,6 +18,8 @@ export type Post = {
   avatar?: ImageSourcePropType;
   photo?: ImageSourcePropType;
   photoHeight?: number;
+  /** Shown instead of a photo: what the session contained. */
+  exercises?: { name: string; detail: string }[];
   record?: string;
   caption: string;
   stats: { value: string; unit: string }[];
@@ -54,13 +56,33 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
         ) : null}
       </Row>
       <Pressable accessibilityRole={onPress ? "button" : undefined} disabled={!onPress} onPress={onPress}>
-      <PhotoSlot source={post.photo} height={post.photoHeight ?? 300} radius={0}>
+      {post.photo ? (
+      <PhotoSlot source={post.photo} height={post.photoHeight ?? 440} radius={0}>
         {post.record ? (
           <View style={{ position: "absolute", left: 12, top: 12 }}>
             <Chip label={post.record} icon="trophy" tone="gold" size="S" />
           </View>
         ) : null}
       </PhotoSlot>
+      ) : (
+        <View style={{ paddingHorizontal: 16, paddingTop: 2, paddingBottom: 4, gap: 0 }}>
+          {post.record ? (
+            <View style={{ paddingBottom: 10 }}>
+              <Chip label={post.record} icon="trophy" tone="gold" size="S" style={{ alignSelf: "flex-start" }} />
+            </View>
+          ) : null}
+          {(post.exercises ?? []).map((e, i) => (
+            <View key={i} style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12, paddingVertical: 7, borderTopWidth: i ? 1 : 0, borderTopColor: colors.border.subtle }}>
+              <Txt variant="labelL" style={{ flex: 1 }} numberOfLines={1}>
+                {e.name}
+              </Txt>
+              <Txt variant="labelM" tone="secondary" tabular>
+                {e.detail}
+              </Txt>
+            </View>
+          ))}
+        </View>
+      )}
       </Pressable>
       <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16, gap: 12 }}>
         <Txt variant="displayS">{post.caption}</Txt>

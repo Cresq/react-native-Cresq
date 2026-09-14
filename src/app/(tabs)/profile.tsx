@@ -17,7 +17,6 @@ import { Tabs } from "@/components/ui/Tabs";
 import { WorkoutTile } from "@/components/WorkoutTile";
 
 const TABS = ["workouts", "photos", "lifts"];
-const MOCK_PHOTOS = [photos.gym1, photos.gym2, photos.gym3];
 
 /**
  * Profile. Who you are, three numbers, then one grid at a time: workouts,
@@ -37,10 +36,7 @@ export default function Profile() {
   }, [wanted]);
 
   const done = useMemo(() => finished(db.sessions), [db.sessions]);
-  const workouts = useMemo(() => {
-    let shared = 0;
-    return [...done].reverse().map((s) => ({ s, prs: newRecords(s, db.sessions.filter((x) => x.startedAt < s.startedAt)).length, photo: s.shared ? MOCK_PHOTOS[shared++ % MOCK_PHOTOS.length] : undefined }));
-  }, [done, db.sessions]);
+  const workouts = useMemo(() => [...done].reverse().map((s) => ({ s, prs: newRecords(s, db.sessions.filter((x) => x.startedAt < s.startedAt)).length, photo: s.photo ? { uri: s.photo } : undefined })), [done, db.sessions]);
   const withPhoto = workouts.filter((w) => w.photo);
   const favourites = db.profile.favourites ?? DEFAULT_FAVOURITES;
   const lifts = useMemo(

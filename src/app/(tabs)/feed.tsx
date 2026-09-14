@@ -3,7 +3,7 @@ import { View } from "react-native";
 import { useRouter } from "expo-router";
 import { useDb } from "@/db/DbProvider";
 import { useSocial } from "@/store/social";
-import { finished, fmtKg, newRecords, relativeDay, sessionStats } from "@/db/derive";
+import { finished, fmtKg, newRecords, relativeDay, sessionRows, sessionStats } from "@/db/derive";
 import { otherPosts, photos } from "@/data/mock";
 import { Screen, Row } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
@@ -44,7 +44,8 @@ export default function Feed() {
             name: db.profile.name,
             meta: `${s.planName} · ${relativeDay(s.startedAt)}${db.profile.showCity === false ? "" : ` · ${db.profile.city}`}`,
             avatar: photos.selfie,
-            photo: photos.gym1,
+            photo: s.photo ? { uri: s.photo } : undefined,
+            exercises: sessionRows(s),
             record: rec ? `New record · ${rec.name} ${rec.kg} kg` : undefined,
             caption: s.caption || (rec ? `${rec.name} ${rec.kg} kg. ${rec.previous ? `Up ${Math.round((rec.kg - rec.previous) * 10) / 10} kg.` : "First logged best."}` : `${s.planName} done. Every set counted.`),
             stats: [
