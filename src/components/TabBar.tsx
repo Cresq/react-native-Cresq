@@ -7,7 +7,7 @@ import { useRouter } from "expo-router";
 import type { ComponentProps } from "react";
 import type { Tabs } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
-import { sessionStats, useWorkout } from "@/store/workout";
+import { fmtTime, sessionStats, useWorkout } from "@/store/workout";
 import { springs, to } from "@/motion";
 import { Txt } from "./ui/Text";
 import { Icon, type IconName } from "./ui/Icon";
@@ -77,7 +77,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
 function RunningStrip() {
   const { colors, layout, radius, shadow } = useTheme();
   const router = useRouter();
-  const { session } = useWorkout();
+  const { session, rest, adjustRest, skipRest } = useWorkout();
   const [, tick] = useState(0);
   const running = !!session && !session.finishedAt;
   const enter = useSharedValue(0);
@@ -91,31 +91,46 @@ function RunningStrip() {
   if (!running || !session) return null;
   const stats = sessionStats(session);
   const current = session.exercises[session.currentIndex];
+  const resting = !!rest;
   return (
-    <Animated.View style={style}>
-      <Press
-        accessibilityRole="button"
-        accessibilityLabel="Return to your running session"
-        onPress={() => router.push("/workout/active")}
-        scaleTo={0.98}
-        wrapperStyle={[{ marginHorizontal: layout.tabBarInset, marginBottom: 8 }, shadow.floating]}
-        style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingLeft: 16, paddingRight: 12, borderRadius: radius.pill, backgroundColor: pressed ? colors.accent.pressed : colors.accent.ember })}
-      >
-        <Pulse color={colors.accent.on} />
+    <Animated.View style={[style, { marginHorizontal: layout.tabBarInset, marginBottom: 8, borderRadius: radius.pill, backgroundColor: resting ? colors.bg.raised : colors.accent.ember, flexDirection: "row", alignItems: "center", paddingRight: 8 }, shadow.floating]}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Return to your running session" onPress={() => router.push("/workout/active")} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingLeft: 16, paddingRight: 8, opacity: pressed ? 0.8 : 1 })}>
+        <Pulse color={resting ? colors.accent.ember : colors.accent.on} />
         <View style={{ flex: 1, gap: 1 }}>
-          <Txt variant="labelL" style={{ color: colors.accent.on }} numberOfLines={1}>
-            {session.planName} · {current?.name ?? "Add an exercise"}
+          <Txt variant="labelL" style={{ color: resting ? colors.text.primary : colors.accent.on }} numberOfLines={1}>
+            {resting ? `Rest ${fmtTime(rest.left)}` : `${session.planName} · ${current?.name ?? "Add an exercise"}`}
           </Txt>
-          <Txt variant="labelS" style={{ color: colors.accent.on, opacity: 0.8 }}>
-            {stats.setsDone} of {stats.setsTotal} sets
+          <Txt variant="labelS" style={{ color: resting ? colors.text.tertiary : colors.accent.on, opacity: resting ? 1 : 0.8 }} numberOfLines={1}>
+            {resting ? rest.nextLabel : `${stats.setsDone} of ${stats.setsTotal} sets`}
           </Txt>
         </View>
-        <Txt variant="numberM" tabular style={{ color: colors.accent.on }}>
-          {stats.elapsed}
-        </Txt>
+        {resting ? null : (
+          <Txt variant="numberM" tabular style={{ color: colors.accent.on }}>
+            {stats.elapsed}
+          </Txt>
+        )}
+      </Pressable>
+      {resting ? (
+        <View style={{ flexDirection: "row", gap: 6 }}>
+          <StripPill label="−15" onPress={() => adjustRest(-15)} />
+          <StripPill label="+15" onPress={() => adjustRest(15)} />
+          <StripPill label="Skip" accent onPress={skipRest} />
+        </View>
+      ) : (
         <Icon name="chevronRight" size={16} color={colors.accent.on} strokeWidth={2.2} />
-      </Press>
+      )}
     </Animated.View>
+  );
+}
+
+function StripPill({ label, onPress, accent }: { label: string; onPress: () => void; accent?: boolean }) {
+  const { colors, radius } = useTheme();
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={label === "Skip" ? "Skip rest" : `${label} seconds`} onPress={onPress} style={({ pressed }) => ({ paddingHorizontal: 12, height: 36, justifyContent: "center", borderRadius: radius.pill, backgroundColor: accent ? colors.accent.ember : colors.bg.surface, opacity: pressed ? 0.8 : 1 })}>
+      <Txt variant="buttonM" style={{ color: accent ? colors.accent.on : colors.text.primary }}>
+        {label}
+      </Txt>
+    </Pressable>
   );
 }
 
