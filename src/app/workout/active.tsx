@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Platform, Pressable, TextInput, View } from "react-native";
-import * as Haptics from "expo-haptics";
+import { Pressable, TextInput, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { FadeInDown, FadeOutDown, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import { project, rubberband, springs } from "@/motion";
@@ -21,19 +20,14 @@ import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { Field } from "@/components/ui/Field";
 import { fontFamily } from "../../../constants/theme";
 
-export const haptic = (kind: "tap" | "done" | "error") => {
-  if (Platform.OS === "web") return;
-  if (kind === "tap") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-  else if (kind === "done") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-  else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-};
+import { haptic } from "@/haptics";
 
 const setLabel = (s: SetEntry, workingIndex: number) => (s.type === "warmup" ? "W" : s.type === "drop" ? "D" : s.type === "failure" ? "F" : String(workingIndex));
 
 /** One collapsed exercise row is about this tall; dragging that far moves one place. */
 const ROW_STEP = 64;
 
-type Sheet = null | { kind: "finish" } | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry } | { kind: "session" } | { kind: "discard" } | { kind: "note"; ex: ExerciseEntry };
+type Sheet = null | { kind: "finish" } | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry } | { kind: "note"; ex: ExerciseEntry };
 
 /**
  * Active workout. Built for one-handed input between sets: the exercise you
@@ -95,6 +89,12 @@ export default function ActiveWorkout() {
     w.finish();
     router.replace("/workout/summary");
   };
+  /** Stops at once. The strip above the tab bar offers Undo for a few seconds. */
+  const stop = () => {
+    haptic("error");
+    w.discard();
+    router.back();
+  };
   const complete = (ex: ExerciseEntry, s: SetEntry, i: number) => {
     const firstOpen = ex.sets.findIndex((x) => !x.done);
     if (!s.done && firstOpen !== -1 && firstOpen < i) {
@@ -145,7 +145,7 @@ export default function ActiveWorkout() {
           subtitle={`Exercise ${session.currentIndex + 1} of ${session.exercises.length}`}
           right={
             <Row gap={6}>
-              <IconButton name="moreHorizontal" size={34} iconSize={18} tone="raised" onPress={() => setSheet({ kind: "session" })} accessibilityLabel="Session options" />
+              <IconButton name="trash" size={34} iconSize={17} tone="danger" onPress={stop} accessibilityLabel="Stop and discard session" />
               <Button label="Finish" variant="inverse" size="S" full={false} onPress={() => setSheet({ kind: "finish" })} />
             </Row>
           }
@@ -281,21 +281,9 @@ export default function ActiveWorkout() {
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={sheet?.kind === "session"} onClose={() => setSheet(null)} title={session.planName} subtitle={`${stats.elapsed} elapsed · ${stats.setsDone} of ${stats.setsTotal} sets`}>
-        <SheetOption icon="addPlus" label="Add exercise" sub="From your library" onPress={() => { setSheet(null); router.push("/exercises?session=1"); }} />
-        <SheetOption icon="trash" label="Discard session" sub="Nothing from this session is saved" danger onPress={() => setSheet({ kind: "discard" })} />
-      </BottomSheet>
-
       <BottomSheet visible={sheet?.kind === "finish"} onClose={() => setSheet(null)} title="Finish this session?" subtitle={openSets > 0 ? `${stats.setsDone} of ${stats.setsTotal} sets done, ${openSets} still open. Open sets are not counted.` : `All ${stats.setsTotal} sets done in ${stats.elapsed}.`}>
         <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
           <Button label="Finish session" onPress={() => { setSheet(null); haptic("done"); finish(); }} />
-          <Button label="Keep training" variant="secondary" size="M" onPress={() => setSheet(null)} />
-        </View>
-      </BottomSheet>
-
-      <BottomSheet visible={sheet?.kind === "discard"} onClose={() => setSheet(null)} title="Discard this session?" subtitle={`${stats.setsDone} completed set${stats.setsDone === 1 ? "" : "s"} will be lost. This cannot be undone.`}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
-          <Button label="Discard session" variant="danger" size="M" onPress={() => { setSheet(null); w.discard(); router.back(); }} />
           <Button label="Keep training" variant="secondary" size="M" onPress={() => setSheet(null)} />
         </View>
       </BottomSheet>

@@ -77,7 +77,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
 function RunningStrip() {
   const { colors, layout, radius, shadow } = useTheme();
   const router = useRouter();
-  const { session, rest, adjustRest, skipRest } = useWorkout();
+  const { session, rest, adjustRest, skipRest, lastDiscarded, undoDiscard } = useWorkout();
   const [, tick] = useState(0);
   const running = !!session && !session.finishedAt;
   const enter = useSharedValue(0);
@@ -88,7 +88,20 @@ function RunningStrip() {
     return () => clearInterval(t);
   }, [running, enter]);
   const style = useAnimatedStyle(() => ({ opacity: enter.value, transform: [{ translateY: (1 - enter.value) * 24 }] }));
-  if (!running || !session) return null;
+  if (!running || !session) {
+    if (!lastDiscarded) return null;
+    return (
+      <View style={[{ marginHorizontal: layout.tabBarInset, marginBottom: 8, borderRadius: radius.pill, backgroundColor: colors.bg.raised, flexDirection: "row", alignItems: "center", paddingVertical: 10, paddingLeft: 16, paddingRight: 8, gap: 12 }, shadow.floating]}>
+        <View style={{ flex: 1, gap: 1 }}>
+          <Txt variant="labelL">Session discarded</Txt>
+          <Txt variant="labelS" tone="tertiary" numberOfLines={1}>
+            {lastDiscarded.planName} · nothing was saved
+          </Txt>
+        </View>
+        <StripPill label="Undo" accent onPress={undoDiscard} />
+      </View>
+    );
+  }
   const stats = sessionStats(session);
   const current = session.exercises[session.currentIndex];
   const resting = !!rest;
@@ -101,7 +114,7 @@ function RunningStrip() {
             {resting ? `Rest ${fmtTime(rest.left)}` : `${session.planName} · ${current?.name ?? "Add an exercise"}`}
           </Txt>
           <Txt variant="labelS" style={{ color: resting ? colors.text.tertiary : colors.accent.on, opacity: resting ? 1 : 0.8 }} numberOfLines={1}>
-            {resting ? rest.nextLabel : `${stats.setsDone} of ${stats.setsTotal} sets`}
+            {resting ? `${rest.nextLabel} · ${stats.elapsed} elapsed` : `${stats.setsDone} of ${stats.setsTotal} sets`}
           </Txt>
         </View>
         {resting ? null : (

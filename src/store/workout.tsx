@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from "react";
 import { useDb } from "@/db/DbProvider";
 import type { Exercise, ExerciseEntry, Session, SetEntry, SetType } from "@/db/types";
+import { haptic } from "@/haptics";
 import { sessionFromPlan } from "@/db/derive";
 import { uid } from "@/db/storage";
 
@@ -12,6 +13,8 @@ type Rest = { total: number; left: number; nextLabel: string } | null;
 type WorkoutState = {
   session: Session | null;
   rest: Rest;
+  lastDiscarded: Session | null;
+  undoDiscard: () => void;
   /** Start from a plan id, or a quick empty session with a name. */
   start: (planId?: string, name?: string) => void;
   finish: () => void;
@@ -81,6 +84,7 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
       update((d) => {
         const plan = d.plans.find((p) => p.id === planId) ?? (name ? d.plans.find((p) => p.name.toLowerCase() === name.toLowerCase()) : undefined);
         const fresh = plan ? sessionFromPlan(plan, d.exercises, d.sessions) : { id: uid(), planName: name ?? "Quick session", startedAt: Date.now(), exercises: [], currentIndex: 0 };
+        haptic("start");
         return { ...d, activeSession: fresh };
       }),
     [update],
@@ -89,9 +93,26 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
     setRest(null);
     mutate((s) => ({ ...s, finishedAt: Date.now() }));
   }, [mutate]);
+  const [lastDiscarded, setLastDiscarded] = useState<Session | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Stops the session at once. It is kept for a few seconds so a slip can be undone. */
   const discard = useCallback(() => {
     setRest(null);
-    update((d) => ({ ...d, activeSession: null }));
+    update((d) => {
+      if (d.activeSession) {
+        setLastDiscarded(d.activeSession);
+        if (undoTimer.current) clearTimeout(undoTimer.current);
+        undoTimer.current = setTimeout(() => setLastDiscarded(null), 6000);
+      }
+      return { ...d, activeSession: null };
+    });
+  }, [update]);
+  const undoDiscard = useCallback(() => {
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    setLastDiscarded((s) => {
+      if (s) update((d) => ({ ...d, activeSession: s }));
+      return null;
+    });
   }, [update]);
   const file = useCallback(
     (shared: boolean) => {
@@ -188,8 +209,8 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
   const skipRest = useCallback(() => setRest(null), []);
 
   const value = useMemo<WorkoutState>(
-    () => ({ session, rest, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, adjustRest, skipRest }),
-    [session, rest, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, adjustRest, skipRest],
+    () => ({ session, rest, lastDiscarded, undoDiscard, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, adjustRest, skipRest }),
+    [session, rest, lastDiscarded, undoDiscard, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, adjustRest, skipRest],
   );
   return <WorkoutContext.Provider value={value}>{children}</WorkoutContext.Provider>;
 }

@@ -106,7 +106,7 @@ export default function LiftDetail() {
                       <Legend color={colors.pr.gold} label="Record" />
                       {fc ? <Legend color={colors.fuel.sage} label="Forecast" /> : null}
                     </Row>
-                    <LineChart points={shown} forecast={fc?.values} target={fc?.target} height={170} labels={[shortDate(shown[0].date), "", "", "Now", fc ? `${fc.target} kg` : ""]} />
+                    <LineChart points={shown} forecast={fc?.values} target={fc?.target} height={170} labels={[shortDate(shown[0].date), "", "", "Now", fc ? `${fc.target} kg` : ""]} scrubLabels={shown.map((p) => shortDate(p.date))} />
                   </Card>
                 </View>
 

@@ -8,6 +8,7 @@ import { Icon } from "./ui/Icon";
 import { Avatar, PhotoSlot } from "./ui/PhotoSlot";
 import { Chip } from "./ui/Chip";
 import { Row } from "./ui/Screen";
+import type { BreakdownExercise } from "./SessionBreakdown";
 
 export type Post = {
   id: string;
@@ -20,6 +21,8 @@ export type Post = {
   photoHeight?: number;
   /** Shown instead of a photo: what the session contained. */
   exercises?: { name: string; detail: string }[];
+  /** Every set, for the post's own page. */
+  workout?: BreakdownExercise[];
   record?: string;
   caption: string;
   stats: { value: string; unit: string }[];
@@ -85,19 +88,21 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
       )}
       </Pressable>
       <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16, gap: 12 }}>
-        <Txt variant="displayS">{post.caption}</Txt>
-        <Row gap={16}>
-          {post.stats.map((s, i) => (
-            <Row key={i} gap={4} align="baseline">
-              <Txt variant="numberM" tabular>
-                {s.value}
-              </Txt>
-              <Txt variant="labelS" tone="tertiary">
-                {s.unit}
-              </Txt>
-            </Row>
-          ))}
-        </Row>
+        <Pressable accessibilityRole={onPress ? "button" : undefined} accessibilityLabel="Open this workout" disabled={!onPress} onPress={onPress} style={{ gap: 12 }}>
+          <Txt variant="displayS">{post.caption}</Txt>
+          <Row gap={16}>
+            {post.stats.map((s, i) => (
+              <Row key={i} gap={4} align="baseline">
+                <Txt variant="numberM" tabular>
+                  {s.value}
+                </Txt>
+                <Txt variant="labelS" tone="tertiary">
+                  {s.unit}
+                </Txt>
+              </Row>
+            ))}
+          </Row>
+        </Pressable>
         {preview ? (
           <Txt variant="labelS" tone="tertiary">
             Reactions from followers show up here

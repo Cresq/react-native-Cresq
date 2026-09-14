@@ -1,45 +1,61 @@
-import { useEffect, useRef } from "react";
-import { Animated, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { View } from "react-native";
+import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { Lockup, Mark } from "@/components/Brand";
-import { Txt } from "@/components/ui/Text";
+import { spring } from "@/motion";
 
-/** Splash. Shows the brand while the database loads, then routes to auth, onboarding or the tabs. */
+/**
+ * Splash. The mark settles in, the wordmark follows; once the database is
+ * ready the mark grows toward the viewer and dissolves, and the app is there.
+ */
 export default function Splash() {
   const { colors } = useTheme();
   const { db, ready } = useDb();
   const router = useRouter();
-  const progress = useRef(new Animated.Value(0)).current;
   const shownAt = useRef(Date.now());
+  const [leaving, setLeaving] = useState(false);
+  const markScale = useSharedValue(0.72);
+  const markOpacity = useSharedValue(0);
+  const lockupOpacity = useSharedValue(0);
+  const lockupY = useSharedValue(10);
 
   useEffect(() => {
-    Animated.timing(progress, { toValue: 1, duration: 1200, useNativeDriver: false }).start();
-  }, [progress]);
+    markOpacity.value = withTiming(1, { duration: 260 });
+    markScale.value = withSpring(1, spring(0.5, 0.85));
+    lockupOpacity.value = withDelay(220, withTiming(1, { duration: 320 }));
+    lockupY.value = withDelay(220, withSpring(0, spring(0.5)));
+  }, [markOpacity, markScale, lockupOpacity, lockupY]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || leaving) return;
     const target = !db.auth.signedIn ? "/(auth)/sign-in" : !db.profile.onboarded ? "/onboarding" : "/(tabs)";
-    const wait = Math.max(0, 1300 - (Date.now() - shownAt.current));
-    const t = setTimeout(() => router.replace(target), wait);
+    const wait = Math.max(0, 1100 - (Date.now() - shownAt.current));
+    const t = setTimeout(() => {
+      setLeaving(true);
+      lockupOpacity.value = withTiming(0, { duration: 180 });
+      markScale.value = withSequence(withTiming(1.06, { duration: 120 }), withTiming(2.4, { duration: 420, easing: Easing.in(Easing.cubic) }));
+      markOpacity.value = withDelay(140, withTiming(0, { duration: 360 }, (done) => {
+        if (done) runOnJS(router.replace)(target);
+      }));
+    }, wait);
     return () => clearTimeout(t);
-  }, [ready, db.auth.signedIn, db.profile.onboarded, router]);
+  }, [ready, leaving, db.auth.signedIn, db.profile.onboarded, router, lockupOpacity, markScale, markOpacity]);
+
+  const markStyle = useAnimatedStyle(() => ({ opacity: markOpacity.value, transform: [{ scale: markScale.value }] }));
+  const lockupStyle = useAnimatedStyle(() => ({ opacity: lockupOpacity.value, transform: [{ translateY: lockupY.value }] }));
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg.ground, alignItems: "center", justifyContent: "center" }}>
-      <View pointerEvents="none" style={{ position: "absolute", width: 360, height: 360, borderRadius: 180, backgroundColor: colors.accent.ember, opacity: 0.16, transform: [{ scale: 1.5 }] }} />
       <View style={{ alignItems: "center", gap: 28 }}>
-        <Mark size={132} />
-        <Lockup width={236} />
-      </View>
-      <View style={{ position: "absolute", bottom: 88, alignItems: "center", gap: 20 }}>
-        <Txt variant="bodyM" tone="secondary">
-          Train. See it grow.
-        </Txt>
-        <View style={{ width: 120, height: 3, borderRadius: 2, backgroundColor: colors.border.strong, overflow: "hidden" }}>
-          <Animated.View style={{ height: 3, borderRadius: 2, backgroundColor: colors.accent.ember, width: progress.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }) }} />
-        </View>
+        <Animated.View style={markStyle}>
+          <Mark size={132} />
+        </Animated.View>
+        <Animated.View style={lockupStyle}>
+          <Lockup width={236} />
+        </Animated.View>
       </View>
     </View>
   );

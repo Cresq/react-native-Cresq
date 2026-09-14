@@ -61,7 +61,7 @@ export default function Feed() {
     [db.sessions, db.profile],
   );
   const visible = (filter === "following" ? [...mine, ...otherPosts.filter((p) => p.userId && isFollowing(p.userId))] : otherPosts.filter((p) => !p.userId || !isFollowing(p.userId))).filter((p) => !hidden.includes(p.id));
-  const open = (p: Post) => (p.userId ? router.push(`/user/${p.userId}`) : router.push(`/workout/${p.id}`));
+  const open = (p: Post) => router.push(`/workout/${p.id}`);
 
   return (
     <Screen tabs>

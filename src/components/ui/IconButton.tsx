@@ -17,14 +17,14 @@ export function IconButton({
   onPress?: () => void;
   size?: number;
   iconSize?: number;
-  tone?: "surface" | "raised" | "ember";
+  tone?: "surface" | "raised" | "ember" | "danger";
   badge?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
 }) {
   const { colors } = useTheme();
-  const bg = tone === "ember" ? colors.accent.ember : tone === "raised" ? colors.bg.raised : colors.bg.surface;
-  const fg = tone === "ember" ? colors.accent.on : colors.icon.strong;
+  const bg = tone === "ember" ? colors.accent.ember : tone === "raised" || tone === "danger" ? colors.bg.raised : colors.bg.surface;
+  const fg = tone === "ember" ? colors.accent.on : tone === "danger" ? colors.status.danger : colors.icon.strong;
   return (
     <Press
       accessibilityRole="button"

@@ -188,7 +188,7 @@ export default function Home() {
                       </Row>
                     </View>
                   </Row>
-                  <LineChart points={lift.points.slice(-8)} labels={lift.points.slice(-8).map((p, i, a) => (i === a.length - 1 ? "Now" : shortDate(p.date)))} height={110} />
+                  <LineChart points={lift.points.slice(-8)} labels={lift.points.slice(-8).map((p, i, a) => (i === a.length - 1 ? "Now" : shortDate(p.date)))} scrubLabels={lift.points.slice(-8).map((p) => shortDate(p.date))} height={110} />
                   <Row gap={6}>
                     <Icon name="star" size={12} color={fc?.weeksToTarget ? colors.fuel.sage : colors.text.tertiary} strokeWidth={2} />
                     <Txt variant="labelS" tone={fc?.weeksToTarget ? "sage" : "tertiary"}>
