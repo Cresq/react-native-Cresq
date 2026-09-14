@@ -56,7 +56,7 @@ export default function ActiveWorkout() {
     return (
       <Screen>
         <Txt variant="displayL">No session running</Txt>
-        <Button label="Back" variant="secondary" onPress={() => router.back()} />
+        <Button label="Back" variant="secondary" onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))} />
       </Screen>
     );
   }
@@ -93,7 +93,8 @@ export default function ActiveWorkout() {
   const stop = () => {
     haptic("error");
     w.discard();
-    router.back();
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)");
   };
   const complete = (ex: ExerciseEntry, s: SetEntry, i: number) => {
     const firstOpen = ex.sets.findIndex((x) => !x.done);
