@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo , useState } from "react";
 import { Share, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -15,6 +15,9 @@ import { Avatar, PhotoSlot } from "@/components/ui/PhotoSlot";
 import { Stat, StatDivider } from "@/components/StatCard";
 import { SessionBreakdown, type BreakdownExercise } from "@/components/SessionBreakdown";
 import { useT } from "@/i18n";
+import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { Field } from "@/components/ui/Field";
+import { Button } from "@/components/ui/Button";
 
 /**
  * One workout, read-only: the figures, any records, the photo, then every
@@ -25,7 +28,9 @@ export default function SessionDetail() {
   const { colors } = useTheme();
   const router = useRouter();
   const t = useT();
-  const { db } = useDb();
+  const { db, update } = useDb();
+  const [menu, setMenu] = useState<"menu" | "caption" | "delete" | null>(null);
+  const [captionText, setCaptionText] = useState("");
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = db.sessions.find((s) => s.id === id) ?? (db.activeSession?.id === id ? db.activeSession : undefined);
   const post = session ? undefined : otherPosts.find((p) => p.id === id);
@@ -82,7 +87,7 @@ export default function SessionDetail() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={s.planName} subtitle={longDate(s.startedAt)} right={<IconButton name="share" onPress={() => Share.share({ message: `${s.planName}, ${longDate(s.startedAt)}: ${t("{n} sets", { n: stats.setsDone })}, ${fmtKg(stats.volume)} kg, ${stats.minutes} min. CresQ.` })} accessibilityLabel={t("Share")} />} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={s.planName} subtitle={longDate(s.startedAt)} right={<IconButton name="moreHorizontal" onPress={() => setMenu("menu")} accessibilityLabel={t("Options")} />} />
 
       <Row gap={12} align="stretch">
         <Stat label={t("Duration")} value={String(stats.minutes)} unit="min" />
@@ -113,6 +118,31 @@ export default function SessionDetail() {
           {s.sample ? `, ${t("sample session")}` : ""}
         </Txt>
       </Row>
+
+      <BottomSheet visible={menu === "menu"} onClose={() => setMenu(null)} title={s.planName} subtitle={longDate(s.startedAt)}>
+        <SheetOption icon="share" label={t("Share")} sub={t("Send a summary to another app")} onPress={() => { setMenu(null); Share.share({ message: `${s.planName}, ${longDate(s.startedAt)}: ${t("{n} sets", { n: stats.setsDone })}, ${fmtKg(stats.volume)} kg, ${stats.minutes} min. CresQ.` }); }} />
+        <SheetOption icon="noteEdit" label={t("Edit caption")} onPress={() => { setCaptionText(s.caption ?? ""); setMenu("caption"); }} />
+        {s.shared ? (
+          <SheetOption icon="lock" label={t("Make private")} sub={t("Removes it from the feed, keeps it in your log")} onPress={() => { setMenu(null); update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, shared: false } : x)) })); }} />
+        ) : (
+          <SheetOption icon="users" label={t("Share to feed")} sub={t("Your followers see it in their feed")} onPress={() => { setMenu(null); update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, shared: true } : x)) })); }} />
+        )}
+        <SheetOption icon="trash" label={t("Delete workout")} sub={t("Gone from the feed and from your log")} danger onPress={() => setMenu("delete")} />
+      </BottomSheet>
+
+      <BottomSheet visible={menu === "caption"} onClose={() => setMenu(null)} title={t("Caption")}>
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
+          <Field label={t("Caption")} value={captionText} onChangeText={setCaptionText} placeholder={t("How did it go?")} multiline autoFocus />
+          <Button label={t("Save caption")} onPress={() => { update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, caption: captionText.trim() } : x)) })); setMenu(null); }} />
+        </View>
+      </BottomSheet>
+
+      <BottomSheet visible={menu === "delete"} onClose={() => setMenu(null)} title={t("Delete this workout?")} subtitle={t("It disappears from the feed and from your log. Records from it are recalculated. This cannot be undone.")}>
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
+          <Button label={t("Keep it")} variant="secondary" size="M" onPress={() => setMenu(null)} />
+          <Button label={t("Delete workout")} variant="danger" size="M" onPress={() => { const id = s.id; setMenu(null); update((d) => ({ ...d, sessions: d.sessions.filter((x) => x.id !== id) })); router.canGoBack() ? router.back() : router.replace("/(tabs)"); }} />
+        </View>
+      </BottomSheet>
     </Screen>
   );
 }

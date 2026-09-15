@@ -20,11 +20,15 @@ import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { Field } from "@/components/ui/Field";
+import { WheelPicker } from "@/components/ui/WheelPicker";
+import { SUPERSET_INK, supersetColor } from "@/superset";
 import { fontFamily } from "../../../constants/theme";
+
+const REST_CHOICES = Array.from({ length: 20 }, (_, i) => (i + 1) * 15);
 
 const setLabel = (s: SetEntry, workingIndex: number) => (s.type === "warmup" ? "W" : s.type === "drop" ? "D" : s.type === "failure" ? "F" : String(workingIndex));
 
-type Sheet = null | { kind: "finish" } | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry } | { kind: "note"; ex: ExerciseEntry } | { kind: "superset"; ex: ExerciseEntry };
+type Sheet = null | { kind: "finish" } | { kind: "discard" } | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry } | { kind: "note"; ex: ExerciseEntry } | { kind: "superset"; ex: ExerciseEntry };
 type Slot = { id: string; y: number; h: number };
 
 /**
@@ -47,7 +51,10 @@ export default function ActiveWorkout() {
   const [open, setOpen] = useState<string[] | null>(null);
   const [pick, setPick] = useState<string[]>([]);
   const [drop, setDrop] = useState<{ index: number; dragging: string } | null>(null);
+  const [highlight, setHighlight] = useState<string | null>(null);
+  const [restValue, setRestValue] = useState(90);
   const slots = useRef<Record<string, Slot>>({});
+  const openBeforeDrag = useRef<string[] | null>(null);
 
   useEffect(() => {
     const i = setInterval(() => force((n) => n + 1), 1000);
@@ -98,6 +105,7 @@ export default function ActiveWorkout() {
     router.replace("/workout/summary");
   };
   const stop = () => {
+    setSheet(null);
     haptic("error");
     w.discard();
     leave();
@@ -118,11 +126,14 @@ export default function ActiveWorkout() {
     setNoteText(ex.note ?? "");
     setSheet({ kind: "note", ex });
   };
-  // Sheets are native modals: one has to be gone before the next appears, or iOS locks up.
+  // The picker lives in the same sheet as the exercise menu: the content swaps, the modal stays.
   const openSuperset = (ex: ExerciseEntry) => {
     setPick(session.exercises.filter((e) => e.id !== ex.id && ex.supersetGroup && e.supersetGroup === ex.supersetGroup).map((e) => e.id));
-    setSheet(null);
-    setTimeout(() => setSheet({ kind: "superset", ex }), 380);
+    setSheet({ kind: "superset", ex });
+  };
+  const openRest = (ex: ExerciseEntry) => {
+    setRestValue(ex.restSeconds);
+    setSheet({ kind: "rest", ex });
   };
 
   /** Where a card dragged by `dy` from its slot would land, by walking the measured slots. */
@@ -146,6 +157,12 @@ export default function ActiveWorkout() {
     }
     return idx;
   };
+  // While a card is being dragged every card is closed, so the list is short and
+  // the target is easy to read; afterwards they open again and the moved card lights up.
+  const onDragStart = () => {
+    openBeforeDrag.current = open ?? [];
+    setOpen([]);
+  };
   const onDragMove = (id: string, dy: number) => {
     const idx = targetIndex(id, dy);
     setDrop((d) => (d && d.index === idx && d.dragging === id ? d : { index: idx, dragging: id }));
@@ -158,6 +175,10 @@ export default function ActiveWorkout() {
       haptic("tap");
       w.moveExercise(id, to - from);
     }
+    setOpen(openBeforeDrag.current ?? []);
+    openBeforeDrag.current = null;
+    setHighlight(id);
+    setTimeout(() => setHighlight((h) => (h === id ? null : h)), 1400);
   };
   const measure = (id: string) => (e: LayoutChangeEvent) => {
     const { y, height } = e.nativeEvent.layout;
@@ -174,7 +195,7 @@ export default function ActiveWorkout() {
           subtitle={t("Exercise {a} of {b}", { a: session.currentIndex + 1, b: session.exercises.length })}
           right={
             <Row gap={6}>
-              <IconButton name="trash" size={34} iconSize={17} tone="danger" onPress={stop} accessibilityLabel={t("Stop and discard session")} />
+              <IconButton name="trash" size={34} iconSize={17} tone="danger" onPress={() => setSheet({ kind: "discard" })} accessibilityLabel={t("Stop and discard session")} />
               <Button label={t("Finish")} variant="inverse" size="S" full={false} onPress={() => setSheet({ kind: "finish" })} />
             </Row>
           }
@@ -191,13 +212,14 @@ export default function ActiveWorkout() {
             const lineAbove = drop && drop.index === index && dragFrom > index;
             const lineBelow = drop && drop.index === index && dragFrom !== -1 && dragFrom < index;
             const groupStart = ex.supersetGroup && (index === 0 || session.exercises[index - 1].supersetGroup !== ex.supersetGroup);
+            const groupColor = supersetColor(ex.supersetGroup);
             return (
               <View key={ex.id} onLayout={measure(ex.id)} style={{ gap: 8 }}>
                 {lineAbove ? <DropLine /> : null}
-                {groupStart ? (
+                {groupStart && groupColor ? (
                   <Row gap={6} style={{ paddingHorizontal: 4, paddingTop: 4 }}>
-                    <Icon name="link" size={13} color={colors.accent.ember} strokeWidth={2} />
-                    <Txt variant="labelS" tone="ember">
+                    <Icon name="link" size={13} color={groupColor} strokeWidth={2} />
+                    <Txt variant="labelS" style={{ color: groupColor }}>
                       {t("Superset, alternate, no rest between")}
                     </Txt>
                   </Row>
@@ -207,13 +229,16 @@ export default function ActiveWorkout() {
                   index={index}
                   isCurrent={ex.id === current.id}
                   expanded={isOpen(ex.id)}
+                  highlighted={highlight === ex.id}
+                  groupColor={groupColor}
                   blocked={blocked}
                   onToggle={() => toggle(ex.id)}
                   onFocus={() => w.setCurrent(index)}
+                  onDragStart={onDragStart}
                   onDragMove={(dy) => onDragMove(ex.id, dy)}
                   onDragEnd={(dy) => onDragEnd(ex.id, dy)}
                   onNote={() => openNote(ex)}
-                  onRest={() => setSheet({ kind: "rest", ex })}
+                  onRest={() => openRest(ex)}
                   onRemove={() => { haptic("error"); w.removeExercise(ex.id); }}
                   onMore={() => setSheet({ kind: "exercise", ex })}
                   onSetType={(s, i) => setSheet({ kind: "set", ex, set: s, index: i })}
@@ -254,7 +279,24 @@ export default function ActiveWorkout() {
         </Animated.View>
       ) : null}
 
-      <BottomSheet visible={sheet?.kind === "exercise"} onClose={() => setSheet(null)} title={sheet?.kind === "exercise" ? sheet.ex.name : ""} subtitle={sheet?.kind === "exercise" ? t("Exercise {a} of {b}", { a: session.exercises.indexOf(sheet.ex) + 1, b: session.exercises.length }) : undefined}>
+      <BottomSheet
+        visible={sheet?.kind === "exercise" || sheet?.kind === "superset"}
+        onClose={() => setSheet(null)}
+        title={sheet?.kind === "exercise" ? sheet.ex.name : sheet?.kind === "superset" ? t("Superset") : ""}
+        subtitle={sheet?.kind === "exercise" ? t("Exercise {a} of {b}", { a: session.exercises.indexOf(sheet.ex) + 1, b: session.exercises.length }) : sheet?.kind === "superset" ? t("Pick the exercises to alternate with {name}. No rest between them.", { name: sheet.ex.name }) : undefined}
+      >
+        {sheet?.kind === "superset" ? (
+          <View style={{ gap: 4 }}>
+            {session.exercises.filter((e) => e.id !== sheet.ex.id).map((e) => {
+              const on = pick.includes(e.id);
+              const elsewhere = e.supersetGroup && e.supersetGroup !== sheet.ex.supersetGroup && !on;
+              return <SheetOption key={e.id} icon={on ? "circleCheck" : "addPlus"} label={e.name} sub={elsewhere ? t("In another superset, tap to move it here") : undefined} selected={on} onPress={() => setPick((p) => (p.includes(e.id) ? p.filter((x) => x !== e.id) : [...p, e.id]))} />;
+            })}
+            <View style={{ paddingHorizontal: 8, paddingTop: 8 }}>
+              <Button label={pick.length ? t("Save superset") : sheet.ex.supersetGroup ? t("Remove superset") : t("Pick at least one")} disabled={!pick.length && !sheet.ex.supersetGroup} onPress={() => { w.groupExercises([sheet.ex.id, ...pick]); setSheet(null); }} />
+            </View>
+          </View>
+        ) : null}
         {sheet?.kind === "exercise" ? (
           <>
             <SheetOption icon="reload" label={t("Swap exercise")} sub={t("Keep the sets, change the movement")} onPress={() => { const id = sheet.ex.id; setSheet(null); setTimeout(() => router.push(`/exercises?swap=${id}`), 380); }} />
@@ -265,18 +307,11 @@ export default function ActiveWorkout() {
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={sheet?.kind === "superset"} onClose={() => setSheet(null)} title={t("Superset")} subtitle={sheet?.kind === "superset" ? t("Pick the exercises to alternate with {name}. No rest between them.", { name: sheet.ex.name }) : undefined}>
-        {sheet?.kind === "superset" ? (
-          <View style={{ gap: 4 }}>
-            {session.exercises.filter((e) => e.id !== sheet.ex.id).map((e) => {
-              const on = pick.includes(e.id);
-              return <SheetOption key={e.id} icon={on ? "circleCheck" : "addPlus"} label={e.name} sub={e.supersetGroup && e.supersetGroup !== sheet.ex.supersetGroup ? t("Already in another superset") : undefined} selected={on} onPress={() => setPick((p) => (p.includes(e.id) ? p.filter((x) => x !== e.id) : [...p, e.id]))} />;
-            })}
-            <View style={{ paddingHorizontal: 8, paddingTop: 8 }}>
-              <Button label={pick.length ? t("Save superset") : t("Remove superset")} onPress={() => { w.groupExercises([sheet.ex.id, ...pick]); setSheet(null); }} />
-            </View>
-          </View>
-        ) : null}
+      <BottomSheet visible={sheet?.kind === "discard"} onClose={() => setSheet(null)} title={t("Stop this workout?")} subtitle={t("Nothing from this session is saved. You can undo for a few seconds afterwards.")}>
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
+          <Button label={t("No, keep going")} variant="secondary" size="M" onPress={() => setSheet(null)} />
+          <Button label={t("Yes, stop this workout")} variant="danger" size="M" onPress={stop} />
+        </View>
       </BottomSheet>
 
       <BottomSheet visible={sheet?.kind === "set"} onClose={() => setSheet(null)} title={sheet?.kind === "set" ? t("Set {n}", { n: sheet.index + 1 }) : ""} subtitle={sheet?.kind === "set" ? `${sheet.ex.name}, ${sheet.set.kg} kg × ${sheet.set.reps}` : undefined}>
@@ -315,11 +350,15 @@ export default function ActiveWorkout() {
 
       <BottomSheet visible={sheet?.kind === "rest"} onClose={() => setSheet(null)} title={t("Rest timer")} subtitle={sheet?.kind === "rest" ? t("After each set of {name}", { name: sheet.ex.name }) : undefined}>
         {sheet?.kind === "rest" ? (
-          <Row gap={8} style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
-            {[60, 90, 120, 150, 180].map((s) => (
-              <Chip key={s} label={fmtTime(s)} selected={sheet.ex.restSeconds === s} onPress={() => { w.setRestSeconds(sheet.ex.id, s); setSheet(null); }} style={{ flex: 1, justifyContent: "center" }} />
-            ))}
-          </Row>
+          <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
+            <WheelPicker values={REST_CHOICES} value={restValue} onChange={setRestValue} format={fmtTime} />
+            <Row gap={8}>
+              {[60, 90, 120, 180].map((s) => (
+                <Chip key={s} label={fmtTime(s)} selected={restValue === s} onPress={() => setRestValue(s)} style={{ flex: 1, justifyContent: "center" }} />
+              ))}
+            </Row>
+            <Button label={t("Use {time}", { time: fmtTime(restValue) })} onPress={() => { w.setRestSeconds(sheet.ex.id, restValue); setSheet(null); }} />
+          </View>
         ) : null}
       </BottomSheet>
     </View>
@@ -337,9 +376,12 @@ type CardProps = {
   index: number;
   isCurrent: boolean;
   expanded: boolean;
+  highlighted: boolean;
+  groupColor?: string;
   blocked: { id: string; msg: string } | null;
   onToggle: () => void;
   onFocus: () => void;
+  onDragStart: () => void;
   onDragMove: (dy: number) => void;
   onDragEnd: (dy: number) => void;
   onNote: () => void;
@@ -358,25 +400,29 @@ type CardProps = {
  * note line, chevron) and, when open, the rest pill, a delete button, the
  * options button, the set table and an Add set button.
  */
-function ExerciseCard({ ex, index, isCurrent, expanded, blocked, onToggle, onFocus, onDragMove, onDragEnd, onNote, onRest, onRemove, onMore, onSetType, onChange, onDone, onRemoveSet, onAddSet }: CardProps) {
+function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor, blocked, onToggle, onFocus, onDragStart, onDragMove, onDragEnd, onNote, onRest, onRemove, onMore, onSetType, onChange, onDone, onRemoveSet, onAddSet }: CardProps) {
   const { colors, radius } = useTheme();
   const t = useT();
-  const { drag, style } = useDrag(onDragMove, onDragEnd);
+  const { drag, style } = useDrag(onDragStart, onDragMove, onDragEnd);
   const done = ex.sets.length > 0 && ex.sets.every((s) => s.done);
   const doneCount = ex.sets.filter((s) => s.done).length;
   let working = 0;
   return (
     <Animated.View style={style}>
-      <Card padding={expanded ? 16 : 10} gap={6} style={isCurrent ? { borderWidth: 1.5, borderColor: colors.accent.ember } : undefined}>
+      <Card padding={expanded ? 16 : 10} gap={6} style={highlighted ? { borderWidth: 1.5, borderColor: colors.accent.ember, backgroundColor: colors.accent.soft } : isCurrent ? { borderWidth: 1.5, borderColor: colors.accent.ember } : undefined}>
         <Row gap={10} align="center">
           <GestureDetector gesture={drag}>
             <Animated.View accessibilityRole="button" accessibilityLabel={t("Drag to reorder")} style={{ width: 28, height: 28, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg.raised }}>
               <Icon name="dragVertical" size={16} color={colors.text.secondary} strokeWidth={2} />
             </Animated.View>
           </GestureDetector>
-          <View style={{ width: 26, height: 26, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: done ? colors.status.success : isCurrent ? colors.accent.ember : colors.bg.raised }}>
+          <View style={{ width: 26, height: 26, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: done ? colors.status.success : groupColor ? groupColor : isCurrent ? colors.accent.ember : colors.bg.raised }}>
             {done ? (
               <Icon name="check" size={14} color={colors.accent.on} strokeWidth={2.4} />
+            ) : groupColor ? (
+              <Txt variant="labelS" style={{ color: SUPERSET_INK, letterSpacing: 0.3 }}>
+                SS
+              </Txt>
             ) : (
               <Txt variant="labelM" style={{ color: isCurrent ? colors.accent.on : colors.text.secondary }}>
                 {index + 1}
@@ -452,7 +498,7 @@ function ExerciseCard({ ex, index, isCurrent, expanded, blocked, onToggle, onFoc
 }
 
 /** Vertical drag that lifts the element, follows the finger, reports where it is, and where it let go. */
-function useDrag(onMove: (dy: number) => void, onEnd: (dy: number) => void) {
+function useDrag(onStart: () => void, onMove: (dy: number) => void, onEnd: (dy: number) => void) {
   const ty = useSharedValue(0);
   const lift = useSharedValue(0);
   const drag = Gesture.Pan()
@@ -460,6 +506,7 @@ function useDrag(onMove: (dy: number) => void, onEnd: (dy: number) => void) {
     .failOffsetX([-16, 16])
     .onStart(() => {
       lift.value = withSpring(1, springs.snappy);
+      runOnJS(onStart)();
     })
     .onUpdate((e) => {
       ty.value = e.translationY;

@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useWorkout } from "@/store/workout";
 import { compareToLast, fmtKg, longDate, newRecords, sessionStats, shortDate } from "@/db/derive";
-import { Screen, Row, Header } from "@/components/ui/Screen";
+import { Screen, Row, Header, Section } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
 import { Divider } from "@/components/ui/Card";
@@ -14,6 +14,9 @@ import { Icon } from "@/components/ui/Icon";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
+import { Field } from "@/components/ui/Field";
+import { Toggle } from "@/components/ui/Toggle";
+import type { SharePrefs } from "@/db/types";
 import { Stat, StatDivider } from "@/components/StatCard";
 import { PhotoSlot } from "@/components/ui/PhotoSlot";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
@@ -30,7 +33,9 @@ export default function Summary() {
   const router = useRouter();
   const t = useT();
   const { db } = useDb();
-  const { session, file, setPhoto } = useWorkout();
+  const { session, file, setPhoto, setCaption, setShare } = useWorkout();
+  const share: SharePrefs = session?.share ?? { exercises: true, stats: true, records: true };
+  const flip = (key: keyof SharePrefs) => setShare({ ...share, [key]: !share[key] });
   const [photoSheet, setPhotoSheet] = useState(false);
   const choose = async (source: "library" | "camera") => {
     setPhotoSheet(false);
@@ -103,17 +108,38 @@ export default function Summary() {
       </Row>
       </Animated.View>
 
-      {session?.photo ? (
-        <View style={{ gap: 10 }}>
-          <PhotoSlot source={{ uri: session.photo }} height={300} radius={18} />
-          <Row gap={10}>
-            <Button label={t("Change photo")} variant="secondary" size="S" full={false} icon="camera" onPress={() => setPhotoSheet(true)} />
-            <Button label={t("Remove")} variant="tertiary" size="S" full={false} onPress={() => setPhoto(null)} />
-          </Row>
+      <Section title={t("Your post")} gap={12}>
+        {session?.photo ? (
+          <View style={{ gap: 10 }}>
+            <PhotoSlot source={{ uri: session.photo }} height={300} radius={18} />
+            <Row gap={10}>
+              <Button label={t("Change photo")} variant="secondary" size="S" full={false} icon="camera" onPress={() => setPhotoSheet(true)} />
+              <Button label={t("Remove")} variant="tertiary" size="S" full={false} onPress={() => setPhoto(null)} />
+            </Row>
+          </View>
+        ) : (
+          <Pressable accessibilityRole="button" accessibilityLabel={t("Add a photo")} onPress={() => setPhotoSheet(true)} style={({ pressed }) => ({ height: 150, borderRadius: 18, borderWidth: 1.5, borderStyle: "dashed", borderColor: colors.accent.ember, backgroundColor: pressed ? colors.accent.soft : colors.bg.surface, alignItems: "center", justifyContent: "center", gap: 8 })}>
+            <View style={{ width: 48, height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent.ember }}>
+              <Icon name="camera" size={22} color={colors.accent.on} strokeWidth={2} />
+            </View>
+            <Txt variant="labelL">{t("Add a photo")}</Txt>
+            <Txt variant="bodyS" tone="tertiary">
+              {t("Goes on your post and in your log")}
+            </Txt>
+          </Pressable>
+        )}
+        <Field label={t("Caption")} value={session?.caption ?? ""} onChangeText={setCaption} placeholder={t("How did it go?")} multiline />
+        <View>
+          <Txt variant="labelS" tone="tertiary" style={{ paddingBottom: 4 }}>
+            {t("What your post shows")}
+          </Txt>
+          <ShareRow label={t("Exercises and sets")} value={share.exercises} onChange={() => flip("exercises")} />
+          <Divider />
+          <ShareRow label={t("Duration, volume and set count")} value={share.stats} onChange={() => flip("stats")} />
+          <Divider />
+          <ShareRow label={t("New records")} value={share.records} onChange={() => flip("records")} />
         </View>
-      ) : (
-        <Button label={t("Add a photo")} variant="secondary" size="M" icon="camera" onPress={() => setPhotoSheet(true)} />
-      )}
+      </Section>
 
       <BottomSheet visible={photoSheet} onClose={() => setPhotoSheet(false)} title={t("Add a photo")} subtitle={t("It goes on this session, and on your post if you share it.")}>
         <SheetOption icon="camera" label={t("Take a photo")} onPress={() => choose("camera")} />
@@ -142,10 +168,10 @@ export default function Summary() {
                   <View style={{ flex: 1, gap: 2 }}>
                     <Txt variant="labelL">{r.name}</Txt>
                     <Txt variant="bodyS" tone="tertiary">
-                      {r.detail}
+                      {t(r.detail)}
                     </Txt>
                   </View>
-                  <Chip label={r.delta} icon={r.tone === "ember" ? "trendingUp" : undefined} tone={r.tone} size="S" />
+                  <Chip label={t(r.delta)} icon={r.tone === "ember" ? "trendingUp" : undefined} tone={r.tone} size="S" />
                 </Row>
               </View>
             ))}
@@ -185,6 +211,17 @@ export default function Summary() {
         )}
       </View>
     </Screen>
+  );
+}
+
+function ShareRow({ label, value, onChange }: { label: string; value: boolean; onChange: () => void }) {
+  return (
+    <Row gap={12} style={{ paddingVertical: 10 }}>
+      <Txt variant="labelL" style={{ flex: 1 }}>
+        {label}
+      </Txt>
+      <Toggle value={value} onChange={onChange} />
+    </Row>
   );
 }
 

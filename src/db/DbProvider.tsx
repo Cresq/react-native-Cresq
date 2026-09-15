@@ -17,7 +17,10 @@ const DbContext = createContext<DbState | null>(null);
 /** Fill keys that were added after a document was first stored, without touching what the user already has. */
 function migrate(stored: Db): Db {
   const fresh = createSeedDb();
-  return { ...fresh, ...stored, profile: { ...fresh.profile, ...stored.profile }, consent: { ...fresh.consent, ...(stored.consent ?? {}) }, following: stored.following ?? fresh.following, blocked: stored.blocked ?? [] };
+  // Exercises added to the library since the user's first launch join theirs; nothing of theirs is touched.
+  const have = new Set((stored.exercises ?? []).map((e) => e.id));
+  const exercises = [...(stored.exercises ?? []), ...fresh.exercises.filter((e) => !have.has(e.id))];
+  return { ...fresh, ...stored, exercises, profile: { ...fresh.profile, ...stored.profile }, consent: { ...fresh.consent, ...(stored.consent ?? {}) }, following: stored.following ?? fresh.following, blocked: stored.blocked ?? [] };
 }
 
 export function DbProvider({ children }: PropsWithChildren) {

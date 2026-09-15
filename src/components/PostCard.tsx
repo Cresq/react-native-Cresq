@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { Pressable, Share, View, type ImageSourcePropType } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
+import { springs } from "@/motion";
+import { haptic } from "@/haptics";
 import { Card } from "./ui/Card";
 import { Txt } from "./ui/Text";
 import { Icon } from "./ui/Icon";
@@ -42,6 +45,7 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
   const t = useT();
   const [liked, setLiked] = useState(!!post.liked);
   const likes = post.likes + (liked && !post.liked ? 1 : !liked && post.liked ? -1 : 0);
+  const { toggleLike, heartStyle, ringStyle } = useLikeMotion(liked, setLiked);
   return (
     <Card padding={0} gap={0} style={{ overflow: "hidden" }}>
       <Row style={{ paddingHorizontal: 16, paddingVertical: 14 }} gap={10}>
@@ -111,8 +115,13 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
           </Txt>
         ) : (
           <Row gap={20}>
-            <Pressable onPress={() => setLiked((v) => !v)} accessibilityRole="button" accessibilityLabel={t("Like")} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Icon name="heart" size={20} color={liked ? colors.accent.ember : colors.text.secondary} fill={liked ? colors.accent.ember : undefined} strokeWidth={1.8} />
+            <Pressable onPress={toggleLike} accessibilityRole="button" accessibilityLabel={t("Like")} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View style={{ width: 20, height: 20, alignItems: "center", justifyContent: "center" }}>
+                <Animated.View pointerEvents="none" style={[{ position: "absolute", width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: colors.accent.ember }, ringStyle]} />
+                <Animated.View style={heartStyle}>
+                  <Icon name="heart" size={20} color={liked ? colors.accent.ember : colors.text.secondary} fill={liked ? colors.accent.ember : undefined} strokeWidth={1.8} />
+                </Animated.View>
+              </View>
               <Txt variant="labelM" tone={liked ? "ember" : "secondary"}>
                 {likes}
               </Txt>
@@ -132,4 +141,28 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
       </View>
     </Card>
   );
+}
+
+/**
+ * The like: the heart shrinks a touch, springs past its size and settles,
+ * while a ring bursts outward and fades. Unliking is a small dip, nothing more.
+ */
+function useLikeMotion(liked: boolean, setLiked: (f: (v: boolean) => boolean) => void) {
+  const scale = useSharedValue(1);
+  const ring = useSharedValue(0);
+  const toggleLike = () => {
+    const next = !liked;
+    setLiked(() => next);
+    if (next) {
+      haptic("tap");
+      scale.value = withSequence(withTiming(0.7, { duration: 70 }), withSpring(1.35, springs.bouncy), withSpring(1, springs.snappy));
+      ring.value = 0;
+      ring.value = withTiming(1, { duration: 420 });
+    } else {
+      scale.value = withSequence(withTiming(0.85, { duration: 80 }), withSpring(1, springs.snappy));
+    }
+  };
+  const heartStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const ringStyle = useAnimatedStyle(() => ({ opacity: ring.value === 0 ? 0 : 0.7 * (1 - ring.value), transform: [{ scale: 0.6 + ring.value * 1.6 }] }));
+  return { toggleLike, heartStyle, ringStyle };
 }

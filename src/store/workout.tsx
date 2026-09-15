@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from "react";
 import { useDb } from "@/db/DbProvider";
-import type { Exercise, ExerciseEntry, Session, SetEntry, SetType } from "@/db/types";
+import type { Exercise, ExerciseEntry, Session, SetEntry, SetType, SharePrefs } from "@/db/types";
 import { haptic } from "@/haptics";
 import { sessionFromPlan } from "@/db/derive";
 import { uid } from "@/db/storage";
@@ -9,6 +9,35 @@ export { fmtKg, fmtTime, sessionStats } from "@/db/derive";
 export type { Session };
 
 type Rest = { total: number; left: number; nextLabel: string } | null;
+
+/** Exercises as blocks: a superset is one block, a loose exercise is a block of one. */
+function blocks(exs: ExerciseEntry[]) {
+  const out: ExerciseEntry[][] = [];
+  for (const e of exs) {
+    const last = out[out.length - 1];
+    if (e.supersetGroup && last && last[0].supersetGroup === e.supersetGroup) last.push(e);
+    else out.push([e]);
+  }
+  return out;
+}
+/** Every superset's members side by side, at the place of the first member. */
+function contiguous(exs: ExerciseEntry[]) {
+  const seen = new Set<string>();
+  const out: ExerciseEntry[] = [];
+  for (const e of exs) {
+    if (e.supersetGroup) {
+      if (seen.has(e.supersetGroup)) continue;
+      seen.add(e.supersetGroup);
+      out.push(...exs.filter((x) => x.supersetGroup === e.supersetGroup));
+    } else out.push(e);
+  }
+  return out;
+}
+function keepCurrent(s: Session, next: ExerciseEntry[]): Session {
+  const currentId = s.exercises[s.currentIndex]?.id;
+  const currentIndex = currentId ? Math.max(0, next.findIndex((e) => e.id === currentId)) : s.currentIndex;
+  return { ...s, exercises: next, currentIndex };
+}
 
 type WorkoutState = {
   session: Session | null;
@@ -37,6 +66,7 @@ type WorkoutState = {
   swapExercise: (entryId: string, ex: Exercise) => void;
   toggleSuperset: (entryId: string) => void;
   groupExercises: (ids: string[]) => void;
+  setShare: (share: SharePrefs) => void;
   adjustRest: (delta: number) => void;
   skipRest: () => void;
 };
@@ -192,38 +222,49 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
         let g = "A";
         while (used.has(g)) g = String.fromCharCode(g.charCodeAt(0) + 1);
         const group = ids.length >= 2 ? g : undefined;
-        return { ...s, exercises: s.exercises.map((e) => (ids.includes(e.id) ? { ...e, supersetGroup: group } : e)) };
+        return keepCurrent(s, contiguous(s.exercises.map((e) => (ids.includes(e.id) ? { ...e, supersetGroup: group } : e))));
       }),
     [mutate],
   );
   const removeExercise = useCallback((exerciseId: string) => mutate((s) => ({ ...s, exercises: s.exercises.filter((e) => e.id !== exerciseId), currentIndex: Math.max(0, Math.min(s.currentIndex, s.exercises.length - 2)) })), [mutate]);
-  /** Move an exercise by any number of places; the current exercise stays the current one. */
+  /**
+   * Move an exercise by a number of rows. A superset moves as one block and
+   * nothing can land inside another block, so groups always stay together.
+   * The current exercise stays the current one.
+   */
   const moveExercise = useCallback(
     (exerciseId: string, delta: number) =>
       mutate((s) => {
         const i = s.exercises.findIndex((e) => e.id === exerciseId);
         if (i < 0 || !delta) return s;
-        const j = Math.max(0, Math.min(s.exercises.length - 1, i + delta));
-        if (j === i) return s;
-        const next = [...s.exercises];
-        const [item] = next.splice(i, 1);
-        next.splice(j, 0, item);
-        const currentId = s.exercises[s.currentIndex]?.id;
-        const currentIndex = currentId ? Math.max(0, next.findIndex((e) => e.id === currentId)) : s.currentIndex;
-        return { ...s, exercises: next, currentIndex };
+        const units = blocks(s.exercises);
+        const from = units.findIndex((u) => u.some((e) => e.id === exerciseId));
+        const targetRow = Math.max(0, Math.min(s.exercises.length - 1, i + delta));
+        let to = 0;
+        let row = 0;
+        for (let k = 0; k < units.length; k++) {
+          if (targetRow >= row && targetRow < row + units[k].length) to = k;
+          row += units[k].length;
+        }
+        if (to === from) return s;
+        const moved = [...units];
+        const [unit] = moved.splice(from, 1);
+        moved.splice(to, 0, unit);
+        return keepCurrent(s, moved.flat());
       }),
     [mutate],
   );
   const setRestSeconds = useCallback((exerciseId: string, seconds: number) => mutate((s) => mapEx(s, exerciseId, (e) => ({ ...e, restSeconds: seconds }))), [mutate]);
   const setNote = useCallback((exerciseId: string, note: string) => mutate((s) => mapEx(s, exerciseId, (e) => ({ ...e, note }))), [mutate]);
+  const setShare = useCallback((share: SharePrefs) => mutate((s) => ({ ...s, share })), [mutate]);
   const setCaption = useCallback((caption: string) => mutate((s) => ({ ...s, caption })), [mutate]);
   const setPhoto = useCallback((photo: string | null) => mutate((s) => ({ ...s, photo: photo ?? undefined })), [mutate]);
   const adjustRest = useCallback((delta: number) => setRest((r) => (r ? { ...r, left: Math.max(1, r.left + delta), total: Math.max(r.total, r.left + delta) } : r)), []);
   const skipRest = useCallback(() => setRest(null), []);
 
   const value = useMemo<WorkoutState>(
-    () => ({ session, rest, lastDiscarded, undoDiscard, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, adjustRest, skipRest }),
-    [session, rest, lastDiscarded, undoDiscard, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, adjustRest, skipRest],
+    () => ({ session, rest, lastDiscarded, undoDiscard, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, setShare, adjustRest, skipRest }),
+    [session, rest, lastDiscarded, undoDiscard, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, setShare, adjustRest, skipRest],
   );
   return <WorkoutContext.Provider value={value}>{children}</WorkoutContext.Provider>;
 }

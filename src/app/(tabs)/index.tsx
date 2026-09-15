@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { useMemo, useState } from "react";
+import { Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
@@ -27,6 +27,17 @@ import { useSocial } from "@/store/social";
 import { otherPosts } from "@/data/mock";
 import { person } from "@/data/people";
 
+/**
+ * One line, always. The size follows the room next to the avatar and the bell
+ * (Inter Extra Bold runs about 0.58 em per character), so a long name shrinks
+ * instead of wrapping or cutting off. Native shrinks once more if needed.
+ */
+const greetingSize = (line: string, screenWidth: number) => {
+  const room = screenWidth - 32 - 44 - 12 - 44 - 12;
+  const size = Math.max(20, Math.min(34, Math.floor(room / (line.length * 0.58))));
+  return { fontSize: size, lineHeight: Math.round(size * 1.18) };
+};
+
 const greetingKey = () => {
   const h = new Date().getHours();
   return h < 12 ? "Morning" : h < 18 ? "Afternoon" : "Evening";
@@ -48,12 +59,7 @@ export default function Home() {
   const { isFollowing } = useSocial();
   const [mode, setMode] = useState("gym");
   const [choosing, setChoosing] = useState(false);
-  // While the chart is being scrubbed, releasing the finger must not open the lift.
-  const scrubbing = useRef(false);
-  const onScrub = (on: boolean) => {
-    if (on) scrubbing.current = true;
-    else setTimeout(() => { scrubbing.current = false; }, 300);
-  };
+  const { width: screenWidth } = useWindowDimensions();
 
   const override = split.overridePlanId ? db.plans.find((p) => p.id === split.overridePlanId) : undefined;
   const plan = override ?? db.plans.find((p) => p.id === nextDay?.planId);
@@ -101,7 +107,7 @@ export default function Home() {
           <Txt variant="labelS" tone="tertiary">
             {new Date().toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" })}
           </Txt>
-          <Txt variant="displayXL">
+          <Txt variant="displayXL" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={greetingSize(`${t(greetingKey())}, ${db.profile.first}`, screenWidth)}>
             {t(greetingKey())}, {db.profile.first}
           </Txt>
         </View>
@@ -209,7 +215,8 @@ export default function Home() {
               </Row>
 
               {lift && lift.points.length >= 2 ? (
-                <Pressable accessibilityRole="button" accessibilityLabel={lift.ex.name} onPress={() => { if (!scrubbing.current) router.push(`/progress/${lift.ex.id}`); }} style={{ gap: 12 }}>
+                <View style={{ gap: 12 }}>
+                  <Pressable accessibilityRole="button" accessibilityLabel={lift.ex.name} onPress={() => router.push(`/progress/${lift.ex.id}`)} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
                   <Row justify="space-between" align="flex-end">
                     <View style={{ gap: 2 }}>
                       <Txt variant="labelS" tone="tertiary">
@@ -238,14 +245,17 @@ export default function Home() {
                       </Row>
                     </View>
                   </Row>
-                  <LineChart points={lift.points.slice(-8)} labels={lift.points.slice(-8).map((p, i, a) => (i === a.length - 1 ? t("Now") : shortDate(p.date)))} scrubLabels={lift.points.slice(-8).map((p) => shortDate(p.date))} height={110} onScrub={onScrub} />
+                  </Pressable>
+                  <LineChart points={lift.points.slice(-8)} labels={lift.points.slice(-8).map((p, i, a) => (i === a.length - 1 ? t("Now") : shortDate(p.date)))} scrubLabels={lift.points.slice(-8).map((p) => shortDate(p.date))} height={110} onPress={() => router.push(`/progress/${lift.ex.id}`)} />
+                  <Pressable accessibilityRole="button" accessibilityLabel={t("Open {name}", { name: lift.ex.name })} onPress={() => router.push(`/progress/${lift.ex.id}`)}>
                   <Row gap={6}>
                     <Icon name="star" size={12} color={fc?.weeksToTarget ? colors.fuel.sage : colors.text.tertiary} strokeWidth={2} />
                     <Txt variant="labelS" tone={fc?.weeksToTarget ? "sage" : "tertiary"}>
                       {fc?.weeksToTarget ? weeksWord(fc.weeksToTarget) : t("Holding steady, add a rep or a small jump in weight")}
                     </Txt>
                   </Row>
-                </Pressable>
+                  </Pressable>
+                </View>
               ) : (
                 <View style={{ gap: 4, paddingVertical: 8 }}>
                   <Txt variant="displayM">{lift ? lift.ex.name : t("Pick your lifts")}</Txt>

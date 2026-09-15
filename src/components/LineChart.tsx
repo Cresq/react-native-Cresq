@@ -4,6 +4,7 @@ import Svg, { Circle, Line, Path } from "react-native-svg";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { useTheme } from "@/theme/ThemeProvider";
+import { useT } from "@/i18n";
 import { haptic } from "@/haptics";
 import { springs } from "@/motion";
 import { Txt } from "./ui/Text";
@@ -16,8 +17,9 @@ export type ChartPoint = { value: number; record?: boolean };
  * Put a finger on it and a marker follows, snapping to the nearest session
  * with a light tick; the value and its date read above the finger.
  */
-export function LineChart({ points, forecast, height = 96, labels, target, scrubLabels, unit = "kg", onScrub }: { points: ChartPoint[]; forecast?: number[]; height?: number; labels?: string[]; target?: number; /** One label per point, shown while scrubbing (usually the date). */ scrubLabels?: string[]; unit?: string; /** Fires true when a scrub starts and false when it ends, so a parent Pressable can ignore the release. */ onScrub?: (active: boolean) => void }) {
+export function LineChart({ points, forecast, height = 96, labels, target, scrubLabels, unit = "kg", onScrub, onPress }: { points: ChartPoint[]; forecast?: number[]; height?: number; labels?: string[]; target?: number; /** One label per point, shown while scrubbing (usually the date). */ scrubLabels?: string[]; unit?: string; /** Fires true when a scrub starts and false when it ends, so a parent Pressable can ignore the release. */ onScrub?: (active: boolean) => void; /** A quick tap, and only that: a scrub never counts as one. */ onPress?: () => void }) {
   const { colors } = useTheme();
+  const t = useT();
   const [width, setWidth] = useState(0);
   const [active, setActive] = useState<number | null>(null);
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
@@ -84,7 +86,11 @@ export function LineChart({ points, forecast, height = 96, labels, target, scrub
   };
   const hold = Gesture.Pan().activateAfterLongPress(160).onStart(begin).onUpdate((e) => pick(e.x)).onFinalize(release);
   const swipe = Gesture.Pan().activeOffsetX([-10, 10]).failOffsetY([-12, 12]).onStart(begin).onUpdate((e) => pick(e.x)).onFinalize(release);
-  const pan = Gesture.Race(hold, swipe);
+  const fire = () => onPress?.();
+  const tap = Gesture.Tap().maxDuration(220).onEnd((_e, ok) => {
+    if (ok) runOnJS(fire)();
+  });
+  const pan = Gesture.Exclusive(Gesture.Race(hold, swipe), tap);
   const markerStyle = useAnimatedStyle(() => ({ opacity: shown.value, transform: [{ translateX: mx.value }] }));
   const dotStyle = useAnimatedStyle(() => ({ opacity: shown.value, transform: [{ translateX: mx.value - 7 }, { translateY: my.value - 7 }] }));
   const value = active !== null ? points[active]?.value : null;
@@ -114,7 +120,7 @@ export function LineChart({ points, forecast, height = 96, labels, target, scrub
           </Animated.View>
         ) : (
           <Txt variant="labelS" tone="tertiary">
-            {points.length > 1 ? "Touch the line to read a session" : ""}
+            {points.length > 1 ? t("Touch the line to read a session") : ""}
           </Txt>
         )}
       </View>

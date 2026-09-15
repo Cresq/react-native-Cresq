@@ -38,7 +38,11 @@ export type Session = {
   caption?: string;
   /** Local uri of the photo added after finishing. */
   photo?: string;
+  /** What a shared post shows. Everything on when absent. */
+  share?: SharePrefs;
 };
+
+export type SharePrefs = { exercises: boolean; stats: boolean; records: boolean };
 
 export type SplitDay = { id: string; name: string; focus: string; planId?: string; exercises?: number; minutes?: number; rest?: boolean };
 

@@ -33,6 +33,10 @@ export default function Feed() {
   const [more, setMore] = useState<Post | null>(null);
   const [hidden, setHidden] = useState<string[]>([]);
   const [reported, setReported] = useState(false);
+  const [captionFor, setCaptionFor] = useState<Post | null>(null);
+  const [captionText, setCaptionText] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<Post | null>(null);
+  const patchSession = (id: string, fn: (s: (typeof db.sessions)[number]) => (typeof db.sessions)[number]) => update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === id ? fn(x) : x)) }));
   const [commentsFor, setCommentsFor] = useState<Post | null>(null);
   const [comments, setComments] = useState<Record<string, { name: string; text: string }[]>>({});
   const [draft, setDraft] = useState("");
@@ -58,10 +62,10 @@ export default function Feed() {
             meta: `${s.planName}, ${relativeDay(s.startedAt)}${db.profile.showCity === false ? "" : `, ${db.profile.city}`}`,
             avatar: photos.selfie,
             photo: s.photo ? { uri: s.photo } : undefined,
-            exercises: sessionRows(s).map((r) => ({ name: r.name, detail: t(r.count === 1 ? "{n} set" : "{n} sets", { n: r.count }) })),
-            record: rec ? t("New record, {name} {kg} kg", { name: rec.name, kg: rec.kg }) : undefined,
+            exercises: s.share?.exercises === false ? [] : sessionRows(s).map((r) => ({ name: r.name, detail: t(r.count === 1 ? "{n} set" : "{n} sets", { n: r.count }) })),
+            record: rec && s.share?.records !== false ? t("New record, {name} {kg} kg", { name: rec.name, kg: rec.kg }) : undefined,
             caption: s.caption || (rec ? `${rec.name} ${rec.kg} kg. ${rec.previous ? t("Up {kg} kg.", { kg: Math.round((rec.kg - rec.previous) * 10) / 10 }) : t("First logged best.")}` : t("{plan} done. Every set counted.", { plan: s.planName })),
-            stats: [
+            stats: s.share?.stats === false ? [] : [
               { value: String(stats.minutes), unit: "min" },
               { value: fmtKg(stats.volume), unit: "kg" },
               { value: String(stats.setsDone), unit: t("sets") },
@@ -172,9 +176,25 @@ export default function Feed() {
         ) : more ? (
           <>
             <SheetOption icon="rows" label={t("Open session")} onPress={() => { const id = more.id; setMore(null); router.push(`/workout/${id}`); }} />
+            <SheetOption icon="noteEdit" label={t("Edit caption")} onPress={() => { const p = more; setMore(null); setCaptionText(db.sessions.find((x) => x.id === p.id)?.caption ?? ""); setTimeout(() => setCaptionFor(p), 380); }} />
             <SheetOption icon="lock" label={t("Make private")} sub={t("Removes it from the feed, keeps it in your log")} onPress={() => { const id = more.id; update((d) => ({ ...d, sessions: d.sessions.map((s) => (s.id === id ? { ...s, shared: false } : s)) })); setMore(null); }} />
+            <SheetOption icon="trash" label={t("Delete workout")} sub={t("Gone from the feed and from your log")} danger onPress={() => { const p = more; setMore(null); setTimeout(() => setConfirmDelete(p), 380); }} />
           </>
         ) : null}
+      </BottomSheet>
+
+      <BottomSheet visible={!!captionFor} onClose={() => setCaptionFor(null)} title={t("Caption")} subtitle={captionFor ? captionFor.meta : undefined}>
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
+          <Field label={t("Caption")} value={captionText} onChangeText={setCaptionText} placeholder={t("How did it go?")} multiline autoFocus />
+          <Button label={t("Save caption")} onPress={() => { if (captionFor) patchSession(captionFor.id, (x) => ({ ...x, caption: captionText.trim() })); setCaptionFor(null); }} />
+        </View>
+      </BottomSheet>
+
+      <BottomSheet visible={!!confirmDelete} onClose={() => setConfirmDelete(null)} title={t("Delete this workout?")} subtitle={t("It disappears from the feed and from your log. Records from it are recalculated. This cannot be undone.")}>
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
+          <Button label={t("Keep it")} variant="secondary" size="M" onPress={() => setConfirmDelete(null)} />
+          <Button label={t("Delete workout")} variant="danger" size="M" onPress={() => { const id = confirmDelete?.id; setConfirmDelete(null); if (id) update((d) => ({ ...d, sessions: d.sessions.filter((x) => x.id !== id) })); }} />
+        </View>
       </BottomSheet>
     </Screen>
   );
