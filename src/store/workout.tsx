@@ -222,7 +222,11 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
         let g = "A";
         while (used.has(g)) g = String.fromCharCode(g.charCodeAt(0) + 1);
         const group = ids.length >= 2 ? g : undefined;
-        return keepCurrent(s, contiguous(s.exercises.map((e) => (ids.includes(e.id) ? { ...e, supersetGroup: group } : e))));
+        const moved = s.exercises.map((e) => (ids.includes(e.id) ? { ...e, supersetGroup: group } : e));
+        const size: Record<string, number> = {};
+        for (const e of moved) if (e.supersetGroup) size[e.supersetGroup] = (size[e.supersetGroup] ?? 0) + 1;
+        const kept = moved.map((e) => (e.supersetGroup && size[e.supersetGroup] < 2 ? { ...e, supersetGroup: undefined } : e));
+        return keepCurrent(s, contiguous(kept));
       }),
     [mutate],
   );

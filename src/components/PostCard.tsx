@@ -13,6 +13,7 @@ import { Chip } from "./ui/Chip";
 import { Row } from "./ui/Screen";
 import { useT } from "@/i18n";
 import type { BreakdownExercise } from "./SessionBreakdown";
+import { PhotoViewer } from "./PhotoViewer";
 
 export type Post = {
   id: string;
@@ -22,6 +23,8 @@ export type Post = {
   meta: string;
   avatar?: ImageSourcePropType;
   photo?: ImageSourcePropType;
+  /** The workout's own name, the first thing a post says. */
+  title?: string;
   photoHeight?: number;
   /** Shown instead of a photo: what the session contained. */
   exercises?: { name: string; detail: string }[];
@@ -33,6 +36,8 @@ export type Post = {
   likes: number;
   liked?: boolean;
   comments: number;
+  /** The first comments, shown under the post so the card has a voice before you open it. */
+  commentList?: { name: string; text: string; avatar?: ImageSourcePropType }[];
 };
 
 /**
@@ -44,6 +49,7 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
   const router = useRouter();
   const t = useT();
   const [liked, setLiked] = useState(!!post.liked);
+  const [zoom, setZoom] = useState(false);
   const likes = post.likes + (liked && !post.liked ? 1 : !liked && post.liked ? -1 : 0);
   const { toggleLike, heartStyle, ringStyle } = useLikeMotion(liked, setLiked);
   return (
@@ -54,7 +60,7 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
           <View style={{ flex: 1, gap: 1 }}>
             <Txt variant="labelL">{post.name}</Txt>
             <Txt variant="labelS" tone="tertiary">
-              {post.meta}
+              {t(post.meta)}
             </Txt>
           </View>
         </Pressable>
@@ -64,44 +70,45 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
           </Pressable>
         ) : null}
       </Row>
-      <Pressable accessibilityRole={onPress ? "button" : undefined} disabled={!onPress} onPress={onPress}>
       {post.photo ? (
-      <PhotoSlot source={post.photo} height={post.photoHeight ?? 440} radius={0}>
-        {post.record ? (
-          <View style={{ position: "absolute", left: 12, top: 12 }}>
-            <Chip label={post.record} icon="trophy" tone="gold" size="S" />
-          </View>
-        ) : null}
-      </PhotoSlot>
-      ) : (
-        <View style={{ paddingHorizontal: 16, paddingTop: 2, paddingBottom: 4, gap: 0 }}>
-          {post.record ? (
-            <View style={{ paddingBottom: 10 }}>
-              <Chip label={post.record} icon="trophy" tone="gold" size="S" style={{ alignSelf: "flex-start" }} />
+        <Pressable accessibilityRole="button" accessibilityLabel={t("See the photo")} onPress={() => setZoom(true)}>
+          <PhotoSlot source={post.photo} height={post.photoHeight ?? 440} radius={0}>
+            {post.record ? (
+              <View style={{ position: "absolute", left: 12, top: 12 }}>
+                <Chip label={t(post.record)} icon="trophy" tone="gold" size="S" />
+              </View>
+            ) : null}
+          </PhotoSlot>
+        </Pressable>
+      ) : null}
+      <View style={{ paddingHorizontal: 16, paddingTop: post.photo ? 14 : 4, paddingBottom: 16, gap: 12 }}>
+        {/* The workout's name, then what was said about it, then what it held. */}
+        <Pressable accessibilityRole={onPress ? "button" : undefined} accessibilityLabel={t("Open this workout")} disabled={!onPress} onPress={onPress} style={{ gap: 10 }}>
+          {post.title ? <Txt variant="displayS">{post.title}</Txt> : null}
+          <Txt variant="bodyM" tone="secondary">
+            {post.caption}
+          </Txt>
+          {!post.photo && post.record ? <Chip label={t(post.record)} icon="trophy" tone="gold" size="S" style={{ alignSelf: "flex-start" }} /> : null}
+          {!post.photo && (post.exercises ?? []).length ? (
+            <View style={{ gap: 0 }}>
+              {/* Three exercises at most. The rest is one tap away, on the post's own page. */}
+              {(post.exercises ?? []).slice(0, 3).map((e, i) => (
+                <View key={i} style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12, paddingVertical: 5 }}>
+                  <Txt variant="labelM" style={{ flex: 1 }} numberOfLines={1}>
+                    {e.name}
+                  </Txt>
+                  <Txt variant="labelS" tone="tertiary" tabular>
+                    {e.detail}
+                  </Txt>
+                </View>
+              ))}
+              {(post.exercises ?? []).length > 3 ? (
+                <Txt variant="labelS" tone="tertiary" style={{ paddingTop: 5 }}>
+                  {t("+{n} more", { n: (post.exercises ?? []).length - 3 })}
+                </Txt>
+              ) : null}
             </View>
           ) : null}
-          {/* Three exercises at most. The rest is one tap away, on the post's own page. */}
-          {(post.exercises ?? []).slice(0, 3).map((e, i) => (
-            <View key={i} style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12, paddingVertical: 5 }}>
-              <Txt variant="labelM" style={{ flex: 1 }} numberOfLines={1}>
-                {e.name}
-              </Txt>
-              <Txt variant="labelS" tone="tertiary" tabular>
-                {e.detail}
-              </Txt>
-            </View>
-          ))}
-          {(post.exercises ?? []).length > 3 ? (
-            <Txt variant="labelS" tone="tertiary" style={{ paddingTop: 5 }}>
-              {t("+{n} more", { n: (post.exercises ?? []).length - 3 })}
-            </Txt>
-          ) : null}
-        </View>
-      )}
-      </Pressable>
-      <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16, gap: 12 }}>
-        <Pressable accessibilityRole={onPress ? "button" : undefined} accessibilityLabel={t("Open this workout")} disabled={!onPress} onPress={onPress} style={{ gap: 12 }}>
-          <Txt variant="bodyL">{post.caption}</Txt>
           {post.stats.length ? (
             <Txt variant="labelS" tone="tertiary" tabular>
               {post.stats.map((s) => `${s.value} ${s.unit}`).join(", ")}
@@ -137,7 +144,27 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
             </Pressable>
           </Row>
         )}
+
+        {!preview && post.commentList?.length ? (
+          <Pressable accessibilityRole="button" accessibilityLabel={t("Comments")} disabled={!onComment} onPress={onComment} style={({ pressed }) => ({ gap: 8, opacity: pressed ? 0.7 : 1 })}>
+            {post.commentList.slice(0, 2).map((c, i) => (
+              <Row key={i} gap={8} align="flex-start">
+                <Avatar source={c.avatar} size={22} initial={c.name[0]} />
+                <Txt variant="bodyS" tone="secondary" style={{ flex: 1 }} numberOfLines={2}>
+                  <Txt variant="labelS">{c.name.split(" ")[0]} </Txt>
+                  {c.text}
+                </Txt>
+              </Row>
+            ))}
+            {post.comments > 2 ? (
+              <Txt variant="labelS" tone="tertiary">
+                {t("See all {n} comments", { n: post.comments })}
+              </Txt>
+            ) : null}
+          </Pressable>
+        ) : null}
       </View>
+      <PhotoViewer source={post.photo} visible={zoom} onClose={() => setZoom(false)} />
     </Card>
   );
 }

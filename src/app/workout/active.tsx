@@ -454,6 +454,7 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
               </Pressable>
             ) : null}
           </View>
+          {expanded ? null : <IconButton name="moreHorizontal" size={30} iconSize={16} tone="raised" onPress={onMore} accessibilityLabel={t("Exercise options")} />}
           <Pressable accessibilityRole="button" accessibilityLabel={expanded ? t("Collapse") : t("Expand")} hitSlop={10} onPress={onToggle} style={{ width: 28, height: 28, alignItems: "center", justifyContent: "center", transform: [{ rotate: expanded ? "180deg" : "0deg" }] }}>
             <Icon name="chevronDown" size={18} color={colors.text.tertiary} strokeWidth={2} />
           </Pressable>

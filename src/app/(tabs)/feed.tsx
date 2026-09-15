@@ -19,7 +19,8 @@ import { PostCard, type Post } from "@/components/PostCard";
 import { Field } from "@/components/ui/Field";
 
 /** Placeholder replies on the mock posts, so the sheet is not empty on day one. */
-const seedComments = (p: Post): { name: string; text: string }[] => (p.userId === "u2" ? [{ name: "Tom Bakker", text: "Pause squats at 90, strong." }, { name: "Nick Li", text: "That bar speed though." }] : p.userId === "u3" ? [{ name: "Sara de Vries", text: "Forearms will forgive you by Thursday." }] : []);
+/** What a post already carries, plus anything written on this device. */
+const seedComments = (p: Post) => p.commentList ?? [];
 
 /** Feed. Your own shared sessions come from the database; other people's posts are placeholders until there is a server. */
 export default function Feed() {
@@ -38,7 +39,7 @@ export default function Feed() {
   const [confirmDelete, setConfirmDelete] = useState<Post | null>(null);
   const patchSession = (id: string, fn: (s: (typeof db.sessions)[number]) => (typeof db.sessions)[number]) => update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === id ? fn(x) : x)) }));
   const [commentsFor, setCommentsFor] = useState<Post | null>(null);
-  const [comments, setComments] = useState<Record<string, { name: string; text: string }[]>>({});
+  const [comments, setComments] = useState<Record<string, NonNullable<Post["commentList"]>>>({});
   const [draft, setDraft] = useState("");
   // Opening the feed marks everything as seen; Home's "since you were here" starts counting again.
   useEffect(() => {
@@ -59,7 +60,8 @@ export default function Feed() {
           return {
             id: s.id,
             name: db.profile.name,
-            meta: `${s.planName}, ${relativeDay(s.startedAt)}${db.profile.showCity === false ? "" : `, ${db.profile.city}`}`,
+            title: s.planName,
+            meta: `${relativeDay(s.startedAt)}${db.profile.showCity === false ? "" : `, ${db.profile.city}`}`,
             avatar: photos.selfie,
             photo: s.photo ? { uri: s.photo } : undefined,
             exercises: s.share?.exercises === false ? [] : sessionRows(s).map((r) => ({ name: r.name, detail: t(r.count === 1 ? "{n} set" : "{n} sets", { n: r.count }) })),
@@ -133,16 +135,19 @@ export default function Feed() {
         ) : null}
       </View>
 
-      <BottomSheet visible={!!commentsFor} onClose={() => { setCommentsFor(null); setDraft(""); }} title={t("Comments")} subtitle={commentsFor ? `${commentsFor.name}, ${commentsFor.meta}` : undefined}>
+      <BottomSheet visible={!!commentsFor} onClose={() => { setCommentsFor(null); setDraft(""); }} title={t("Comments")} subtitle={commentsFor ? `${commentsFor.name}, ${commentsFor.title ?? ""}` : undefined}>
         {commentsFor ? (
           <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
             {[...seedComments(commentsFor), ...(comments[commentsFor.id] ?? [])].map((c, i) => (
-              <View key={i} style={{ gap: 2 }}>
-                <Txt variant="labelM">{c.name}</Txt>
-                <Txt variant="bodyM" tone="secondary">
-                  {c.text}
-                </Txt>
-              </View>
+              <Row key={i} gap={10} align="flex-start">
+                <Avatar source={c.avatar} size={32} initial={c.name[0]} />
+                <View style={{ flex: 1, gap: 2, backgroundColor: colors.bg.raised, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 9 }}>
+                  <Txt variant="labelM">{c.name}</Txt>
+                  <Txt variant="bodyM" tone="secondary">
+                    {c.text}
+                  </Txt>
+                </View>
+              </Row>
             ))}
             {seedComments(commentsFor).length + (comments[commentsFor.id]?.length ?? 0) === 0 ? (
               <Txt variant="bodyM" tone="tertiary">
@@ -153,7 +158,7 @@ export default function Feed() {
               <View style={{ flex: 1 }}>
                 <Field label={t("Comment")} value={draft} onChangeText={setDraft} placeholder={t("Nice work")} />
               </View>
-              <Button label={t("Post")} size="M" full={false} disabled={!draft.trim()} onPress={() => { const id = commentsFor.id; setComments((c) => ({ ...c, [id]: [...(c[id] ?? []), { name: db.profile.name, text: draft.trim() }] })); setDraft(""); }} />
+              <Button label={t("Post")} size="M" full={false} disabled={!draft.trim()} onPress={() => { const id = commentsFor.id; setComments((c) => ({ ...c, [id]: [...(c[id] ?? []), { name: db.profile.name, text: draft.trim(), avatar: photos.selfie }] })); setDraft(""); }} />
             </Row>
             <Txt variant="labelS" tone="tertiary">
               {t("Comments stay on this device until accounts sync.")}

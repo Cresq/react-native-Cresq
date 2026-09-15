@@ -1,5 +1,5 @@
 import { useMemo , useState } from "react";
-import { Share, View } from "react-native";
+import { Share, View, Pressable } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
@@ -15,6 +15,7 @@ import { Avatar, PhotoSlot } from "@/components/ui/PhotoSlot";
 import { Stat, StatDivider } from "@/components/StatCard";
 import { SessionBreakdown, type BreakdownExercise } from "@/components/SessionBreakdown";
 import { useT } from "@/i18n";
+import { PhotoViewer } from "@/components/PhotoViewer";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
@@ -31,6 +32,7 @@ export default function SessionDetail() {
   const { db, update } = useDb();
   const [menu, setMenu] = useState<"menu" | "caption" | "delete" | null>(null);
   const [captionText, setCaptionText] = useState("");
+  const [zoom, setZoom] = useState(false);
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = db.sessions.find((s) => s.id === id) ?? (db.activeSession?.id === id ? db.activeSession : undefined);
   const post = session ? undefined : otherPosts.find((p) => p.id === id);
@@ -74,7 +76,12 @@ export default function SessionDetail() {
           ))}
         </Row>
         {post.record ? <Chip label={post.record} icon="trophy" tone="gold" size="S" style={{ alignSelf: "flex-start" }} /> : null}
-        {post.photo ? <PhotoSlot source={post.photo} height={320} radius={18} /> : null}
+        {post.photo ? (
+          <Pressable accessibilityRole="button" accessibilityLabel={t("See the photo")} onPress={() => setZoom(true)}>
+            <PhotoSlot source={post.photo} height={320} radius={18} />
+          </Pressable>
+        ) : null}
+        <PhotoViewer source={post.photo} visible={zoom} onClose={() => setZoom(false)} />
         <Txt variant="displayS">{post.caption}</Txt>
         <SessionBreakdown exercises={exercises} />
       </Screen>
@@ -97,7 +104,12 @@ export default function SessionDetail() {
         <Stat label={t("Sets")} value={String(stats.setsDone)} unit={t("of {n}", { n: stats.setsTotal })} />
       </Row>
 
-      {s.photo ? <PhotoSlot source={{ uri: s.photo }} height={320} radius={18} /> : null}
+      {s.photo ? (
+        <Pressable accessibilityRole="button" accessibilityLabel={t("See the photo")} onPress={() => setZoom(true)}>
+          <PhotoSlot source={{ uri: s.photo }} height={320} radius={18} />
+        </Pressable>
+      ) : null}
+      <PhotoViewer source={s.photo ? { uri: s.photo } : undefined} visible={zoom} onClose={() => setZoom(false)} />
 
       {recs.length ? (
         <Row gap={8} style={{ flexWrap: "wrap" }}>
