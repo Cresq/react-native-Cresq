@@ -1,0 +1,40 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+
+@import "nativewind/theme";
+
+/*
+  CresQ Ember tokens, mirrored from constants/theme.ts so NativeWind classes
+  and StyleSheet code share one vocabulary. Screens in v1 use the StyleSheet
+  tokens directly; these utilities are here for anyone who prefers classes.
+*/
+@theme {
+    --color-ground: #151311;
+    --color-surface: #1E1B18;
+    --color-raised: #292520;
+    --color-inverse: #F4EFE6;
+    --color-border-subtle: #2E2A25;
+    --color-border-strong: #3D3831;
+    --color-text-primary: #F4EFE6;
+    --color-text-secondary: #A8A197;
+    --color-text-tertiary: #6F695F;
+    --color-ember: #F26B1D;
+    --color-ember-pressed: #D4581A;
+    --color-ember-soft: #3A2416;
+    --color-ember-on: #16100A;
+    --color-sage: #8FCBA8;
+    --color-sage-soft: #1B2E25;
+    --color-gold: #F2B826;
+    --color-gold-soft: #3A2F10;
+    --color-success: #5DBE7A;
+    --color-warning: #E8B84A;
+    --color-danger: #E5544B;
+
+    --font-display: Bricolage-Bold;
+    --font-display-semi: Bricolage-SemiBold;
+    --font-sans: Instrument-Regular;
+    --font-sans-medium: Instrument-Medium;
+    --font-sans-semibold: Instrument-SemiBold;
+    --font-sans-bold: Instrument-Bold;
+}

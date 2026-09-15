@@ -7,12 +7,14 @@
     "icon": "./assets/images/icon.png",
     "scheme": "cresq",
     "userInterfaceStyle": "automatic",
+    "backgroundColor": "#151311",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "supportsTablet": false
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#151311",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -20,7 +22,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -28,14 +30,28 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#F6F3EE",
+          "image": "./assets/brand/mark-black.png",
+          "imageWidth": 120,
+          "dark": {
+            "backgroundColor": "#151311",
+            "image": "./assets/brand/mark-white.png",
+            "imageWidth": 120
+          }
+        }
+      ],
+      "expo-image",
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "CresQ shows the photo you pick on your session. Nothing else is read.",
+          "cameraPermission": "CresQ takes the photo you choose to add to your session."
         }
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
+      "typedRoutes": false,
       "reactCompiler": true
     }
   }
