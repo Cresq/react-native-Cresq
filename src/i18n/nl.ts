@@ -631,4 +631,11 @@ export const nl: Record<string, string> = {
   "Finish a session and the muscles it worked appear here.": "Rond een sessie af en de spieren die je hebt getraind verschijnen hier.",
   "Nothing for these": "Niets voor deze",
   "A set counts for every muscle the exercise names. The kilos count once, for the first.": "Een set telt voor elke spier die de oefening noemt. De kilo's tellen één keer, voor de eerste.",
+  "Open": "Openen",
+  "Volume per week, muscle groups, every lift": "Volume per week, spiergroepen, elke oefening",
+  "Your lifts": "Je oefeningen",
+  "Overviews": "Overzichten",
+  "Twelve weeks, a bar each": "Twaalf weken, een balk per week",
+  "All exercises": "Alle oefeningen",
+  "Every lift you follow, with its records": "Elke oefening die je volgt, met zijn records",
 };
