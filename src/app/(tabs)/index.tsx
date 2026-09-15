@@ -70,7 +70,7 @@ export default function Home() {
   const running = !!session && !session.finishedAt;
   const done = useMemo(() => finished(db.sessions), [db.sessions]);
   const week = useMemo(() => weekDays(db.sessions), [db.sessions]);
-  const volume = useMemo(() => weeklyVolume(db.sessions), [db.sessions]);
+  const volume = useMemo(() => weeklyVolume(db.sessions, Date.now(), db.activeSession), [db.sessions, db.activeSession]);
   const thisWeek = useMemo(() => done.filter((s) => s.startedAt >= startOfWeek(Date.now())).length, [done]);
   const goal = db.profile.daysPerWeek ?? 3;
 
@@ -170,12 +170,20 @@ export default function Home() {
             </Pressable>
           ) : null}
 
-      {/* Two figures, no change lines: the week strip above already says how the week is going. */}
-      <Row gap={16} align="stretch">
-        <Stat label={t("This week")} value={fmtKg(volume.current)} unit="kg" />
-        <StatDivider />
-        <Stat label={t("Sessions")} value={String(thisWeek)} unit={t("of {n}", { n: goal })} />
-      </Row>
+      <Pressable accessibilityRole="button" accessibilityLabel={t("Volume per week")} onPress={() => router.push("/progress/volume")} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+        <Row gap={16} align="stretch">
+          <Stat
+            label={t("This week")}
+            value={fmtKg(volume.current)}
+            unit="kg"
+            delta={volume.delta === null ? t("First week with a session") : t("{p}% on last week", { p: `${volume.delta >= 0 ? "+" : ""}${volume.delta}` })}
+            deltaTone={volume.delta === null ? "tertiary" : volume.delta >= 0 ? "ember" : "warning"}
+            deltaIcon={volume.delta !== null && volume.delta < 0 ? "trendingDown" : "trendingUp"}
+          />
+          <StatDivider />
+          <Stat label={t("Sessions")} value={String(thisWeek)} unit={t("of {n}", { n: goal })} />
+        </Row>
+      </Pressable>
 
       <Section title={t("Progress")} action={t("All lifts")} onAction={() => router.push("/(tabs)/profile")}>
         <Card padding={18} gap={14}>

@@ -183,14 +183,40 @@ export function weekDays(sessions: Session[], now = Date.now()) {
   });
 }
 
-export function weeklyVolume(sessions: Session[], now = Date.now()) {
+export function weeklyVolume(sessions: Session[], now = Date.now(), active?: Session | null) {
   const thisStart = startOfWeek(now);
   const lastStart = thisStart - 7 * 86400000;
   const sum = (from: number, to: number) => finished(sessions).filter((s) => s.startedAt >= from && s.startedAt < to).reduce((n, s) => n + sessionStats(s).volume, 0);
-  const current = sum(thisStart, thisStart + 7 * 86400000);
+  // A session still running counts: the figure is what you have lifted this week, not what you have filed.
+  const live = active && !active.finishedAt && active.startedAt >= thisStart ? sessionStats(active).volume : 0;
+  const current = sum(thisStart, thisStart + 7 * 86400000) + live;
   const last = sum(lastStart, thisStart);
-  const delta = last ? Math.round(((current - last) / last) * 100) : null;
+  const delta = last ? Math.round(((current - last) / last) * 1000) / 10 : null;
   return { current, last, delta };
+}
+
+/** Volume per week, most recent first, for the weeks that hold a session. */
+export function volumeByWeek(sessions: Session[], weeks = 12, now = Date.now(), active?: Session | null) {
+  const thisStart = startOfWeek(now);
+  const out: { start: number; week: number; volume: number; sessions: number }[] = [];
+  for (let i = 0; i < weeks; i++) {
+    const start = thisStart - i * 7 * 86400000;
+    const end = start + 7 * 86400000;
+    const inWeek = finished(sessions).filter((s) => s.startedAt >= start && s.startedAt < end);
+    const live = active && !active.finishedAt && active.startedAt >= start && active.startedAt < end ? sessionStats(active).volume : 0;
+    const running = live > 0 ? 1 : 0;
+    out.push({ start, week: isoWeek(start), volume: inWeek.reduce((n, s) => n + sessionStats(s).volume, 0) + live, sessions: inWeek.length + running });
+  }
+  return out;
+}
+
+/** ISO week number, the one people mean when they say "week 38". */
+export function isoWeek(t: number) {
+  const d = new Date(t);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const first = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d.getTime() - first.getTime()) / 86400000 - 3 + ((first.getDay() + 6) % 7)) / 7);
 }
 
 /** Consecutive weeks, ending this or last week, with at least one finished session. */

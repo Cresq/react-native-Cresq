@@ -131,30 +131,39 @@ export default function SessionDetail() {
         </Txt>
       </Row>
 
-      <BottomSheet visible={menu === "menu"} onClose={() => setMenu(null)} title={s.planName} subtitle={longDate(s.startedAt)}>
-        <SheetOption icon="share" label={t("Share")} sub={t("Send a summary to another app")} onPress={() => { setMenu(null); Share.share({ message: `${s.planName}, ${longDate(s.startedAt)}: ${t("{n} sets", { n: stats.setsDone })}, ${fmtKg(stats.volume)} kg, ${stats.minutes} min. CresQ.` }); }} />
-        <SheetOption icon="noteEdit" label={t("Edit caption")} onPress={() => { setCaptionText(s.caption ?? ""); setMenu("caption"); }} />
-        {s.shared ? (
-          <SheetOption icon="lock" label={t("Make private")} sub={t("Removes it from the feed, keeps it in your log")} onPress={() => { setMenu(null); update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, shared: false } : x)) })); }} />
-        ) : (
-          <SheetOption icon="users" label={t("Share to feed")} sub={t("Your followers see it in their feed")} onPress={() => { setMenu(null); update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, shared: true } : x)) })); }} />
-        )}
-        <SheetOption icon="trash" label={t("Delete workout")} sub={t("Gone from the feed and from your log")} danger onPress={() => setMenu("delete")} />
+      {/* One sheet that changes its face: a second modal opened while the first closes locks up iOS. */}
+      <BottomSheet
+        visible={!!menu}
+        onClose={() => setMenu(null)}
+        title={menu === "caption" ? t("Caption") : menu === "delete" ? t("Delete this workout?") : s.planName}
+        subtitle={menu === "delete" ? t("It disappears from the feed and from your log. Records from it are recalculated. This cannot be undone.") : menu === "menu" ? longDate(s.startedAt) : undefined}
+      >
+        {menu === "menu" ? (
+          <>
+            <SheetOption icon="share" label={t("Share")} sub={t("Send a summary to another app")} onPress={() => { setMenu(null); Share.share({ message: `${s.planName}, ${longDate(s.startedAt)}: ${t("{n} sets", { n: stats.setsDone })}, ${fmtKg(stats.volume)} kg, ${stats.minutes} min. CresQ.` }); }} />
+            <SheetOption icon="noteEdit" label={t("Edit caption")} onPress={() => { setCaptionText(s.caption ?? ""); setMenu("caption"); }} />
+            {s.shared ? (
+              <SheetOption icon="lock" label={t("Make private")} sub={t("Removes it from the feed, keeps it in your log")} onPress={() => { setMenu(null); update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, shared: false } : x)) })); }} />
+            ) : (
+              <SheetOption icon="users" label={t("Share to feed")} sub={t("Your followers see it in their feed")} onPress={() => { setMenu(null); update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, shared: true } : x)) })); }} />
+            )}
+            <SheetOption icon="trash" label={t("Delete workout")} sub={t("Gone from the feed and from your log")} danger onPress={() => setMenu("delete")} />
+          </>
+        ) : null}
+        {menu === "caption" ? (
+          <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
+            <Field label={t("Caption")} value={captionText} onChangeText={setCaptionText} placeholder={t("How did it go?")} multiline autoFocus />
+            <Button label={t("Save caption")} onPress={() => { update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, caption: captionText.trim() } : x)) })); setMenu(null); }} />
+          </View>
+        ) : null}
+        {menu === "delete" ? (
+          <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
+            <Button label={t("Keep it")} variant="secondary" size="M" onPress={() => setMenu("menu")} />
+            <Button label={t("Delete workout")} variant="danger" size="M" onPress={() => { const id = s.id; setMenu(null); update((d) => ({ ...d, sessions: d.sessions.filter((x) => x.id !== id) })); if (router.canGoBack()) router.back(); else router.replace("/(tabs)"); }} />
+          </View>
+        ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={menu === "caption"} onClose={() => setMenu(null)} title={t("Caption")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
-          <Field label={t("Caption")} value={captionText} onChangeText={setCaptionText} placeholder={t("How did it go?")} multiline autoFocus />
-          <Button label={t("Save caption")} onPress={() => { update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, caption: captionText.trim() } : x)) })); setMenu(null); }} />
-        </View>
-      </BottomSheet>
-
-      <BottomSheet visible={menu === "delete"} onClose={() => setMenu(null)} title={t("Delete this workout?")} subtitle={t("It disappears from the feed and from your log. Records from it are recalculated. This cannot be undone.")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
-          <Button label={t("Keep it")} variant="secondary" size="M" onPress={() => setMenu(null)} />
-          <Button label={t("Delete workout")} variant="danger" size="M" onPress={() => { const id = s.id; setMenu(null); update((d) => ({ ...d, sessions: d.sessions.filter((x) => x.id !== id) })); router.canGoBack() ? router.back() : router.replace("/(tabs)"); }} />
-        </View>
-      </BottomSheet>
     </Screen>
   );
 }

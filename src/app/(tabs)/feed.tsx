@@ -34,9 +34,10 @@ export default function Feed() {
   const [more, setMore] = useState<Post | null>(null);
   const [hidden, setHidden] = useState<string[]>([]);
   const [reported, setReported] = useState(false);
-  const [captionFor, setCaptionFor] = useState<Post | null>(null);
+  const [moreView, setMoreView] = useState<"menu" | "caption" | "delete">("menu");
   const [captionText, setCaptionText] = useState("");
-  const [confirmDelete, setConfirmDelete] = useState<Post | null>(null);
+  const openMore = (p: Post) => { setMoreView("menu"); setReported(false); setMore(p); };
+  const closeMore = () => { setMore(null); setReported(false); setMoreView("menu"); };
   const patchSession = (id: string, fn: (s: (typeof db.sessions)[number]) => (typeof db.sessions)[number]) => update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === id ? fn(x) : x)) }));
   const [commentsFor, setCommentsFor] = useState<Post | null>(null);
   const [comments, setComments] = useState<Record<string, NonNullable<Post["commentList"]>>>({});
@@ -126,7 +127,7 @@ export default function Feed() {
 
       <View style={{ gap: 20 }}>
         {visible.map((p) => (
-          <PostCard key={p.id} post={p} onPress={() => open(p)} onMore={() => setMore(p)} onComment={() => setCommentsFor(p)} />
+          <PostCard key={p.id} post={p} onPress={() => open(p)} onMore={() => openMore(p)} onComment={() => setCommentsFor(p)} />
         ))}
         {visible.length === 0 ? (
           <Txt variant="bodyM" tone="secondary">
@@ -167,40 +168,44 @@ export default function Feed() {
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={!!more} onClose={() => { setMore(null); setReported(false); }} title={reported ? t("Thanks, we got it") : (more?.name ?? "")} subtitle={reported ? t("We look at every report within two days.") : undefined}>
+      <BottomSheet
+        visible={!!more}
+        onClose={closeMore}
+        title={reported ? t("Thanks, we got it") : moreView === "caption" ? t("Caption") : moreView === "delete" ? t("Delete this workout?") : (more?.name ?? "")}
+        subtitle={reported ? t("We look at every report within two days.") : moreView === "delete" ? t("It disappears from the feed and from your log. Records from it are recalculated. This cannot be undone.") : moreView === "caption" ? (more?.title ?? undefined) : undefined}
+      >
+        {!reported && more && moreView === "caption" ? (
+          <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
+            <Field label={t("Caption")} value={captionText} onChangeText={setCaptionText} placeholder={t("How did it go?")} multiline autoFocus />
+            <Button label={t("Save caption")} onPress={() => { patchSession(more.id, (x) => ({ ...x, caption: captionText.trim() })); closeMore(); }} />
+          </View>
+        ) : null}
+        {!reported && more && moreView === "delete" ? (
+          <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
+            <Button label={t("Keep it")} variant="secondary" size="M" onPress={() => setMoreView("menu")} />
+            <Button label={t("Delete workout")} variant="danger" size="M" onPress={() => { const id = more.id; closeMore(); update((d) => ({ ...d, sessions: d.sessions.filter((x) => x.id !== id) })); }} />
+          </View>
+        ) : null}
         {reported ? (
           <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
-            <Button label={t("Done")} variant="secondary" size="M" onPress={() => { setMore(null); setReported(false); }} />
+            <Button label={t("Done")} variant="secondary" size="M" onPress={closeMore} />
           </View>
-        ) : more?.userId ? (
+        ) : moreView !== "menu" ? null : more?.userId ? (
           <>
-            <SheetOption icon="user" label={t("View profile")} onPress={() => { const id = more.userId!; setMore(null); router.push(`/user/${id}`); }} />
-            <SheetOption icon="close" label={t("Hide this post")} sub={t("Only from your feed")} onPress={() => { setHidden((h) => [...h, more.id]); setMore(null); }} />
+            <SheetOption icon="user" label={t("View profile")} onPress={() => { const id = more.userId!; closeMore(); router.push(`/user/${id}`); }} />
+            <SheetOption icon="close" label={t("Hide this post")} sub={t("Only from your feed")} onPress={() => { setHidden((h) => [...h, more.id]); closeMore(); }} />
             <SheetOption icon="flag" label={t("Report post")} sub={t("Spam or abuse")} danger onPress={() => setReported(true)} />
           </>
         ) : more ? (
           <>
-            <SheetOption icon="rows" label={t("Open session")} onPress={() => { const id = more.id; setMore(null); router.push(`/workout/${id}`); }} />
-            <SheetOption icon="noteEdit" label={t("Edit caption")} onPress={() => { const p = more; setMore(null); setCaptionText(db.sessions.find((x) => x.id === p.id)?.caption ?? ""); setTimeout(() => setCaptionFor(p), 380); }} />
-            <SheetOption icon="lock" label={t("Make private")} sub={t("Removes it from the feed, keeps it in your log")} onPress={() => { const id = more.id; update((d) => ({ ...d, sessions: d.sessions.map((s) => (s.id === id ? { ...s, shared: false } : s)) })); setMore(null); }} />
-            <SheetOption icon="trash" label={t("Delete workout")} sub={t("Gone from the feed and from your log")} danger onPress={() => { const p = more; setMore(null); setTimeout(() => setConfirmDelete(p), 380); }} />
+            <SheetOption icon="rows" label={t("Open session")} onPress={() => { const id = more.id; closeMore(); router.push(`/workout/${id}`); }} />
+            <SheetOption icon="noteEdit" label={t("Edit caption")} onPress={() => { setCaptionText(db.sessions.find((x) => x.id === more.id)?.caption ?? ""); setMoreView("caption"); }} />
+            <SheetOption icon="lock" label={t("Make private")} sub={t("Removes it from the feed, keeps it in your log")} onPress={() => { const id = more.id; update((d) => ({ ...d, sessions: d.sessions.map((s) => (s.id === id ? { ...s, shared: false } : s)) })); closeMore(); }} />
+            <SheetOption icon="trash" label={t("Delete workout")} sub={t("Gone from the feed and from your log")} danger onPress={() => setMoreView("delete")} />
           </>
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={!!captionFor} onClose={() => setCaptionFor(null)} title={t("Caption")} subtitle={captionFor ? captionFor.meta : undefined}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
-          <Field label={t("Caption")} value={captionText} onChangeText={setCaptionText} placeholder={t("How did it go?")} multiline autoFocus />
-          <Button label={t("Save caption")} onPress={() => { if (captionFor) patchSession(captionFor.id, (x) => ({ ...x, caption: captionText.trim() })); setCaptionFor(null); }} />
-        </View>
-      </BottomSheet>
-
-      <BottomSheet visible={!!confirmDelete} onClose={() => setConfirmDelete(null)} title={t("Delete this workout?")} subtitle={t("It disappears from the feed and from your log. Records from it are recalculated. This cannot be undone.")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
-          <Button label={t("Keep it")} variant="secondary" size="M" onPress={() => setConfirmDelete(null)} />
-          <Button label={t("Delete workout")} variant="danger" size="M" onPress={() => { const id = confirmDelete?.id; setConfirmDelete(null); if (id) update((d) => ({ ...d, sessions: d.sessions.filter((x) => x.id !== id) })); }} />
-        </View>
-      </BottomSheet>
     </Screen>
   );
 }

@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
@@ -51,33 +51,22 @@ export default function Train() {
         <IconButton name="search" onPress={() => router.push("/exercises")} accessibilityLabel={t("Exercise library")} />
       </Row>
 
-      <Section title={t("Your split")} action={t("Edit")} onAction={() => router.push("/train/split")}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t("Edit your split")} onPress={() => router.push("/train/split")} style={({ pressed }) => ({ gap: 10, opacity: pressed ? 0.8 : 1 })}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, alignItems: "center", paddingRight: 20 }} style={{ marginHorizontal: -20, paddingHorizontal: 20 }}>
-            {split.days.map((d, i) => {
-              const isNext = i === split.nextIndex;
-              return (
-                <Row key={d.id} gap={6}>
-                  <View style={{ paddingVertical: 9, paddingHorizontal: 13, borderRadius: 999, backgroundColor: isNext ? colors.accent.ember : colors.bg.surface }}>
-                    <Txt variant="labelM" style={{ color: isNext ? colors.accent.on : d.rest ? colors.text.tertiary : colors.text.secondary }}>
-                      {d.rest ? t("Rest day") : d.name}
-                    </Txt>
-                  </View>
-                  {i < split.days.length - 1 ? <Icon name="chevronRight" size={12} color={colors.text.tertiary} strokeWidth={2.2} /> : null}
-                </Row>
-              );
-            })}
-          </ScrollView>
-          <Txt variant="bodyS" tone="tertiary">
-            {t("{name}, day {a} of {b}. Finishing a session moves you to the next day.", { name: split.name, a: split.nextIndex + 1, b: split.days.length })}
-          </Txt>
-        </Pressable>
-      </Section>
-
       <Card padding={20} gap={14}>
-        <Txt variant="labelM" tone={running ? "ember" : "tertiary"}>
-          {running ? t("Session running") : t("Up next")}
-        </Txt>
+        {/* The split is one quiet line on the card it governs, not a section of its own. */}
+        {running ? (
+          <Txt variant="labelM" tone="ember">
+            {t("Session running")}
+          </Txt>
+        ) : (
+          <Pressable accessibilityRole="button" accessibilityLabel={t("Edit your split")} onPress={() => router.push("/train/split")} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+            <Row gap={5}>
+              <Txt variant="labelM" tone="tertiary">
+                {split.name}, {t("day {a} of {b}", { a: split.nextIndex + 1, b: split.days.length })}
+              </Txt>
+              <Icon name="chevronRight" size={13} color={colors.text.tertiary} strokeWidth={2} />
+            </Row>
+          </Pressable>
+        )}
         <View style={{ gap: 4 }}>
           <Txt variant="displayL">{running ? session?.planName : (nextDay?.rest ? t("Rest day") : nextDay?.name) ?? t("Quick session")}</Txt>
           <Txt variant="bodyM" tone="secondary">

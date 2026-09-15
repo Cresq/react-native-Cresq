@@ -606,4 +606,12 @@ export const nl: Record<string, string> = {
   "Arms": "Arms",
   "Push": "Push",
   "New record, Deadlift 90 kg": "Nieuw record, Deadlift 90 kg",
+  "Volume per week": "Volume per week",
+  "First week with a session": "Eerste week met een sessie",
+  "day {a} of {b}": "dag {a} van {b}",
+  "{n} kg a week on average": "gemiddeld {n} kg per week",
+  "Week {n}": "Week {n}",
+  "No sessions": "Geen sessies",
+  "Volume is weight times reps, warm-up sets left out.": "Volume is gewicht maal herhalingen, warming-upsets tellen niet mee.",
+  "{n} session": "{n} sessie",
 };

@@ -18,7 +18,6 @@ import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
-import { Field } from "@/components/ui/Field";
 import { WheelPicker } from "@/components/ui/WheelPicker";
 import { SUPERSET_INK, supersetColor } from "@/superset";
 import { fontFamily } from "../../../constants/theme";
@@ -27,7 +26,7 @@ const REST_CHOICES = Array.from({ length: 20 }, (_, i) => (i + 1) * 15);
 
 const setLabel = (s: SetEntry, workingIndex: number) => (s.type === "warmup" ? "W" : s.type === "drop" ? "D" : s.type === "failure" ? "F" : String(workingIndex));
 
-type Sheet = null | { kind: "finish" } | { kind: "discard" } | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry } | { kind: "note"; ex: ExerciseEntry } | { kind: "superset"; ex: ExerciseEntry };
+type Sheet = null | { kind: "finish" } | { kind: "discard" } | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry } | { kind: "superset"; ex: ExerciseEntry };
 type Slot = { id: string; y: number; h: number };
 
 /**
@@ -45,7 +44,6 @@ export default function ActiveWorkout() {
   const { session, rest } = w;
   const [, force] = useState(0);
   const [sheet, setSheet] = useState<Sheet>(null);
-  const [noteText, setNoteText] = useState("");
   const [blocked, setBlocked] = useState<{ id: string; msg: string } | null>(null);
   const [open, setOpen] = useState<string[] | null>(null);
   const [pick, setPick] = useState<string[]>([]);
@@ -130,14 +128,13 @@ export default function ActiveWorkout() {
     setTimeout(() => {
       setOpen((o) => {
         const rest = (o ?? []).filter((x) => x !== ex.id);
-        return next && !rest.includes(next.id) ? [...rest, next.id] : rest;
+        if (!next) return rest;
+        // A superset opens whole: you alternate between its exercises, so you need them side by side.
+        const group = next.supersetGroup ? order.filter((e) => e.supersetGroup === next.supersetGroup).map((e) => e.id) : [next.id];
+        return [...rest.filter((id) => !group.includes(id)), ...group];
       });
       if (next) w.setCurrent(order.findIndex((e) => e.id === next.id));
-    }, 420);
-  };
-  const openNote = (ex: ExerciseEntry) => {
-    setNoteText(ex.note ?? "");
-    setSheet({ kind: "note", ex });
+    }, 140);
   };
   // The picker lives in the same sheet as the exercise menu: the content swaps, the modal stays.
   const openSuperset = (ex: ExerciseEntry) => {
@@ -216,8 +213,8 @@ export default function ActiveWorkout() {
 
         <Row gap={0}>
           <Strip label={t("Elapsed")} value={stats.elapsed} />
-          <Strip label={t("Volume")} value={fmtKg(stats.volume)} unit="kg" />
-          <Strip label={t("Sets")} value={String(stats.setsDone)} unit={t("of {n}", { n: stats.setsTotal })} />
+          <Strip label={t("Volume")} count={stats.volume} format={fmtKg} unit="kg" />
+          <Strip label={t("Sets")} count={stats.setsDone} format={(n) => String(Math.round(n))} unit={t("of {n}", { n: stats.setsTotal })} />
         </Row>
 
         <View style={{ gap: 8 }}>
@@ -250,7 +247,7 @@ export default function ActiveWorkout() {
                   onDragStart={onDragStart}
                   onDragMove={(dy) => onDragMove(ex.id, dy)}
                   onDragEnd={(dy) => onDragEnd(ex.id, dy)}
-                  onNote={() => openNote(ex)}
+                  onNote={(text) => w.setNote(ex.id, text)}
                   onRest={() => openRest(ex)}
                   onRemove={() => { haptic("error"); w.removeExercise(ex.id); }}
                   onMore={() => setSheet({ kind: "exercise", ex })}
@@ -345,15 +342,6 @@ export default function ActiveWorkout() {
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={sheet?.kind === "note"} onClose={() => setSheet(null)} title={t("Note")} subtitle={sheet?.kind === "note" ? t("{name}, shown under the name, and next time you do it", { name: sheet.ex.name }) : undefined}>
-        {sheet?.kind === "note" ? (
-          <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
-            <Field label={t("Note")} value={noteText} onChangeText={(v) => { setNoteText(v); w.setNote(sheet.ex.id, v.trimStart()); }} placeholder={t("Feet planted, pause on the chest")} multiline autoFocus />
-            <Button label={t("Done")} onPress={() => { w.setNote(sheet.ex.id, noteText.trim()); setSheet(null); }} />
-          </View>
-        ) : null}
-      </BottomSheet>
-
       <BottomSheet visible={sheet?.kind === "finish"} onClose={() => setSheet(null)} title={t("Finish this session?")} subtitle={openSets > 0 ? t("{a} of {b} sets done, {c} still open. Open sets are not counted.", { a: stats.setsDone, b: stats.setsTotal, c: openSets }) : t("All {n} sets done in {time}.", { n: stats.setsTotal, time: stats.elapsed })}>
         <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
           <Button label={t("Finish session")} onPress={() => { setSheet(null); haptic("done"); finish(); }} />
@@ -392,7 +380,7 @@ type CardProps = {
   onDragStart: () => void;
   onDragMove: (dy: number) => void;
   onDragEnd: (dy: number) => void;
-  onNote: () => void;
+  onNote: (text: string) => void;
   onRest: () => void;
   onRemove: () => void;
   onMore: () => void;
@@ -412,6 +400,7 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
   const { colors, radius } = useTheme();
   const t = useT();
   const { drag, style } = useDrag(onDragStart, onDragMove, onDragEnd);
+  const [noteEditing, setNoteEditing] = useState(false);
   const done = ex.sets.length > 0 && ex.sets.every((s) => s.done);
   const doneCount = ex.sets.filter((s) => s.done).length;
   let working = 0;
@@ -446,13 +435,6 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
                 </Txt>
               )}
             </Pressable>
-            {expanded ? (
-              <Pressable accessibilityRole="button" accessibilityLabel={ex.note ? t("Edit note") : t("Add a note")} onPress={onNote} hitSlop={6}>
-                <Txt variant="bodyS" tone={ex.note ? "secondary" : "tertiary"} italic numberOfLines={2}>
-                  {ex.note || t("Add a note")}
-                </Txt>
-              </Pressable>
-            ) : null}
           </View>
           {expanded ? null : <IconButton name="moreHorizontal" size={30} iconSize={16} tone="raised" onPress={onMore} accessibilityLabel={t("Exercise options")} />}
           <Pressable accessibilityRole="button" accessibilityLabel={expanded ? t("Collapse") : t("Expand")} hitSlop={10} onPress={onToggle} style={{ width: 28, height: 28, alignItems: "center", justifyContent: "center", transform: [{ rotate: expanded ? "180deg" : "0deg" }] }}>
@@ -472,6 +454,29 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
               <IconButton name="trash" size={34} iconSize={17} tone="danger" onPress={onRemove} accessibilityLabel={t("Remove from workout")} />
               <IconButton name="moreHorizontal" size={34} iconSize={18} tone="raised" onPress={onMore} accessibilityLabel={t("Exercise options")} />
             </Row>
+
+            {/* The note sits under the controls, well clear of the name you tap to fold the card. */}
+            {noteEditing ? (
+              <TextInput
+                value={ex.note ?? ""}
+                onChangeText={onNote}
+                onBlur={() => setNoteEditing(false)}
+                onSubmitEditing={() => setNoteEditing(false)}
+                autoFocus
+                multiline
+                returnKeyType="done"
+                placeholder={t("Feet planted, pause on the chest")}
+                placeholderTextColor={colors.text.tertiary}
+                accessibilityLabel={t("Note")}
+                style={{ fontFamily: fontFamily.italic, fontSize: 13, lineHeight: 18, color: colors.text.secondary, paddingVertical: 2, paddingTop: 6 }}
+              />
+            ) : (
+              <Pressable accessibilityRole="button" accessibilityLabel={ex.note ? t("Edit note") : t("Add a note")} onPress={() => setNoteEditing(true)} hitSlop={6} style={{ paddingTop: 6 }}>
+                <Txt variant="bodyS" tone={ex.note ? "secondary" : "tertiary"} italic numberOfLines={2}>
+                  {ex.note || t("Add a note")}
+                </Txt>
+              </Pressable>
+            )}
 
             <Row gap={8} style={{ paddingHorizontal: 6, paddingTop: 10 }}>
               <Txt variant="labelS" tone="tertiary" style={{ width: 28 }}>
@@ -533,16 +538,25 @@ function useDrag(onStart: () => void, onMove: (dy: number) => void, onEnd: (dy: 
   return { drag, style };
 }
 
-function Strip({ label, value, unit }: { label: string; value: string; unit?: string }) {
+/**
+ * A figure at the top of the session. Given `count` it runs to its new value
+ * instead of jumping, and leans green on the way up, warm on the way down, so
+ * a completed set is visible in the total without a word being said.
+ */
+function Strip({ label, value, count, format, unit }: { label: string; value?: string; count?: number; format?: (n: number) => string; unit?: string }) {
   return (
     <View style={{ flex: 1, gap: 2 }}>
       <Txt variant="labelS" tone="tertiary">
         {label}
       </Txt>
       <Row gap={3} align="baseline">
+        {count !== undefined && format ? (
+          <CountUp value={count} format={format} />
+        ) : (
         <Txt variant="numberM" tabular>
           {value}
         </Txt>
+        )}
         {unit ? (
           <Txt variant="labelS" tone="secondary">
             {unit}
@@ -674,5 +688,50 @@ export function SmallPill({ label, onPress, inverse }: { label: string; onPress:
         {label}
       </Txt>
     </Pressable>
+  );
+}
+
+/**
+ * A number that travels to its new value in a quarter of a second and pulses
+ * in the direction it moved: up when a set is ticked, down when one is removed
+ * or unticked. The tween is plain state so it behaves the same everywhere.
+ */
+function CountUp({ value, format }: { value: number; format: (n: number) => string }) {
+  const { colors } = useTheme();
+  const [shown, setShown] = useState(value);
+  const [dir, setDir] = useState(0);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pop = useSharedValue(1);
+
+  useEffect(() => {
+    const a = shown;
+    if (Math.abs(a - value) < 0.5) return;
+    setDir(value > a ? 1 : -1);
+    pop.value = withSequence(withSpring(1.12, springs.snappy), withSpring(1, springs.snappy));
+    const started = Date.now();
+    if (timer.current) clearInterval(timer.current);
+    timer.current = setInterval(() => {
+      const p = Math.min(1, (Date.now() - started) / 260);
+      setShown(a + (value - a) * (1 - Math.pow(1 - p, 3)));
+      if (p >= 1 && timer.current) {
+        clearInterval(timer.current);
+        timer.current = null;
+        setTimeout(() => setDir(0), 260);
+      }
+    }, 16);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  useEffect(() => () => {
+    if (timer.current) clearInterval(timer.current);
+  }, []);
+
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
+  return (
+    <Animated.View style={style}>
+      <Txt variant="numberM" tabular style={{ color: dir === 0 ? colors.text.primary : dir > 0 ? colors.status.success : colors.status.warning }}>
+        {format(shown)}
+      </Txt>
+    </Animated.View>
   );
 }
