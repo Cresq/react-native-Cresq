@@ -29,6 +29,8 @@ SplashScreen.preventAutoHideAsync();
  *   /progress             Redirects to Profile › Favourites (old links)
  *   /progress/volume      Volume per week
  *   /progress/muscles     Working sets per muscle group
+ *   /compare              People you follow who share their figures
+ *   /compare/[id]         Your figures beside theirs
  *   /progress/[lift]      One exercise: trend, forecast, records, history
  *   /settings             Units, language, sample data, reset, sign out
  *   /settings/devices     Connected devices and Health permissions
@@ -76,6 +78,8 @@ export default function RootLayout() {
             <Stack.Screen name="progress/index" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="progress/volume" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="progress/muscles" options={{ animation: "slide_from_right" }} />
+            <Stack.Screen name="compare/index" options={{ animation: "slide_from_right" }} />
+            <Stack.Screen name="compare/[id]" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="progress/[lift]" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="workout/[id]" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="user/[id]" options={{ animation: "slide_from_right" }} />

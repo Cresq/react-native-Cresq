@@ -68,6 +68,9 @@ export default function UserProfile() {
         <Count label={t("Following")} value={p.following.length} onPress={() => router.push(`/followers?user=${p.id}&tab=following`)} />
       </Row>
 
+      {p.compare ? (
+        <Button label={t("Compare")} variant="secondary" size="M" icon="chartLine" onPress={() => router.push(`/compare/${p.id}`)} />
+      ) : null}
       <Button label={on ? t("Following") : t("Follow")} variant={on ? "secondary" : "primary"} size="M" icon={on ? "check" : "addPlus"} onPress={() => toggleFollow(p.id)} accessibilityLabel={on ? t("Unfollow {name}", { name: p.name }) : t("Follow {name}", { name: p.name })} />
 
       <View style={{ gap: 12 }}>

@@ -83,6 +83,8 @@ export default function Account() {
         <Setting label={t("Show my city")} sub={t("On your profile and next to your posts")} value={p.showCity !== false} onChange={(v) => setProfile({ showCity: v })} />
         <Divider />
         <Setting label={t("Share live workouts")} sub={t("People who follow you can watch a session while it runs. Off means nobody sees anything until you share it.")} value={!!p.shareLive} onChange={(v) => setProfile({ shareLive: v })} />
+        <Divider />
+        <Setting label={t("Let others compare with you")} sub={t("People you follow can hold their session count, weekly volume and one-rep maxes against yours. Off means they see nothing of yours.")} value={p.compareStats !== false} onChange={(v) => setProfile({ compareStats: v })} />
       </Section>
 
       <Section title={t("What we may collect")} gap={0}>

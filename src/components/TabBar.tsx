@@ -19,8 +19,8 @@ import { useT } from "@/i18n";
 type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>["tabBar"]>>[0];
 
 const tabIcons: Record<string, IconName> = { index: "house", feed: "rows", train: "dumbbell", profile: "user" };
-const tabLabels: Record<string, string> = { index: "Home", feed: "Feed", train: "Train", profile: "Profile" };
-const tabLabelsNl: Record<string, string> = { index: "Home", feed: "Feed", train: "Train", profile: "Profiel" };
+const tabLabels: Record<string, string> = { index: "Home", feed: "Feed", train: "Workout", profile: "Profile" };
+const tabLabelsNl: Record<string, string> = { index: "Home", feed: "Feed", train: "Workout", profile: "Profiel" };
 
 /**
  * Floating tab bar as a material: content scrolls underneath a blurred

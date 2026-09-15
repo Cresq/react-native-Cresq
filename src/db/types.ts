@@ -76,6 +76,8 @@ export type Profile = {
   showCity?: boolean;
   /** Let followers watch a session while it runs. Off by default. */
   shareLive?: boolean;
+  /** Let people you follow hold their figures up against yours. On unless you say otherwise. */
+  compareStats?: boolean;
   language?: "nl" | "en";
   /** Gyms you have trained at, most recent first, offered when a session asks where you were. */
   gyms?: string[];
