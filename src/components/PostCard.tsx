@@ -80,34 +80,33 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
               <Chip label={post.record} icon="trophy" tone="gold" size="S" style={{ alignSelf: "flex-start" }} />
             </View>
           ) : null}
-          {(post.exercises ?? []).map((e, i) => (
-            <View key={i} style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12, paddingVertical: 7, borderTopWidth: i ? 1 : 0, borderTopColor: colors.border.subtle }}>
-              <Txt variant="labelL" style={{ flex: 1 }} numberOfLines={1}>
+          {/* Three exercises at most. The rest is one tap away, on the post's own page. */}
+          {(post.exercises ?? []).slice(0, 3).map((e, i) => (
+            <View key={i} style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12, paddingVertical: 5 }}>
+              <Txt variant="labelM" style={{ flex: 1 }} numberOfLines={1}>
                 {e.name}
               </Txt>
-              <Txt variant="labelM" tone="secondary" tabular>
+              <Txt variant="labelS" tone="tertiary" tabular>
                 {e.detail}
               </Txt>
             </View>
           ))}
+          {(post.exercises ?? []).length > 3 ? (
+            <Txt variant="labelS" tone="tertiary" style={{ paddingTop: 5 }}>
+              {t("+{n} more", { n: (post.exercises ?? []).length - 3 })}
+            </Txt>
+          ) : null}
         </View>
       )}
       </Pressable>
       <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16, gap: 12 }}>
         <Pressable accessibilityRole={onPress ? "button" : undefined} accessibilityLabel={t("Open this workout")} disabled={!onPress} onPress={onPress} style={{ gap: 12 }}>
-          <Txt variant="displayS">{post.caption}</Txt>
-          <Row gap={16}>
-            {post.stats.map((s, i) => (
-              <Row key={i} gap={4} align="baseline">
-                <Txt variant="numberM" tabular>
-                  {s.value}
-                </Txt>
-                <Txt variant="labelS" tone="tertiary">
-                  {s.unit}
-                </Txt>
-              </Row>
-            ))}
-          </Row>
+          <Txt variant="bodyL">{post.caption}</Txt>
+          {post.stats.length ? (
+            <Txt variant="labelS" tone="tertiary" tabular>
+              {post.stats.map((s) => `${s.value} ${s.unit}`).join(", ")}
+            </Txt>
+          ) : null}
         </Pressable>
         {preview ? (
           <Txt variant="labelS" tone="tertiary">

@@ -17,6 +17,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Avatar } from "@/components/ui/PhotoSlot";
 import { WeekStrip } from "@/components/WeekStrip";
 import { Card } from "@/components/ui/Card";
+import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
 import { Stat, StatDivider } from "@/components/StatCard";
 import { LineChart } from "@/components/LineChart";
@@ -51,11 +52,12 @@ export default function Home() {
   const router = useRouter();
   const t = useT();
   const lang = useLanguage();
-  const { db } = useDb();
+  const { db, update } = useDb();
   const { session, start } = useWorkout();
   const { split, nextDay, setOverride } = useSplit();
   const { isFollowing } = useSocial();
   const [choosing, setChoosing] = useState(false);
+  const [managing, setManaging] = useState(false);
   const { width: screenWidth } = useWindowDimensions();
 
   const override = split.overridePlanId ? db.plans.find((p) => p.id === split.overridePlanId) : undefined;
@@ -81,6 +83,15 @@ export default function Home() {
   const lift = lifts.find((l) => l.ex.id === liftId) ?? lifts.find((l) => l.points.length >= 2) ?? lifts[0] ?? null;
   const current = lift && lift.points.length ? lift.points[lift.points.length - 1].value : 0;
   const delta = lift && lift.points.length ? Math.round((current - lift.points[0].value) * 2) / 2 : 0;
+
+  /** Take a lift off Home. Its sessions and records are untouched. */
+  const dropFavourite = (id: string) => {
+    update((d) => {
+      const cur = d.profile.favourites ?? DEFAULT_FAVOURITES;
+      return { ...d, profile: { ...d.profile, favourites: cur.filter((x) => x !== id) } };
+    });
+    if (liftId === id) setLiftId(null);
+  };
 
   const startSession = () => {
     if (!running) start(plan?.id, plan?.name ?? nextDay?.name);
@@ -168,16 +179,15 @@ export default function Home() {
 
       <Section title={t("Progress")} action={t("All lifts")} onAction={() => router.push("/(tabs)/profile")}>
         <Card padding={18} gap={14}>
-          {/* One lift at a time. The names switch it; the chart answers. */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 18, paddingRight: 18 }} style={{ marginLeft: -18, paddingLeft: 18 }}>
-            {lifts.map((l) => (
-              <Pressable key={l.ex.id} accessibilityRole="button" accessibilityState={{ selected: lift?.ex.id === l.ex.id }} onPress={() => setLiftId(l.ex.id)} hitSlop={8}>
-                <Txt variant="labelM" tone={lift?.ex.id === l.ex.id ? "primary" : "tertiary"}>
-                  {l.ex.name}
-                </Txt>
-              </Pressable>
-            ))}
-          </ScrollView>
+          {/* One lift at a time: the chips say which, the chart answers. */}
+          <Row gap={10}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }} style={{ flex: 1, marginLeft: -18, paddingLeft: 18 }}>
+              {lifts.map((l) => (
+                <Chip key={l.ex.id} label={l.ex.name} selected={lift?.ex.id === l.ex.id} onPress={() => setLiftId(l.ex.id)} />
+              ))}
+            </ScrollView>
+            <IconButton name="addPlus" size={36} iconSize={18} tone="raised" onPress={() => setManaging(true)} accessibilityLabel={t("Choose the lifts on Home")} />
+          </Row>
 
           {lift && lift.points.length >= 2 ? (
             <View style={{ gap: 12 }}>
@@ -212,6 +222,13 @@ export default function Home() {
           )}
         </Card>
       </Section>
+
+      <BottomSheet visible={managing} onClose={() => setManaging(false)} title={t("Lifts on Home")} subtitle={t("Tap one to take it off. Its sessions and records stay.")}>
+        {lifts.map((l) => (
+          <SheetOption key={l.ex.id} icon="close" label={l.ex.name} sub={l.points.length ? t("{n} sessions", { n: l.points.length }) : t("Not logged yet")} onPress={() => dropFavourite(l.ex.id)} />
+        ))}
+        <SheetOption icon="addPlus" label={t("Add a lift")} sub={t("From your exercise library")} onPress={() => { setManaging(false); router.push("/exercises?favourite=1"); }} />
+      </BottomSheet>
 
       <BottomSheet visible={choosing} onClose={() => setChoosing(false)} title={t("Today's workout")} subtitle={t("Your split says {name}. Pick something else for today; the split keeps its order.", { name: nextDay?.rest ? t("Rest day") : (nextDay?.name ?? "") })}>
         {db.plans.map((p) => (

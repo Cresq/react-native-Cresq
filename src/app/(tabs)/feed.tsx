@@ -64,7 +64,7 @@ export default function Feed() {
             photo: s.photo ? { uri: s.photo } : undefined,
             exercises: s.share?.exercises === false ? [] : sessionRows(s).map((r) => ({ name: r.name, detail: t(r.count === 1 ? "{n} set" : "{n} sets", { n: r.count }) })),
             record: rec && s.share?.records !== false ? t("New record, {name} {kg} kg", { name: rec.name, kg: rec.kg }) : undefined,
-            caption: s.caption || (rec ? `${rec.name} ${rec.kg} kg. ${rec.previous ? t("Up {kg} kg.", { kg: Math.round((rec.kg - rec.previous) * 10) / 10 }) : t("First logged best.")}` : t("{plan} done. Every set counted.", { plan: s.planName })),
+            caption: s.caption || t("{plan} done. Every set counted.", { plan: s.planName }),
             stats: s.share?.stats === false ? [] : [
               { value: String(stats.minutes), unit: "min" },
               { value: fmtKg(stats.volume), unit: "kg" },

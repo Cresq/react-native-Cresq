@@ -84,7 +84,7 @@ export default function Posted() {
           photoHeight: 300,
           exercises: session ? sessionRows(session).map((r) => ({ name: r.name, detail: t(r.count === 1 ? "{n} set" : "{n} sets", { n: r.count }) })) : [],
           record: record ? t("New record, {name} {kg} kg", { name: record.name, kg: record.kg }) : undefined,
-          caption: session?.caption || (record ? `${record.name} ${record.kg} kg. ${t("Up {kg} kg.", { kg: record.previous ? Math.round((record.kg - record.previous) * 10) / 10 : record.kg })}` : t("{plan} done. Every set counted.", { plan: session?.planName ?? t("Session") })),
+          caption: session?.caption || t("{plan} done. Every set counted.", { plan: session?.planName ?? t("Session") }),
           stats: [
             { value: String(stats.minutes), unit: "min" },
             { value: fmtKg(stats.volume), unit: "kg" },
