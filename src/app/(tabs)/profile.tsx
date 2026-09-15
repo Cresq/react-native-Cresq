@@ -5,7 +5,8 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useSocial } from "@/store/social";
 import { finished, locale, newRecords, shortDate } from "@/db/derive";
-import { photos } from "@/data/mock";
+import { useMe } from "@/store/me";
+import { pickPhoto } from "@/photo";
 import { useT } from "@/i18n";
 import { Screen, Row } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
@@ -15,6 +16,7 @@ import { Divider } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Tabs } from "@/components/ui/Tabs";
 import { WorkoutTile } from "@/components/WorkoutTile";
+import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 
 const TABS = ["workouts", "photos"];
 
@@ -27,14 +29,23 @@ export default function Profile() {
   const { colors, layout } = useTheme();
   const router = useRouter();
   const t = useT();
-  const { db } = useDb();
+  const { db, update } = useDb();
+  const me = useMe();
   const { followers, following } = useSocial();
+  const [changingPhoto, setChangingPhoto] = useState(false);
   const { width } = useWindowDimensions();
   const { tab: wanted } = useLocalSearchParams<{ tab?: string }>();
   const [tab, setTab] = useState(TABS.includes(wanted ?? "") ? wanted! : "workouts");
   useEffect(() => {
     if (wanted && TABS.includes(wanted)) setTab(wanted);
   }, [wanted]);
+
+  const setAvatar = (uri?: string) => update((d) => ({ ...d, profile: { ...d.profile, avatar: uri } }));
+  const choosePhoto = async (from: "library" | "camera") => {
+    setChangingPhoto(false);
+    const uri = await pickPhoto(from);
+    if (uri) setAvatar(uri);
+  };
 
   const done = useMemo(() => finished(db.sessions), [db.sessions]);
   const workouts = useMemo(() => [...done].reverse().map((s) => ({ s, prs: newRecords(s, db.sessions.filter((x) => x.startedAt < s.startedAt)).length, photo: s.photo ? { uri: s.photo } : undefined })), [done, db.sessions]);
@@ -65,12 +76,16 @@ export default function Profile() {
       </Row>
 
       <Row gap={16}>
-        <Avatar source={photos.selfie} size={72} />
+        <Pressable accessibilityRole="button" accessibilityLabel={t("Change your photo")} onPress={() => setChangingPhoto(true)} style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
+          <Avatar source={me.photo} size={72} initial={me.initial} />
+          <View style={{ position: "absolute", right: -2, bottom: -2, width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg.raised, borderWidth: 2, borderColor: colors.bg.ground }}>
+            <Icon name="camera" size={13} color={colors.text.secondary} strokeWidth={1.9} />
+          </View>
+        </Pressable>
         <View style={{ flex: 1, gap: 4 }}>
           <Txt variant="displayL">{db.profile.name}</Txt>
           <Txt variant="bodyS" tone="secondary">
-            {db.profile.handle}
-            {db.profile.showCity === false ? "" : `, ${db.profile.city}`}
+            {[db.profile.handle, db.profile.showCity === false ? "" : db.profile.city].filter(Boolean).join(", ")}
           </Txt>
           {db.profile.bio ? (
             <Txt variant="bodyS" tone="secondary">
@@ -136,6 +151,12 @@ export default function Profile() {
         ) : null}
 
       </View>
+
+      <BottomSheet visible={changingPhoto} onClose={() => setChangingPhoto(false)} title={t("Your photo")} subtitle={t("It stays on this phone, like everything else in CresQ.")}>
+        <SheetOption icon="camera" label={t("Take a photo")} onPress={() => void choosePhoto("camera")} />
+        <SheetOption icon="rows" label={t("Choose from your library")} onPress={() => void choosePhoto("library")} />
+        {db.profile.avatar ? <SheetOption icon="trash" label={t("Remove photo")} sub={t("Your initial takes its place")} danger onPress={() => { setAvatar(undefined); setChangingPhoto(false); }} /> : null}
+      </BottomSheet>
     </Screen>
   );
 }

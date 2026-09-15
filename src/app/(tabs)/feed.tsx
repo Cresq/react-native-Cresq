@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useDb } from "@/db/DbProvider";
+import { useMe } from "@/store/me";
+import { useNotes } from "@/store/notifications";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useSocial } from "@/store/social";
 import { liveProgress } from "@/data/people";
@@ -28,6 +30,8 @@ export default function Feed() {
   const t = useT();
   const { colors } = useTheme();
   const { db, update } = useDb();
+  const me = useMe();
+  const { unread } = useNotes();
   const { isFollowing, people } = useSocial();
   const live = people.filter((p) => p.live && isFollowing(p.id) && !liveProgress(p.live).finished);
   const [filter, setFilter] = useState("following");
@@ -63,8 +67,8 @@ export default function Feed() {
             name: db.profile.name,
             title: s.planName,
             meta: relativeDay(s.startedAt),
-            place: s.gym ?? (db.profile.showCity === false ? undefined : db.profile.city),
-            avatar: photos.selfie,
+            place: s.gym ?? (db.profile.showCity === false ? undefined : db.profile.city || undefined),
+            avatar: me.photo,
             photo: s.photo ? { uri: s.photo } : undefined,
             exercises: s.share?.exercises === false ? [] : sessionRows(s).map((r) => ({ name: r.name, detail: t(r.count === 1 ? "{n} set" : "{n} sets", { n: r.count }) })),
             record: rec && s.share?.records !== false ? t("New record, {name} {kg} kg", { name: rec.name, kg: rec.kg }) : undefined,
@@ -74,9 +78,11 @@ export default function Feed() {
               { value: fmtKg(stats.volume), unit: "kg" },
               { value: String(stats.setsDone), unit: t("sets") },
             ],
-            likes: rec ? 24 : 9,
-            liked: true,
-            comments: rec ? 6 : 2,
+            // Nobody has liked this. Inventing a number on a person's own post is
+            // the sort of thing that makes an app feel like a demo, and it is a lie.
+            likes: 0,
+            liked: false,
+            comments: 0,
           };
         }),
     [db.sessions, db.profile, t],
@@ -92,7 +98,7 @@ export default function Feed() {
             {t("Feed")}
           </Txt>
           <IconButton name="search" onPress={() => router.push("/search")} accessibilityLabel={t("Find people")} />
-          <IconButton name="bell" badge onPress={() => router.push("/notifications")} accessibilityLabel={t("Notifications")} />
+          <IconButton name="bell" badge={unread > 0} onPress={() => router.push("/notifications")} accessibilityLabel={t("Notifications")} />
         </Row>
         <Row gap={8}>
           <Chip label={t("Following")} selected={filter === "following"} onPress={() => setFilter("following")} />
@@ -160,7 +166,7 @@ export default function Feed() {
               <View style={{ flex: 1 }}>
                 <Field label={t("Comment")} value={draft} onChangeText={setDraft} placeholder={t("Nice work")} />
               </View>
-              <Button label={t("Post")} size="M" full={false} disabled={!draft.trim()} onPress={() => { const id = commentsFor.id; setComments((c) => ({ ...c, [id]: [...(c[id] ?? []), { name: db.profile.name, text: draft.trim(), avatar: photos.selfie }] })); setDraft(""); }} />
+              <Button label={t("Post")} size="M" full={false} disabled={!draft.trim()} onPress={() => { const id = commentsFor.id; setComments((c) => ({ ...c, [id]: [...(c[id] ?? []), { name: db.profile.name, text: draft.trim(), avatar: me.photo }] })); setDraft(""); }} />
             </Row>
             <Txt variant="labelS" tone="tertiary">
               {t("Comments stay on this device until accounts sync.")}
@@ -172,8 +178,8 @@ export default function Feed() {
       <BottomSheet
         visible={!!more}
         onClose={closeMore}
-        title={reported ? t("Thanks, we got it") : moreView === "caption" ? t("Caption") : moreView === "delete" ? t("Delete this workout?") : (more?.name ?? "")}
-        subtitle={reported ? t("We look at every report within two days.") : moreView === "delete" ? t("It disappears from the feed and from your log. Records from it are recalculated. This cannot be undone.") : moreView === "caption" ? (more?.title ?? undefined) : undefined}
+        title={reported ? t("Hidden and noted") : moreView === "caption" ? t("Caption") : moreView === "delete" ? t("Delete this workout?") : (more?.name ?? "")}
+        subtitle={reported ? t("The post is hidden from your feed. Reports reach us once accounts sync; until then nothing leaves this phone.") : moreView === "delete" ? t("It disappears from the feed and from your log. Records from it are recalculated. This cannot be undone.") : moreView === "caption" ? (more?.title ?? undefined) : undefined}
       >
         {!reported && more && moreView === "caption" ? (
           <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
@@ -195,7 +201,7 @@ export default function Feed() {
           <>
             <SheetOption icon="user" label={t("View profile")} onPress={() => { const id = more.userId!; closeMore(); router.push(`/user/${id}`); }} />
             <SheetOption icon="close" label={t("Hide this post")} sub={t("Only from your feed")} onPress={() => { setHidden((h) => [...h, more.id]); closeMore(); }} />
-            <SheetOption icon="flag" label={t("Report post")} sub={t("Spam or abuse")} danger onPress={() => setReported(true)} />
+            <SheetOption icon="flag" label={t("Report post")} sub={t("Spam or abuse")} danger onPress={() => { setHidden((h) => (h.includes(more.id) ? h : [...h, more.id])); setReported(true); }} />
           </>
         ) : more ? (
           <>

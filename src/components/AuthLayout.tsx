@@ -1,16 +1,18 @@
 import type { PropsWithChildren } from "react";
 import { Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "@/theme/ThemeProvider";
 import { Screen, Row } from "./ui/Screen";
 import { Lockup } from "./Brand";
 import { Txt } from "./ui/Text";
-import { Button } from "./ui/Button";
-import { BrandLogo } from "./ui/Icon";
 import { useT } from "@/i18n";
 
 /**
  * One layout for Sign in and Sign up so both screens share exact positions.
+ *
+ * Apple and Google sign-in are not here yet. A button that says "Continue with
+ * Apple" and quietly signs you in as yourself is a lie to the user and a
+ * rejection at review; both come back the day the backend can actually verify
+ * the token.
  *
  * Lockup centering: the lockup is placed in a full-width row with its box centred
  * on the screen axis, not on the form column. The artwork has the round mark on
@@ -20,7 +22,7 @@ import { useT } from "@/i18n";
 const LOCKUP_WIDTH = 140;
 const OPTICAL_NUDGE = 3;
 
-export function AuthLayout({ title, subtitle, children, footerCopy, footerAction, onFooter, onSocial }: PropsWithChildren<{ title: string; subtitle: string; footerCopy: string; footerAction: string; onFooter: () => void; onSocial: () => void }>) {
+export function AuthLayout({ title, subtitle, children, footerCopy, footerAction, onFooter }: PropsWithChildren<{ title: string; subtitle: string; footerCopy: string; footerAction: string; onFooter: () => void }>) {
   const insets = useSafeAreaInsets();
   const t = useT();
   return (
@@ -38,12 +40,6 @@ export function AuthLayout({ title, subtitle, children, footerCopy, footerAction
 
       <View style={{ gap: 12, paddingTop: 28 }}>{children}</View>
 
-      <View style={{ gap: 12, paddingTop: 28 }}>
-        <OrDivider />
-        <Button label={t("Continue with Apple")} variant="secondary" size="M" leading={<BrandLogo brand="apple" size={16} />} onPress={onSocial} />
-        <Button label={t("Continue with Google")} variant="secondary" size="M" leading={<BrandLogo brand="google" size={16} />} onPress={onSocial} />
-      </View>
-
       <View style={{ flex: 1 }} />
       <Row justify="center" gap={8} style={{ paddingTop: 24 }}>
         <Txt variant="bodyS" tone="tertiary">
@@ -57,16 +53,3 @@ export function AuthLayout({ title, subtitle, children, footerCopy, footerAction
   );
 }
 
-function OrDivider() {
-  const { colors } = useTheme();
-  const t = useT();
-  return (
-    <Row gap={12} style={{ paddingVertical: 8 }}>
-      <View style={{ flex: 1, height: 1, backgroundColor: colors.border.subtle }} />
-      <Txt variant="labelS" tone="tertiary">
-        {t("or")}
-      </Txt>
-      <View style={{ flex: 1, height: 1, backgroundColor: colors.border.subtle }} />
-    </Row>
-  );
-}

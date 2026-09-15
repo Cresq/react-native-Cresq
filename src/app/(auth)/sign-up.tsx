@@ -2,8 +2,7 @@ import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
-import { useDb } from "@/db/DbProvider";
-import { useAuth } from "@/store/auth";
+import { emailOk, MIN_PASSWORD, useAuth } from "@/store/auth";
 import { MIN_AGE } from "@/db/types";
 import { useT } from "@/i18n";
 import { AuthLayout } from "@/components/AuthLayout";
@@ -19,8 +18,7 @@ import { Row } from "@/components/ui/Screen";
  * timestamps of both go into the document with the account.
  */
 export default function SignUp() {
-  const { signIn } = useAuth();
-  const { update } = useDb();
+  const { signUp } = useAuth();
   const router = useRouter();
   const t = useT();
   const [name, setName] = useState("");
@@ -29,24 +27,27 @@ export default function SignUp() {
   const [ageOk, setAgeOk] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [nudge, setNudge] = useState(false);
+  const [error, setError] = useState<{ field: "name" | "email" | "password"; msg: string } | null>(null);
   const ready = ageOk && agreed;
 
   const go = () => {
+    if (!name.trim()) return setError({ field: "name", msg: t("We need something to call you.") });
+    if (!emailOk(email)) return setError({ field: "email", msg: t("That does not look like an email address.") });
+    if (password.length < MIN_PASSWORD) return setError({ field: "password", msg: t("At least {n} characters.", { n: MIN_PASSWORD }) });
+    setError(null);
     if (!ready) {
       setNudge(true);
       return;
     }
-    const now = Date.now();
-    update((d) => ({ ...d, profile: { ...d.profile, name: name.trim() || d.profile.name, first: name.trim().split(" ")[0] || d.profile.first }, consent: { ...d.consent, termsAcceptedAt: now, ageConfirmedAt: now } }));
-    signIn();
+    signUp(email, name);
     router.replace("/onboarding");
   };
 
   return (
-    <AuthLayout title={t("Create your account")} subtitle={t("Your log, records and photos stay yours.")} footerCopy={t("Already have an account?")} footerAction={t("Sign in")} onFooter={() => router.back()} onSocial={go}>
-      <Field label={t("Name")} value={name} onChangeText={setName} placeholder={t("Your name")} style={{ marginTop: 0 }} />
-      <Field label={t("Email")} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="you@example.com" />
-      <Field label={t("Password")} value={password} onChangeText={setPassword} secureTextEntry placeholder={t("At least 8 characters")} icon="lock" />
+    <AuthLayout title={t("Create your account")} subtitle={t("Your log, records and photos stay yours.")} footerCopy={t("Already have an account?")} footerAction={t("Sign in")} onFooter={() => router.back()}>
+      <Field label={t("Name")} value={name} onChangeText={(v) => { setName(v); setError(null); }} error={error?.field === "name" ? error.msg : undefined} placeholder={t("Your name")} autoComplete="name" textContentType="name" style={{ marginTop: 0 }} />
+      <Field label={t("Email")} value={email} onChangeText={(v) => { setEmail(v); setError(null); }} error={error?.field === "email" ? error.msg : undefined} keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" placeholder="you@example.com" />
+      <Field label={t("Password")} value={password} onChangeText={(v) => { setPassword(v); setError(null); }} error={error?.field === "password" ? error.msg : undefined} secureTextEntry autoComplete="new-password" textContentType="newPassword" placeholder={t("At least {n} characters", { n: MIN_PASSWORD })} icon="lock" />
 
       <View style={{ gap: 4, paddingTop: 4 }}>
         <Check on={ageOk} onPress={() => setAgeOk(!ageOk)} label={t("I am {n} or older", { n: MIN_AGE })} />
@@ -71,7 +72,7 @@ export default function SignUp() {
 
       <Button label={t("Create account")} onPress={go} style={{ marginTop: 6, opacity: ready ? 1 : 0.6 }} />
       <Txt variant="labelS" tone="tertiary" align="center">
-        {t("We store nothing about you until you create the account.")}
+        {t("Your account and your log live on this phone. Nothing is sent anywhere until sync exists, and then only if you turn it on.")}
       </Txt>
     </AuthLayout>
   );

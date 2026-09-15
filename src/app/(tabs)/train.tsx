@@ -7,7 +7,7 @@ import { useSplit } from "@/store/split";
 import { finished, relativeDay } from "@/db/derive";
 import { estimateMinutes } from "@/db/seed";
 import { uid } from "@/db/storage";
-import { useT } from "@/i18n";
+import { useT, usePlural } from "@/i18n";
 import { Screen, Row, Section } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { Card, Divider } from "@/components/ui/Card";
@@ -24,6 +24,7 @@ export default function Train() {
   const { colors } = useTheme();
   const router = useRouter();
   const t = useT();
+  const plural = usePlural();
   const { db, update } = useDb();
   const { session, start } = useWorkout();
   const { split, nextDay } = useSplit();
@@ -70,7 +71,7 @@ export default function Train() {
         <View style={{ gap: 4 }}>
           <Txt variant="displayL">{running ? session?.planName : (nextDay?.rest ? t("Rest day") : nextDay?.name) ?? t("Quick session")}</Txt>
           <Txt variant="bodyM" tone="secondary">
-            {running ? t("{n} exercises", { n: session?.exercises.length ?? 0 }) : (nextDay?.focus ?? t("Pick any workout below"))}
+            {running ? plural(session?.exercises.length ?? 0, "{n} exercise", "{n} exercises") : (nextDay?.focus ?? t("Pick any workout below"))}
           </Txt>
         </View>
         <Button label={running ? t("Continue session") : nextDay?.rest ? t("Rest day, start anyway") : t("Start session")} iconRight="arrowRight" onPress={() => begin(nextPlan?.id, nextDay?.name)} style={{ marginTop: 4 }} />
@@ -86,7 +87,7 @@ export default function Train() {
                 <View style={{ flex: 1, gap: 4 }}>
                   <Txt variant="labelL">{p.name}</Txt>
                   <Txt variant="bodyS" tone="tertiary">
-                    {p.focus || t("{n} exercises", { n: p.exercises.length })}
+                    {p.focus || plural(p.exercises.length, "{n} exercise", "{n} exercises")}
                   </Txt>
                 </View>
                 <Txt variant="labelS" tone="tertiary">

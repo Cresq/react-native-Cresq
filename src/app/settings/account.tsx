@@ -28,7 +28,7 @@ export default function Account() {
   const router = useRouter();
   const t = useT();
   const { db, update, reset } = useDb();
-  const { signOut } = useAuth();
+  const { signOut, account } = useAuth();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [exported, setExported] = useState(false);
   const p = db.profile;
@@ -40,7 +40,7 @@ export default function Account() {
   const setConsent = (patch: Partial<typeof c>) => update((d) => ({ ...d, consent: { ...d.consent, ...patch } }));
 
   const exportData = async () => {
-    const json = JSON.stringify({ exportedAt: new Date().toISOString(), profile: db.profile, consent: db.consent, plans: db.plans, sessions: db.sessions, split: db.split, following: db.following }, null, 2);
+    const json = JSON.stringify({ exportedAt: new Date().toISOString(), app: "CresQ", version: db.version, account, profile: db.profile, consent: db.consent, exercises: db.exercises, plans: db.plans, sessions: db.sessions, split: db.split, following: db.following }, null, 2);
     if (Platform.OS === "web") {
       const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -67,6 +67,11 @@ export default function Account() {
       <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Account and privacy")} />
 
       <Section title={t("Account")}>
+        {account ? (
+          <Txt variant="bodyS" tone="tertiary">
+            {t("Signed in as {email}, since {date}. Your log is on this phone only.", { email: account.email || t("this device"), date: longDate(account.createdAt) })}
+          </Txt>
+        ) : null}
         <Field label={t("Name")} value={p.name} onChangeText={(v) => setProfile({ name: v, first: v.split(" ")[0] || v })} />
         <Field label={t("Handle")} value={p.handle} onChangeText={(v) => setProfile({ handle: v.startsWith("@") ? v : `@${v}` })} autoCapitalize="none" />
         <Field label={t("City")} value={p.city} onChangeText={(v) => setProfile({ city: v })} />
@@ -145,7 +150,7 @@ export default function Account() {
         ))}
       </Section>
 
-      <BottomSheet visible={confirmDelete} onClose={() => setConfirmDelete(false)} title={t("Delete your account?")} subtitle={t("Your log, photos and settings are removed from this device now, and from our servers within 30 days. This cannot be undone.")}>
+      <BottomSheet visible={confirmDelete} onClose={() => setConfirmDelete(false)} title={t("Delete your account?")} subtitle={t("Your log, photos and settings are removed from this phone. There is nowhere else to remove them from: nothing has been sent anywhere. This cannot be undone.")}>
         <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
           <Button label={t("Download my data first")} variant="secondary" size="M" icon="share" onPress={exportData} />
           <Button label={t("Delete account permanently")} variant="danger" size="M" onPress={deleteAccount} />

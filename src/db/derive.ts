@@ -4,7 +4,8 @@ import { uid } from "./storage";
 /** Epley estimate of a one-rep max. Warm-ups are excluded everywhere this is used. */
 export const e1rm = (kg: number, reps: number) => (reps <= 1 ? kg : kg * (1 + reps / 30));
 
-export const isWorking = (s: SetEntry) => s.done && s.type !== "warmup";
+/** A set counts once it is ticked, is not a warm-up, and actually has reps in it. A ticked empty row is not a lift. */
+export const isWorking = (s: SetEntry) => s.done && s.type !== "warmup" && s.reps > 0;
 
 export const fmtKg = (kg: number) => (kg >= 1000 ? `${(kg / 1000).toFixed(1)}k` : `${Math.round(kg * 10) / 10}`);
 export const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -130,7 +131,11 @@ export function records(sessions: Session[], exercises: Exercise[]): Record[] {
 /** Records set in this session: exercises whose top working weight beats everything before. */
 export function newRecords(session: Session, priorSessions: Session[]) {
   const out: Record[] = [];
+  // The same movement can appear twice in one session; it is still one record.
+  const seen = new Set<string>();
   for (const e of session.exercises) {
+    if (seen.has(e.exerciseId)) continue;
+    seen.add(e.exerciseId);
     const top = bestSet(session, e.exerciseId);
     if (!top || !top.kg) continue;
     let priorBest = 0;

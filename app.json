@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "cresq",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "backgroundColor": "#151311",
     "ios": {
       "icon": "./assets/expo.icon",
@@ -30,9 +30,14 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#151311",
-          "image": "./assets/brand/mark-white.png",
-          "imageWidth": 120
+          "backgroundColor": "#F6F3EE",
+          "image": "./assets/brand/mark-black.png",
+          "imageWidth": 120,
+          "dark": {
+            "backgroundColor": "#151311",
+            "image": "./assets/brand/mark-white.png",
+            "imageWidth": 120
+          }
         }
       ],
       "expo-image",

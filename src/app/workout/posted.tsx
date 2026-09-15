@@ -3,6 +3,7 @@ import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
+import { useMe } from "@/store/me";
 import { useWorkout } from "@/store/workout";
 import { fmtKg, newRecords, sessionRows, sessionStats } from "@/db/derive";
 import { photos } from "@/data/mock";
@@ -15,7 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { PostCard } from "@/components/PostCard";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Field } from "@/components/ui/Field";
-import { useT } from "@/i18n";
+import { useT, usePlural } from "@/i18n";
 
 /**
  * Posted. The session is filed the moment this screen opens, so leaving any
@@ -26,8 +27,10 @@ export default function Posted() {
   const { colors } = useTheme();
   const router = useRouter();
   const t = useT();
+  const plural = usePlural();
   const { followers } = useSocial();
   const { db, update } = useDb();
+  const me = useMe();
   const { session, file, setCaption } = useWorkout();
   // The session moves out of the store as soon as it is filed, so hold on to it.
   const [snap, setSnap] = useState(session);
@@ -97,7 +100,7 @@ export default function Posted() {
         </View>
         <Txt variant="displayL">{t("Posted to your feed")}</Txt>
         <Txt variant="bodyM" tone="secondary">
-          {t("Visible to {n} followers", { n: followers.length })}
+          {plural(followers.length, "Visible to {n} follower", "Visible to {n} followers")}
         </Txt>
       </View>
 
@@ -108,8 +111,8 @@ export default function Posted() {
           name: db.profile.name,
           title: snap?.planName ?? t("Session"),
           meta: t("just now"),
-          place: snap?.gym ?? (db.profile.showCity === false ? undefined : db.profile.city),
-          avatar: photos.selfie,
+          place: snap?.gym ?? (db.profile.showCity === false ? undefined : db.profile.city || undefined),
+          avatar: me.photo,
           photo: snap?.photo ? { uri: snap.photo } : undefined,
           photoHeight: 300,
           exercises: snap ? sessionRows(snap).map((r) => ({ name: r.name, detail: t(r.count === 1 ? "{n} set" : "{n} sets", { n: r.count }) })) : [],

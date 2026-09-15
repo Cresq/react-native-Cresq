@@ -1,11 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from "react";
+import { AppState } from "react-native";
 import { DB_VERSION, type Db } from "./types";
-import { clearDb, loadDb, saveDb } from "./storage";
+import { clearDb, flushDb, loadDb, onSaveTrouble, saveDb, uid } from "./storage";
 import { createSeedDb } from "./seed";
 
 type DbState = {
   db: Db;
   ready: boolean;
+  /** True when the last write to the device failed. The app says so rather than pretending it saved. */
+  saveFailed: boolean;
   /** Apply a pure update; the result is persisted after a short debounce. */
   update: (fn: (db: Db) => Db) => void;
   /** Wipe everything and reseed. Used by Settings › Reset. */
@@ -14,25 +17,48 @@ type DbState = {
 
 const DbContext = createContext<DbState | null>(null);
 
-/** Fill keys that were added after a document was first stored, without touching what the user already has. */
+/**
+ * Carry a stored document forward to the current shape. Every version is
+ * migrated, never discarded: what is in there is somebody's training history.
+ * Keys added since their first launch get the seed's default; everything the
+ * person has themselves is left exactly as it was.
+ */
 function migrate(stored: Db): Db {
   const fresh = createSeedDb();
   // Exercises added to the library since the user's first launch join theirs; nothing of theirs is touched.
   const have = new Set((stored.exercises ?? []).map((e) => e.id));
   const exercises = [...(stored.exercises ?? []), ...fresh.exercises.filter((e) => !have.has(e.id))];
-  return { ...fresh, ...stored, exercises, profile: { ...fresh.profile, ...stored.profile }, consent: { ...fresh.consent, ...(stored.consent ?? {}) }, following: stored.following ?? fresh.following, blocked: stored.blocked ?? [] };
+  const auth = stored.auth ?? fresh.auth;
+  return {
+    ...fresh,
+    ...stored,
+    version: DB_VERSION,
+    exercises,
+    // An account minted before accounts existed: give it its id now, once.
+    auth: { ...auth, account: auth.account ?? (auth.signedIn ? { id: uid(), email: "", createdAt: stored.createdAt ?? Date.now() } : undefined) },
+    profile: { ...fresh.profile, ...stored.profile },
+    consent: { ...fresh.consent, ...(stored.consent ?? {}) },
+    plans: stored.plans ?? fresh.plans,
+    sessions: stored.sessions ?? [],
+    split: stored.split ?? fresh.split,
+    following: stored.following ?? fresh.following,
+    blocked: stored.blocked ?? [],
+  };
 }
 
 export function DbProvider({ children }: PropsWithChildren) {
   const [db, setDb] = useState<Db>(() => createSeedDb());
   const [ready, setReady] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const loaded = useRef(false);
 
   useEffect(() => {
     let alive = true;
     loadDb().then((stored) => {
       if (!alive) return;
-      if (stored && stored.version === DB_VERSION) setDb(migrate(stored));
+      // Any stored document is carried forward. A newer one than this build knows
+      // about is left alone too: dropping back a version must not cost a log.
+      if (stored) setDb(migrate(stored));
       else saveDb(db);
       loaded.current = true;
       setReady(true);
@@ -41,6 +67,21 @@ export function DbProvider({ children }: PropsWithChildren) {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const off = onSaveTrouble(setSaveFailed);
+    return () => {
+      off();
+    };
+  }, []);
+
+  // Leaving the foreground is the moment a write is most likely to be lost, so the debounce is cut short.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") flushDb();
+    });
+    return () => sub.remove();
   }, []);
 
   const update = useCallback((fn: (d: Db) => Db) => {
@@ -58,7 +99,7 @@ export function DbProvider({ children }: PropsWithChildren) {
     saveDb(fresh);
   }, []);
 
-  const value = useMemo(() => ({ db, ready, update, reset }), [db, ready, update, reset]);
+  const value = useMemo(() => ({ db, ready, saveFailed, update, reset }), [db, ready, saveFailed, update, reset]);
   return <DbContext.Provider value={value}>{children}</DbContext.Provider>;
 }
 

@@ -14,7 +14,7 @@ import { Tabs } from "@/components/ui/Tabs";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
 import { LineChart } from "@/components/LineChart";
-import { useT } from "@/i18n";
+import { useT, usePlural } from "@/i18n";
 import { ExerciseMedia } from "@/components/ExerciseMedia";
 
 const RANGES: Record<string, number> = { "1m": 30, "3m": 91, "6m": 182, "1y": 365, all: 100000 };
@@ -27,22 +27,35 @@ export default function LiftDetail() {
   const { colors } = useTheme();
   const router = useRouter();
   const t = useT();
+  const plural = usePlural();
   const { db } = useDb();
   const { lift: id } = useLocalSearchParams<{ lift: string }>();
-  const exercise = db.exercises.find((e) => e.id === id) ?? db.exercises[0];
+  // A link to a lift that is no longer in the library must not take the app down with it.
+  const exercise = db.exercises.find((e) => e.id === id) ?? db.exercises[0] ?? null;
   const [range, setRange] = useState("3m");
   const [tab, setTab] = useState("trend");
   const [how, setHow] = useState(false);
 
-  const all = useMemo(() => liftTrend(db.sessions, exercise.id), [db.sessions, exercise.id]);
+  const all = useMemo(() => (exercise ? liftTrend(db.sessions, exercise.id) : []), [db.sessions, exercise]);
   const since = Date.now() - RANGES[range] * 86400000;
   const points = all.filter((p) => p.date >= since);
   const shown = points.length >= 2 ? points : all;
   const fc = useMemo(() => forecast(all), [all]);
-  const history = useMemo(() => exerciseHistory(db.sessions, exercise.id), [db.sessions, exercise.id]);
+  const history = useMemo(() => (exercise ? exerciseHistory(db.sessions, exercise.id) : []), [db.sessions, exercise]);
   const current = all.length ? all[all.length - 1].value : 0;
   const first = shown.length ? shown[0].value : current;
   const delta = Math.round((current - first) * 2) / 2;
+
+  if (!exercise) {
+    return (
+      <Screen>
+        <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Exercise")} />
+        <Txt variant="bodyM" tone="secondary">
+          {t("This exercise is not in your library.")}
+        </Txt>
+      </Screen>
+    );
+  }
   const weeks = shown.length ? Math.max(1, Math.round((shown[shown.length - 1].date - shown[0].date) / (7 * 86400000))) : 0;
   const bestRecords = useMemo(() => {
     const out: { kg: number; reps: number; date: number }[] = [];
@@ -188,7 +201,7 @@ export default function LiftDetail() {
                       <View style={{ flex: 1, gap: 2 }}>
                         <Txt variant="labelL">{h.top ? `${h.top.kg ? `${h.top.kg} kg × ` : ""}${h.top.reps}` : t("no working sets")}</Txt>
                         <Txt variant="bodyS" tone="tertiary">
-                          {shortDate(h.date)}, {h.planName}, {t("{n} sets", { n: h.sets })}, {fmtKg(h.volume)} kg
+                          {shortDate(h.date)}, {h.planName}, {plural(h.sets, "{n} set", "{n} sets")}, {fmtKg(h.volume)} kg
                         </Txt>
                       </View>
                     </Row>

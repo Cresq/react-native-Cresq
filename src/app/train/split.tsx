@@ -14,7 +14,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
-import { useT } from "@/i18n";
+import { useT, usePlural } from "@/i18n";
 
 /**
  * Split editor. The order is the content: numbered rows, the next day marked,
@@ -24,6 +24,7 @@ export default function SplitEditor() {
   const { colors } = useTheme();
   const router = useRouter();
   const t = useT();
+  const plural = usePlural();
   const { split, nextDay, rename, addDay, removeDay, moveDay, setNext } = useSplit();
   const [renaming, setRenaming] = useState(false);
   const [nameText, setNameText] = useState(split.name);
@@ -74,7 +75,7 @@ export default function SplitEditor() {
                     ) : null}
                   </Row>
                   <Txt variant="bodyS" tone="tertiary">
-                    {d.rest ? d.focus : `${d.focus}, ${t("{n} exercises", { n: d.exercises ?? 0 })}, ${t("{n} min", { n: d.minutes ?? 0 })}`}
+                    {d.rest ? d.focus : `${d.focus}, ${plural(d.exercises ?? 0, "{n} exercise", "{n} exercises")}, ${t("{n} min", { n: d.minutes ?? 0 })}`}
                   </Txt>
                 </Pressable>
                 <Pressable accessibilityRole="button" accessibilityLabel={t("Day options")} hitSlop={10} onPress={() => setSheet({ kind: "day", day: d })}>
@@ -122,7 +123,7 @@ export default function SplitEditor() {
 
       <BottomSheet visible={sheet?.kind === "add"} onClose={() => setSheet(null)} title={t("Add a day")} subtitle={t("Pick a workout or a rest day. You can reorder afterwards.")}>
         {splitTemplates.map((tpl) => (
-          <SheetOption key={tpl.name} icon={tpl.rest ? "sun" : "dumbbell"} label={tpl.rest ? t("Rest day") : tpl.name} sub={tpl.rest ? tpl.focus : `${tpl.focus}, ${t("{n} exercises", { n: tpl.exercises ?? 0 })}`} onPress={() => { addDay(tpl); setSheet(null); }} />
+          <SheetOption key={tpl.name} icon={tpl.rest ? "sun" : "dumbbell"} label={tpl.rest ? t("Rest day") : tpl.name} sub={tpl.rest ? tpl.focus : `${tpl.focus}, ${plural(tpl.exercises ?? 0, "{n} exercise", "{n} exercises")}`} onPress={() => { addDay(tpl); setSheet(null); }} />
         ))}
       </BottomSheet>
     </Screen>

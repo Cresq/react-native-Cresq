@@ -14,7 +14,7 @@ import { Chip } from "@/components/ui/Chip";
 import { Avatar, PhotoSlot } from "@/components/ui/PhotoSlot";
 import { Stat, StatDivider } from "@/components/StatCard";
 import { SessionBreakdown, type BreakdownExercise } from "@/components/SessionBreakdown";
-import { useT } from "@/i18n";
+import { useT, usePlural } from "@/i18n";
 import { PhotoViewer } from "@/components/PhotoViewer";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { Field } from "@/components/ui/Field";
@@ -29,6 +29,7 @@ export default function SessionDetail() {
   const { colors } = useTheme();
   const router = useRouter();
   const t = useT();
+  const plural = usePlural();
   const { db, update } = useDb();
   const [menu, setMenu] = useState<"menu" | "caption" | "delete" | null>(null);
   const [captionText, setCaptionText] = useState("");
@@ -52,7 +53,7 @@ export default function SessionDetail() {
   if (post) {
     const author = post.userId ? person(post.userId) : undefined;
     const exercises: BreakdownExercise[] = post.workout ?? (post.exercises ?? []).map((e) => ({ name: e.name, sets: [] }));
-    const [title, ...rest] = post.meta.split(", ");
+    const [title, ...rest] = post.meta.split(", ").map((part) => t(part));
     return (
       <Screen>
         <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={title} subtitle={rest.join(", ")} />
@@ -149,7 +150,7 @@ export default function SessionDetail() {
       >
         {menu === "menu" ? (
           <>
-            <SheetOption icon="share" label={t("Share")} sub={t("Send a summary to another app")} onPress={() => { setMenu(null); Share.share({ message: `${s.planName}, ${longDate(s.startedAt)}: ${t("{n} sets", { n: stats.setsDone })}, ${fmtKg(stats.volume)} kg, ${stats.minutes} min. CresQ.` }); }} />
+            <SheetOption icon="share" label={t("Share")} sub={t("Send a summary to another app")} onPress={() => { setMenu(null); Share.share({ message: `${s.planName}, ${longDate(s.startedAt)}: ${plural(stats.setsDone, "{n} set", "{n} sets")}, ${fmtKg(stats.volume)} kg, ${stats.minutes} min. CresQ.` }); }} />
             <SheetOption icon="noteEdit" label={t("Edit caption")} onPress={() => { setCaptionText(s.caption ?? ""); setMenu("caption"); }} />
             {s.shared ? (
               <SheetOption icon="lock" label={t("Make private")} sub={t("Removes it from the feed, keeps it in your log")} onPress={() => { setMenu(null); update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, shared: false } : x)) })); }} />

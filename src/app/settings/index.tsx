@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useAuth } from "@/store/auth";
-import { useT } from "@/i18n";
+import { useT, usePlural } from "@/i18n";
 import { Screen, Row, Section, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
@@ -19,6 +19,7 @@ export default function Settings() {
   const { colors } = useTheme();
   const router = useRouter();
   const t = useT();
+  const plural = usePlural();
   const { db, update, reset } = useDb();
   const { signOut } = useAuth();
   const [confirm, setConfirm] = useState<null | "samples" | "reset">(null);
@@ -52,6 +53,13 @@ export default function Settings() {
           </View>
         ))}
       </Card>
+
+      <Section title={t("Appearance")}>
+        <Segmented size="M" value={db.profile.theme ?? "system"} onChange={(v) => update((d) => ({ ...d, profile: { ...d.profile, theme: v as "system" | "dark" | "light" } }))} segments={[{ key: "system", label: t("System") }, { key: "dark", label: t("Dark") }, { key: "light", label: t("Light") }]} />
+        <Txt variant="bodyS" tone="tertiary">
+          {t("System follows your phone. Dark is how CresQ was drawn; light is the same app on paper.")}
+        </Txt>
+      </Section>
 
       <Section title={t("Language")}>
         <Segmented size="M" value={db.profile.language ?? "nl"} onChange={(l) => update((d) => ({ ...d, profile: { ...d.profile, language: l as "nl" | "en" } }))} segments={[{ key: "nl", label: "Nederlands" }, { key: "en", label: "English" }]} />
@@ -110,7 +118,7 @@ export default function Settings() {
 
       <BottomSheet visible={confirm === "samples"} onClose={() => setConfirm(null)} title={t("Remove sample sessions?")} subtitle={t("Your own logged sessions stay. Charts will be empty until you train.")}>
         <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
-          <Button label={t("Remove {n} sessions", { n: samples })} variant="danger" size="M" onPress={() => { update((d) => ({ ...d, sessions: d.sessions.filter((s) => !s.sample) })); setConfirm(null); }} />
+          <Button label={plural(samples, "Remove {n} session", "Remove {n} sessions")} variant="danger" size="M" onPress={() => { update((d) => ({ ...d, sessions: d.sessions.filter((s) => !s.sample) })); setConfirm(null); }} />
         </View>
       </BottomSheet>
       <BottomSheet visible={confirm === "reset"} onClose={() => setConfirm(null)} title={t("Reset everything?")} subtitle={t("This cannot be undone. You will be signed out.")}>

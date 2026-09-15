@@ -269,7 +269,7 @@ export default function ActiveWorkout() {
       {rest ? (
         <Animated.View entering={FadeInDown.springify().damping(18).stiffness(180)} exiting={FadeOutDown.duration(180)} style={{ position: "absolute", left: 16, right: 16, bottom: Math.max(insets.bottom, 16) + 8 }}>
           <View style={[{ flexDirection: "row", alignItems: "center", gap: 12, padding: 12, paddingLeft: 16, borderRadius: radius.bar, backgroundColor: colors.bg.raised }, shadow.floating]}>
-            <RestRing progress={rest.left / rest.total} />
+            <RestRing progress={rest.total > 0 ? rest.left / rest.total : 0} />
             <View style={{ flex: 1, gap: 1 }}>
               <Row gap={8} align="baseline">
                 <Txt variant="numberL" tabular>
@@ -280,7 +280,7 @@ export default function ActiveWorkout() {
                 </Txt>
               </Row>
               <Txt variant="bodyS" tone="tertiary" numberOfLines={1}>
-                {rest.nextLabel}
+                {rest.next ? (rest.next.kg ? t("Set {n}, {kg} kg × {reps}", { n: rest.next.set, kg: rest.next.kg, reps: rest.next.reps }) : t("Set {n}, {reps} reps", { n: rest.next.set, reps: rest.next.reps })) : t("Next exercise")}
               </Txt>
             </View>
             <Pill label="−15" accessibilityLabel={t("15 seconds less")} onPress={() => w.adjustRest(-15)} />
@@ -524,6 +524,7 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
 
 /** Vertical drag that lifts the element, follows the finger, reports where it is, and where it let go. */
 function useDrag(onStart: () => void, onMove: (dy: number) => void, onEnd: (dy: number) => void) {
+  const { shadow } = useTheme();
   const ty = useSharedValue(0);
   const lift = useSharedValue(0);
   const drag = Gesture.Pan()
@@ -545,14 +546,15 @@ function useDrag(onStart: () => void, onMove: (dy: number) => void, onEnd: (dy: 
     .onFinalize(() => {
       lift.value = withSpring(0, springs.snappy);
     });
+  const lifted = shadow.lifted;
   const style = useAnimatedStyle(() => ({
     zIndex: lift.value > 0.01 ? 10 : 0,
     transform: [{ translateY: ty.value }, { scale: 1 + lift.value * 0.03 }],
-    shadowColor: "#000000",
-    shadowOpacity: 0.45 * lift.value,
-    shadowRadius: 26 * lift.value,
-    shadowOffset: { width: 0, height: 16 * lift.value },
-    elevation: 14 * lift.value,
+    shadowColor: lifted.shadowColor,
+    shadowOpacity: lifted.shadowOpacity * lift.value,
+    shadowRadius: lifted.shadowRadius * lift.value,
+    shadowOffset: { width: 0, height: lifted.shadowOffset.height * lift.value },
+    elevation: lifted.elevation * lift.value,
   }));
   return { drag, style };
 }
@@ -601,6 +603,9 @@ function SetRow({ set, label, isCurrent, error, onType, onChange, onDone, onRemo
   const hasPrev = set.prevKg !== null;
   const prev = hasPrev ? `${set.prevKg || "BW"} × ${set.prevReps}` : "–";
   const inputStyle = { width: "100%" as const, textAlign: "center" as const, color: dim ? colors.text.tertiary : colors.text.primary, fontFamily: fontFamily.displaySemi, fontSize: 20, paddingVertical: 0 };
+  // While a box has focus the typed text is the truth. Reading the number back
+  // out on every keystroke ate the decimal point, so 2.5 kg could not be typed.
+  const [draft, setDraft] = useState<{ kg?: string; reps?: string }>({});
   const shake = useSharedValue(0);
   const pop = useSharedValue(1);
   const tx = useSharedValue(0);
@@ -655,10 +660,34 @@ function SetRow({ set, label, isCurrent, error, onType, onChange, onDone, onRemo
               </Txt>
             </Pressable>
             <View style={{ flex: 1, height: 40, borderRadius: radius.input, backgroundColor: boxBg, justifyContent: "center" }}>
-              <TextInput value={String(set.kg)} onChangeText={(v) => onChange({ kg: Number(v.replace(",", ".")) || 0 })} keyboardType="decimal-pad" selectTextOnFocus style={inputStyle} />
+              <TextInput
+                value={draft.kg ?? String(set.kg)}
+                onChangeText={(v) => {
+                  const clean = v.replace(",", ".").replace(/[^0-9.]/g, "");
+                  setDraft((d) => ({ ...d, kg: clean }));
+                  onChange({ kg: Number(clean) || 0 });
+                }}
+                onBlur={() => setDraft((d) => ({ ...d, kg: undefined }))}
+                keyboardType="decimal-pad"
+                selectTextOnFocus
+                accessibilityLabel={t("Weight in kilograms")}
+                style={inputStyle}
+              />
             </View>
             <View style={{ flex: 1, height: 40, borderRadius: radius.input, backgroundColor: boxBg, justifyContent: "center" }}>
-              <TextInput value={String(set.reps)} onChangeText={(v) => onChange({ reps: Number(v) || 0 })} keyboardType="number-pad" selectTextOnFocus style={inputStyle} />
+              <TextInput
+                value={draft.reps ?? String(set.reps)}
+                onChangeText={(v) => {
+                  const clean = v.replace(/[^0-9]/g, "");
+                  setDraft((d) => ({ ...d, reps: clean }));
+                  onChange({ reps: Number(clean) || 0 });
+                }}
+                onBlur={() => setDraft((d) => ({ ...d, reps: undefined }))}
+                keyboardType="number-pad"
+                selectTextOnFocus
+                accessibilityLabel={t("Repetitions")}
+                style={inputStyle}
+              />
             </View>
             <Animated.View style={checkAnim}>
               <Pressable

@@ -205,36 +205,17 @@ export default function Summary() {
             ))}
           </View>
         ) : (
-          <View style={{ gap: 16, paddingTop: 16 }}>
-            <Row gap={16} align="stretch">
-              <HR icon="heart" label={t("Average")} value="126" unit="bpm" color={colors.status.danger} />
-              <HR icon="pulse" label={t("Max")} value="158" unit="bpm" color={colors.text.secondary} />
-              <HR icon="flame" label={t("Energy")} value="412" unit="kcal" color={colors.accent.ember} />
-            </Row>
-            <View style={{ gap: 8 }}>
-              <Row gap={4}>
-                {(
-                  [
-                    [4, colors.border.strong],
-                    [12, colors.fuel.sage],
-                    [28, colors.accent.ember],
-                    [9, colors.status.warning],
-                    [1, colors.status.danger],
-                  ] as const
-                ).map(([minutes, color], i) => (
-                  <View key={i} style={{ flex: minutes, height: 6, borderRadius: 3, backgroundColor: color, minWidth: 6 }} />
-                ))}
-              </Row>
-              <Txt variant="labelS" tone="tertiary">
-                {t("Minutes per zone, easy to hard.")}
+          <View style={{ gap: 16, paddingTop: 20, alignItems: "center" }}>
+            <Icon name="watch" size={28} color={colors.text.tertiary} strokeWidth={1.6} />
+            <View style={{ gap: 6 }}>
+              <Txt variant="labelL" align="center">
+                {t("No heart rate for this session")}
+              </Txt>
+              <Txt variant="bodyS" tone="tertiary" align="center">
+                {t("Connect a watch and CresQ reads the beats, zones and energy for every session you log.")}
               </Txt>
             </View>
-            <Row gap={8}>
-              <Icon name="watch" size={13} color={colors.text.tertiary} strokeWidth={1.8} />
-              <Txt variant="labelS" tone="tertiary">
-                {t("Sample data until a watch is connected.")}
-              </Txt>
-            </Row>
+            <Button label={t("Connect a device")} variant="secondary" size="S" full={false} icon="watch" onPress={() => router.push("/settings/devices")} />
           </View>
         )}
       </View>
@@ -250,26 +231,5 @@ function ShareRow({ label, value, onChange }: { label: string; value: boolean; o
       </Txt>
       <Toggle value={value} onChange={onChange} />
     </Row>
-  );
-}
-
-function HR({ icon, label, value, unit, color }: { icon: "heart" | "pulse" | "flame"; label: string; value: string; unit: string; color: string }) {
-  return (
-    <View style={{ flex: 1, gap: 4 }}>
-      <Row gap={4}>
-        <Icon name={icon} size={12} color={color} strokeWidth={2.2} />
-        <Txt variant="labelS" tone="tertiary">
-          {label}
-        </Txt>
-      </Row>
-      <Row gap={4} align="baseline">
-        <Txt variant="numberM" tabular>
-          {value}
-        </Txt>
-        <Txt variant="labelS" tone="secondary">
-          {unit}
-        </Txt>
-      </Row>
-    </View>
   );
 }

@@ -140,7 +140,9 @@ export function createSeedDb(): Db {
     version: DB_VERSION,
     createdAt: Date.now(),
     auth: { signedIn: false },
-    profile: { name: "Nick Li", first: "Nick", handle: "@nickli", city: "Amsterdam", since: "2021", units: "kg", onboarded: false, favourites: ["bench", "squat", "deadlift", "ohp"] },
+    // No name, no town, no starting year: those are the person's, and they are
+    // asked for at sign-up. A fresh install must never present itself as somebody else.
+    profile: { name: "", first: "", handle: "", city: "", since: String(new Date().getFullYear()), units: "kg", onboarded: false, favourites: ["bench", "squat", "deadlift", "ohp"] },
     exercises,
     plans,
     sessions: seedSampleSessions(exercises, plans),

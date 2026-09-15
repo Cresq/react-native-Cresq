@@ -8,7 +8,13 @@ import { uid } from "@/db/storage";
 export { fmtKg, fmtTime, sessionStats } from "@/db/derive";
 export type { Session };
 
-type Rest = { total: number; left: number; nextLabel: string } | null;
+/**
+ * `endsAt` is the truth and `left` is what it looks like. A timer counted down
+ * a tick at a time stops while the phone sleeps and drifts while it runs, and
+ * both are wrong in the same direction: it tells you to lift sooner than you
+ * should.
+ */
+type Rest = { total: number; left: number; endsAt: number; next: { set: number; kg: number; reps: number } | null } | null;
 
 /** Exercises as blocks: a superset is one block, a loose exercise is a block of one. */
 function blocks(exs: ExerciseEntry[]) {
@@ -32,6 +38,13 @@ function contiguous(exs: ExerciseEntry[]) {
     } else out.push(e);
   }
   return out;
+}
+/** The first group letter nobody outside `ids` is using, so two supersets can never share one. */
+function freeGroup(exs: ExerciseEntry[], ids: string[]) {
+  const used = new Set(exs.filter((e) => e.supersetGroup && !ids.includes(e.id)).map((e) => e.supersetGroup as string));
+  let g = "A";
+  while (used.has(g)) g = String.fromCharCode(g.charCodeAt(0) + 1);
+  return g;
 }
 function keepCurrent(s: Session, next: ExerciseEntry[]): Session {
   const currentId = s.exercises[s.currentIndex]?.id;
@@ -94,19 +107,24 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
     sessionRef.current = session;
   }, [session]);
 
+  const resting = !!rest;
   useEffect(() => {
-    if (!rest) {
-      if (tick.current) clearInterval(tick.current);
-      tick.current = null;
-      return;
-    }
-    if (tick.current) return;
-    tick.current = setInterval(() => setRest((r) => (!r ? r : r.left <= 1 ? null : { ...r, left: r.left - 1 })), 1000);
+    if (!resting) return;
+    tick.current = setInterval(
+      () =>
+        setRest((r) => {
+          if (!r) return r;
+          const left = Math.max(0, Math.round((r.endsAt - Date.now()) / 1000));
+          if (left <= 0) return null;
+          return left === r.left ? r : { ...r, left };
+        }),
+      250,
+    );
     return () => {
       if (tick.current) clearInterval(tick.current);
       tick.current = null;
     };
-  }, [rest]);
+  }, [resting]);
 
   const mutate = useCallback((fn: (s: Session) => Session) => update((d) => (d.activeSession ? { ...d, activeSession: fn(d.activeSession) } : d)), [update]);
   const mapEx = (s: Session, exerciseId: string, fn: (e: ExerciseEntry) => ExerciseEntry): Session => ({ ...s, exercises: s.exercises.map((e) => (e.id === exerciseId ? fn(e) : e)) });
@@ -114,6 +132,8 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
   const start = useCallback(
     (planId?: string, name?: string) =>
       update((d) => {
+        // Someone already lifting keeps their session; the caller routes them back to it.
+        if (d.activeSession && !d.activeSession.finishedAt) return d;
         const plan = d.plans.find((p) => p.id === planId) ?? (name ? d.plans.find((p) => p.name.toLowerCase() === name.toLowerCase()) : undefined);
         const fresh = plan ? sessionFromPlan(plan, d.exercises, d.sessions) : { id: uid(), planName: name ?? "Quick session", startedAt: Date.now(), exercises: [], currentIndex: 0 };
         haptic("start");
@@ -130,14 +150,13 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
   /** Stops the session at once. It is kept for a few seconds so a slip can be undone. */
   const discard = useCallback(() => {
     setRest(null);
-    update((d) => {
-      if (d.activeSession) {
-        setLastDiscarded(d.activeSession);
-        if (undoTimer.current) clearTimeout(undoTimer.current);
-        undoTimer.current = setTimeout(() => setLastDiscarded(null), 6000);
-      }
-      return { ...d, activeSession: null };
-    });
+    const going = sessionRef.current;
+    if (going) {
+      setLastDiscarded(going);
+      if (undoTimer.current) clearTimeout(undoTimer.current);
+      undoTimer.current = setTimeout(() => setLastDiscarded(null), 6000);
+    }
+    update((d) => ({ ...d, activeSession: null }));
   }, [update]);
   const undoDiscard = useCallback(() => {
     if (undoTimer.current) clearTimeout(undoTimer.current);
@@ -174,8 +193,9 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
       mutate((cur) => mapEx(cur, exerciseId, (e) => ({ ...e, sets: e.sets.map((x) => (x.id === setId ? { ...x, done: !x.done } : x)) })));
       if (wasDone) return;
       const next = ex.sets.slice(idx + 1).find((x) => !x.done);
-      const label = next ? `Set ${ex.sets.indexOf(next) + 1}, ${next.kg ? `${next.kg} kg × ` : ""}${next.reps}` : "Next exercise";
-      setRest({ total: ex.restSeconds, left: ex.restSeconds, nextLabel: label });
+      const seconds = Math.max(1, ex.restSeconds || 60);
+      // What comes next travels as numbers, not as a sentence: the sentence is written on screen, in the reader's language.
+      setRest({ total: seconds, left: seconds, endsAt: Date.now() + seconds * 1000, next: next ? { set: ex.sets.indexOf(next) + 1, kg: next.kg, reps: next.reps } : null });
     },
     [mutate],
   );
@@ -210,7 +230,7 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
         const cur = s.exercises[i];
         if (cur.supersetGroup) return { ...s, exercises: s.exercises.map((e) => (e.supersetGroup === cur.supersetGroup ? { ...e, supersetGroup: undefined } : e)) };
         if (i + 1 >= s.exercises.length) return s;
-        const g = String.fromCharCode(65 + i);
+        const g = freeGroup(s.exercises, []);
         return { ...s, exercises: s.exercises.map((e, k) => (k === i || k === i + 1 ? { ...e, supersetGroup: g } : e)) };
       }),
     [mutate],
@@ -219,10 +239,7 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
   const groupExercises = useCallback(
     (ids: string[]) =>
       mutate((s) => {
-        const used = new Set(s.exercises.filter((e) => e.supersetGroup && !ids.includes(e.id)).map((e) => e.supersetGroup as string));
-        let g = "A";
-        while (used.has(g)) g = String.fromCharCode(g.charCodeAt(0) + 1);
-        const group = ids.length >= 2 ? g : undefined;
+        const group = ids.length >= 2 ? freeGroup(s.exercises, ids) : undefined;
         const moved = s.exercises.map((e) => (ids.includes(e.id) ? { ...e, supersetGroup: group } : e));
         const size: Record<string, number> = {};
         for (const e of moved) if (e.supersetGroup) size[e.supersetGroup] = (size[e.supersetGroup] ?? 0) + 1;
@@ -231,7 +248,16 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
       }),
     [mutate],
   );
-  const removeExercise = useCallback((exerciseId: string) => mutate((s) => ({ ...s, exercises: s.exercises.filter((e) => e.id !== exerciseId), currentIndex: Math.max(0, Math.min(s.currentIndex, s.exercises.length - 2)) })), [mutate]);
+  const removeExercise = useCallback(
+    (exerciseId: string) =>
+      mutate((s) => {
+        const next = s.exercises.filter((e) => e.id !== exerciseId);
+        // Removing the one you are on falls back to the row that took its place.
+        if (s.exercises[s.currentIndex]?.id === exerciseId) return { ...s, exercises: next, currentIndex: Math.max(0, Math.min(s.currentIndex, next.length - 1)) };
+        return keepCurrent(s, next);
+      }),
+    [mutate],
+  );
   /**
    * Move an exercise by a number of rows. A superset moves as one block and
    * nothing can land inside another block, so groups always stay together.
@@ -278,7 +304,15 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
   );
   const setCaption = useCallback((caption: string) => mutate((s) => ({ ...s, caption })), [mutate]);
   const setPhoto = useCallback((photo: string | null) => mutate((s) => ({ ...s, photo: photo ?? undefined })), [mutate]);
-  const adjustRest = useCallback((delta: number) => setRest((r) => (r ? { ...r, left: Math.max(1, r.left + delta), total: Math.max(r.total, r.left + delta) } : r)), []);
+  const adjustRest = useCallback(
+    (delta: number) =>
+      setRest((r) => {
+        if (!r) return r;
+        const left = Math.max(1, r.left + delta);
+        return { ...r, left, endsAt: Date.now() + left * 1000, total: Math.max(r.total, left) };
+      }),
+    [],
+  );
   const skipRest = useCallback(() => setRest(null), []);
 
   const value = useMemo<WorkoutState>(

@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { fontFamily } from "../../../../constants/theme";
-import { useT } from "@/i18n";
+import { useT, usePlural } from "@/i18n";
 import { SUPERSET_INK, supersetColor } from "@/superset";
 
 const typeLabel = (t: SetType, working: number) => (t === "warmup" ? "W" : t === "drop" ? "D" : t === "failure" ? "F" : String(working));
@@ -31,6 +31,7 @@ export default function PlanEditor() {
   const { colors, radius } = useTheme();
   const router = useRouter();
   const t = useT();
+  const plural = usePlural();
   const { db, update } = useDb();
   const { session, start } = useWorkout();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -81,7 +82,7 @@ export default function PlanEditor() {
 
   return (
     <Screen bottom={90} footer={<Button label={session && !session.finishedAt ? t("Continue session") : t("Start this workout")} iconRight="arrowRight" onPress={begin} disabled={plan.exercises.length === 0} />}>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Workout")} subtitle={`${t("{n} exercises", { n: plan.exercises.length })}, ${t("{n} min", { n: estimateMinutes(plan) })}`} right={<IconButton name="trash" onPress={() => setSheet({ kind: "delete" })} accessibilityLabel={t("Delete workout")} />} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Workout")} subtitle={`${plural(plan.exercises.length, "{n} exercise", "{n} exercises")}, ${t("{n} min", { n: estimateMinutes(plan) })}`} right={<IconButton name="trash" onPress={() => setSheet({ kind: "delete" })} accessibilityLabel={t("Delete workout")} />} />
 
       <View style={{ gap: 12 }}>
         <Field label={t("Name")} value={plan.name} onChangeText={(v) => patch((p) => ({ ...p, name: v }))} placeholder={t("Push day")} />

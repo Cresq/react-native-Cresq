@@ -5,7 +5,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { DEFAULT_FAVOURITES } from "@/db/types";
 import { finished, fmtKg, liftTrend, sessionStats, shortDate, startOfWeek, weeklyVolume } from "@/db/derive";
-import { useT } from "@/i18n";
+import { useT, usePlural } from "@/i18n";
 import { Screen, Row, Section, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { Icon, type IconName } from "@/components/ui/Icon";
@@ -25,6 +25,7 @@ export default function Data() {
   const { colors } = useTheme();
   const router = useRouter();
   const t = useT();
+  const plural = usePlural();
   const { db, update } = useDb();
   const [managing, setManaging] = useState(false);
   const [liftId, setLiftId] = useState<string | null>(null);
@@ -125,12 +126,12 @@ export default function Data() {
         <Divider />
         <DataRow icon="dumbbell" label={t("Muscle groups")} sub={t("Working sets per muscle, this week and last")} onPress={() => router.push("/progress/muscles")} />
         <Divider />
-        <DataRow icon="trophy" label={t("All exercises")} sub={t("Every lift you follow, with its records")} onPress={() => router.push("/(tabs)/profile")} />
+        <DataRow icon="users" label={t("Compare with others")} sub={t("Your figures beside someone you follow")} onPress={() => router.push("/compare")} />
       </Section>
 
       <BottomSheet visible={managing} onClose={() => setManaging(false)} title={t("Lifts on Home")} subtitle={t("Tap one to take it off. Its sessions and records stay.")}>
         {lifts.map((l) => (
-          <SheetOption key={l.ex.id} icon="close" label={l.ex.name} sub={l.points.length ? t("{n} sessions", { n: l.points.length }) : t("Not logged yet")} onPress={() => dropFavourite(l.ex.id)} />
+          <SheetOption key={l.ex.id} icon="close" label={l.ex.name} sub={l.points.length ? plural(l.points.length, "{n} session", "{n} sessions") : t("Not logged yet")} onPress={() => dropFavourite(l.ex.id)} />
         ))}
         <SheetOption icon="addPlus" label={t("Add a lift")} sub={t("From your exercise library")} onPress={() => { setManaging(false); router.push("/exercises?favourite=1"); }} />
       </BottomSheet>

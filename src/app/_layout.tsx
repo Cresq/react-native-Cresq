@@ -1,13 +1,15 @@
 import { useEffect } from "react";
+import { useColorScheme } from "react-native";
 import { SplashScreen, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
-import { ThemeProvider } from "@/theme/ThemeProvider";
-import { DbProvider } from "@/db/DbProvider";
+import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
+import { DbProvider, useDb } from "@/db/DbProvider";
 import { WorkoutProvider } from "@/store/workout";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { LocaleSync } from "@/i18n";
-import { darkColors } from "../../constants/theme";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { SaveTrouble } from "@/components/SaveTrouble";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -32,7 +34,7 @@ SplashScreen.preventAutoHideAsync();
  *   /compare              People you follow who share their figures
  *   /compare/[id]         Your figures beside theirs
  *   /progress/[lift]      One exercise: trend, forecast, records, history
- *   /settings             Units, language, sample data, reset, sign out
+ *   /settings             Appearance, units, language, sample data, reset, sign out
  *   /settings/devices     Connected devices and Health permissions
  *   /settings/account     Account, privacy switches, consent, export, delete
  *   /legal/[doc]          privacy, terms, cookies, refunds, licences
@@ -58,12 +60,41 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-    <ThemeProvider scheme="dark">
       <DbProvider>
-        <WorkoutProvider>
-          <LocaleSync />
-          <StatusBar style="light" />
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: darkColors.bg.ground }, animation: "slide_from_right", animationDuration: 320, gestureEnabled: true, fullScreenGestureEnabled: true }}>
+        <Themed />
+      </DbProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+/**
+ * The chosen theme lives in the profile, so this sits inside the database and
+ * not above it. "system" follows the phone; the other two win over it.
+ */
+function Themed() {
+  const { db } = useDb();
+  const system = useColorScheme();
+  const want = db.profile.theme ?? "system";
+  const scheme = want === "system" ? (system === "light" ? "light" : "dark") : want;
+  return (
+    <ThemeProvider scheme={scheme}>
+      <WorkoutProvider>
+        <LocaleSync />
+        <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+        <ErrorBoundary>
+          <Routes />
+        </ErrorBoundary>
+        <SaveTrouble />
+      </WorkoutProvider>
+    </ThemeProvider>
+  );
+}
+
+/** Kept apart so the stack's own background can read the theme's ground. */
+function Routes() {
+  const { colors } = useTheme();
+  return (
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg.ground }, animation: "slide_from_right", animationDuration: 320, gestureEnabled: true, fullScreenGestureEnabled: true }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="onboarding" options={{ animation: "slide_from_right" }} />
@@ -91,9 +122,5 @@ export default function RootLayout() {
             <Stack.Screen name="settings/index" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="settings/devices" options={{ animation: "slide_from_right" }} />
           </Stack>
-        </WorkoutProvider>
-      </DbProvider>
-    </ThemeProvider>
-    </GestureHandlerRootView>
   );
 }

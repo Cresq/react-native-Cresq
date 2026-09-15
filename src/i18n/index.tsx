@@ -22,6 +22,15 @@ export function useLanguage(): Language {
   return db.profile.language ?? "nl";
 }
 
+/**
+ * One or many. Both languages need the singular, and "1 oefeningen" is the
+ * kind of small wrongness that makes an app feel unfinished.
+ */
+export function usePlural() {
+  const t = useT();
+  return useCallback((n: number, one: string, other: string) => t(n === 1 ? one : other, { n }), [t]);
+}
+
 export function useT() {
   const lang = useLanguage();
   return useCallback((source: string, vars?: Record<string, string | number>) => translate(lang, source, vars), [lang]);

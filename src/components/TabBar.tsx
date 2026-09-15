@@ -28,7 +28,7 @@ const tabLabelsNl: Record<string, string> = { index: "Home", feed: "Feed", train
  * runs a strip above the bar keeps the clock and a way back, on every tab.
  */
 export function TabBar({ state, navigation }: BottomTabBarProps) {
-  const { colors, layout, radius, shadow } = useTheme();
+  const { colors, layout, radius, shadow, scheme } = useTheme();
   const t = useT();
   const labels = t("Profile") === "Profiel" ? tabLabelsNl : tabLabels;
   const insets = useSafeAreaInsets();
@@ -46,7 +46,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
     <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
       <RunningStrip />
       <View style={[{ marginHorizontal: layout.tabBarInset, marginBottom: bottom, height: layout.tabBarHeight, borderRadius: radius.tabBar, overflow: "hidden" }, shadow.floating]}>
-        <BlurView intensity={Platform.OS === "android" ? 0 : 40} tint="dark" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
+        <BlurView intensity={Platform.OS === "android" ? 0 : 40} tint={scheme} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
         <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: colors.bg.surface, opacity: Platform.OS === "android" ? 1 : 0.82 }} />
         <View style={{ flex: 1, flexDirection: "row", padding: 8 }} onLayout={(e) => setInner(e.nativeEvent.layout.width - 16)}>
           {inner ? <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 8, top: 8, bottom: 8, width: slot, borderRadius: radius.pill, backgroundColor: colors.bg.raised }, pill]} /> : null}
@@ -112,6 +112,7 @@ function RunningStrip() {
   const stats = sessionStats(session);
   const current = session.exercises[session.currentIndex];
   const resting = !!rest;
+  const nextLabel = rest?.next ? (rest.next.kg ? t("Set {n}, {kg} kg × {reps}", { n: rest.next.set, kg: rest.next.kg, reps: rest.next.reps }) : t("Set {n}, {reps} reps", { n: rest.next.set, reps: rest.next.reps })) : t("Next exercise");
   return (
     <Animated.View style={[style, { marginHorizontal: layout.tabBarInset, marginBottom: 8, borderRadius: radius.pill, backgroundColor: resting ? colors.bg.raised : colors.accent.ember, flexDirection: "row", alignItems: "center", paddingRight: 8 }, shadow.floating]}>
       <Pressable accessibilityRole="button" accessibilityLabel={t("Return to your running session")} onPress={() => router.push("/workout/active")} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingLeft: 16, paddingRight: 8, opacity: pressed ? 0.8 : 1 })}>
@@ -121,7 +122,7 @@ function RunningStrip() {
             {resting ? t("Rest {time}", { time: fmtTime(rest.left) }) : `${session.planName}, ${current?.name ?? t("Add exercise")}`}
           </Txt>
           <Txt variant="labelS" style={{ color: resting ? colors.text.tertiary : colors.accent.on, opacity: resting ? 1 : 0.8 }} numberOfLines={1}>
-            {resting ? t("{label}, {time} elapsed", { label: rest.nextLabel, time: stats.elapsed }) : t("{n} of {m} sets", { n: stats.setsDone, m: stats.setsTotal })}
+            {resting ? t("{label}, {time} elapsed", { label: nextLabel, time: stats.elapsed }) : t("{n} of {m} sets", { n: stats.setsDone, m: stats.setsTotal })}
           </Txt>
         </View>
         {resting ? null : (

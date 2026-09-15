@@ -70,6 +70,8 @@ export type Profile = {
   /** Exercise ids charted on Home and listed under Profile › Lifts. Defaults to the four compound lifts. */
   favourites?: string[];
   bio?: string;
+  /** Local uri of the profile photo. Absent means the app shows your initial. */
+  avatar?: string;
   /** Year only, never the full date: enough for the 16+ check and for age bands, nothing more. */
   birthYear?: number;
   privateAccount?: boolean;
@@ -79,10 +81,14 @@ export type Profile = {
   /** Let people you follow hold their figures up against yours. On unless you say otherwise. */
   compareStats?: boolean;
   language?: "nl" | "en";
+  /** "system" follows the phone; the other two override it. */
+  theme?: "system" | "dark" | "light";
   /** Gyms you have trained at, most recent first, offered when a session asks where you were. */
   gyms?: string[];
   /** When the feed was last opened; Home lists what followed people did since. */
   lastFeedSeen?: number;
+  /** When the notifications screen was last opened; anything newer carries a dot. */
+  lastNotificationsSeen?: number;
 };
 
 /**
@@ -98,13 +104,28 @@ export type Consent = {
   marketing: boolean;
 };
 
+/**
+ * Who this log belongs to. The id is minted once on the device and never
+ * changes, so when sync arrives the server adopts this account rather than
+ * issuing a second one and leaving two copies of a person's training.
+ * No password is kept: there is nothing here to check it against, and a
+ * secret stored beside the data it guards is not a lock.
+ */
+export type Account = {
+  id: string;
+  email: string;
+  createdAt: number;
+  /** Set once the log has been sent to a server. Absent means this device is the only copy. */
+  syncedAt?: number;
+};
+
 export const DEFAULT_FAVOURITES = ["bench", "squat", "deadlift", "ohp"];
 export const MIN_AGE = 16;
 
 export type Db = {
   version: number;
   createdAt: number;
-  auth: { signedIn: boolean };
+  auth: { signedIn: boolean; account?: Account };
   profile: Profile;
   exercises: Exercise[];
   plans: Plan[];
@@ -118,5 +139,9 @@ export type Db = {
   blocked: string[];
 };
 
-/** Bump when the seed or shape changes in a way that should discard stored data during development. */
-export const DB_VERSION = 2;
+/**
+ * Bump when the shape changes. A stored document from any older version is
+ * carried forward by `migrate`; it is never discarded, because it is somebody's
+ * training history.
+ */
+export const DB_VERSION = 3;

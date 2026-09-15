@@ -3,13 +3,15 @@ import { Pressable, View, useWindowDimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
+import { useMe } from "@/store/me";
+import { useNotes } from "@/store/notifications";
 import { useWorkout } from "@/store/workout";
 import { useSplit } from "@/store/split";
 import { finished, fmtKg, liftTrend, locale, shortDate, startOfWeek, weekDays, weeklyVolume } from "@/db/derive";
 import { estimateMinutes } from "@/db/seed";
 import { DEFAULT_FAVOURITES } from "@/db/types";
 import { photos } from "@/data/mock";
-import { useLanguage, useT } from "@/i18n";
+import { useLanguage, useT, usePlural } from "@/i18n";
 import { Screen, Row, Section } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { Icon } from "@/components/ui/Icon";
@@ -50,8 +52,11 @@ export default function Home() {
   const { colors } = useTheme();
   const router = useRouter();
   const t = useT();
+  const plural = usePlural();
   const lang = useLanguage();
   const { db } = useDb();
+  const me = useMe();
+  const { unread } = useNotes();
   const { session, start } = useWorkout();
   const { split, nextDay, setOverride } = useSplit();
   const { isFollowing } = useSocial();
@@ -94,7 +99,7 @@ export default function Home() {
     <Screen tabs>
       <Row gap={12}>
         <Pressable accessibilityRole="button" accessibilityLabel={t("Your profile")} onPress={() => router.push("/(tabs)/profile")}>
-          <Avatar source={photos.selfie} size={44} />
+          <Avatar source={me.photo} size={44} initial={me.initial} />
         </Pressable>
         <View style={{ flex: 1, gap: 2 }}>
           <Txt variant="labelS" tone="tertiary">
@@ -104,7 +109,7 @@ export default function Home() {
             {t(greetingKey())}, {db.profile.first}
           </Txt>
         </View>
-        <IconButton name="bell" badge onPress={() => router.push("/notifications")} accessibilityLabel={t("Notifications")} />
+        <IconButton name="bell" badge={unread > 0} onPress={() => router.push("/notifications")} accessibilityLabel={t("Notifications")} />
       </Row>
 
       <View style={{ gap: 20 }}>
@@ -132,7 +137,7 @@ export default function Home() {
               </Pressable>
           {plan ? (
             <Txt variant="labelS" tone="tertiary">
-              {t("{n} exercises", { n: plan.exercises.length })}, {t("{n} min", { n: estimateMinutes(plan) })}
+              {plural(plan.exercises.length, "{n} exercise", "{n} exercises")}, {t("{n} min", { n: estimateMinutes(plan) })}
             </Txt>
           ) : null}
           <Button label={running ? t("Continue session") : nextDay?.rest ? t("Rest day, start anyway") : t("Start session")} iconRight="arrowRight" onPress={startSession} style={{ marginTop: 4 }} />
@@ -151,7 +156,7 @@ export default function Home() {
               <View style={{ flex: 1, gap: 1 }}>
                 <Txt variant="labelL">{missed.length === 1 ? t("{name} trained since you last looked", { name: missed[0].post.name.split(" ")[0] }) : t("{name} and {n} others trained since you last looked", { name: missed[0].post.name.split(" ")[0], n: missed.length - 1 })}</Txt>
                 <Txt variant="bodyS" tone="tertiary">
-                  {missed.map((m) => m.post.meta.split(", ")[0]).join(", ")}
+                  {missed.map((m) => t(m.post.meta.split(", ")[0])).join(", ")}
                 </Txt>
               </View>
               <Icon name="chevronRight" size={18} color={colors.text.tertiary} />
@@ -210,7 +215,7 @@ export default function Home() {
 
       <BottomSheet visible={choosing} onClose={() => setChoosing(false)} title={t("Today's workout")} subtitle={t("Your split says {name}. Pick something else for today; the split keeps its order.", { name: nextDay?.rest ? t("Rest day") : (nextDay?.name ?? "") })}>
         {db.plans.map((p) => (
-          <SheetOption key={p.id} icon="dumbbell" label={p.name} sub={[p.focus, t("{n} exercises", { n: p.exercises.length })].filter(Boolean).join(", ")} selected={plan?.id === p.id} onPress={() => { setOverride(p.id === nextDay?.planId ? undefined : p.id); setChoosing(false); }} />
+          <SheetOption key={p.id} icon="dumbbell" label={p.name} sub={[p.focus, plural(p.exercises.length, "{n} exercise", "{n} exercises")].filter(Boolean).join(", ")} selected={plan?.id === p.id} onPress={() => { setOverride(p.id === nextDay?.planId ? undefined : p.id); setChoosing(false); }} />
         ))}
         {override ? <SheetOption icon="reload" label={t("Back to the split")} sub={nextDay?.name} onPress={() => { setOverride(undefined); setChoosing(false); }} /> : null}
       </BottomSheet>
