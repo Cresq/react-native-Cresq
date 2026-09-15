@@ -14,6 +14,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import { ExerciseMedia } from "@/components/ExerciseMedia";
 import { useT } from "@/i18n";
 
 /**
@@ -87,6 +88,7 @@ export default function Exercises() {
             <View key={e.id}>
               {i > 0 ? <Divider /> : null}
               <Pressable accessibilityRole="button" accessibilityState={mode === "favourite" ? { selected: fav } : undefined} onPress={() => pick(e.id)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 13, opacity: pressed ? 0.7 : 1 })}>
+                <ExerciseMedia exercise={e} size={44} />
                 <View style={{ flex: 1, gap: 2 }}>
                   <Txt variant="labelL">{e.name}</Txt>
                   <Txt variant="bodyS" tone="tertiary">

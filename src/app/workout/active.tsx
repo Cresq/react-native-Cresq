@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Pressable, TextInput, View, type LayoutChangeEvent } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, { FadeInDown, FadeOutDown, LinearTransition, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeOutDown, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import { project, rubberband, springs } from "@/motion";
 import { useRouter } from "expo-router";
 import Svg, { Circle } from "react-native-svg";
@@ -225,7 +225,7 @@ export default function ActiveWorkout() {
             const groupStart = ex.supersetGroup && (index === 0 || session.exercises[index - 1].supersetGroup !== ex.supersetGroup);
             const groupColor = supersetColor(ex.supersetGroup);
             return (
-              <Animated.View key={ex.id} layout={LinearTransition.springify().damping(20).stiffness(190)} onLayout={measure(ex.id)} style={{ gap: 8 }}>
+              <Animated.View key={ex.id} onLayout={measure(ex.id)} style={{ gap: 8 }}>
                 {lineAbove ? <DropLine /> : null}
                 {groupStart && groupColor ? (
                   <Row gap={8} style={{ paddingHorizontal: 4, paddingTop: 4 }}>
@@ -407,7 +407,17 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
   let working = 0;
   return (
     <Animated.View style={style}>
-      <Card padding={expanded ? 16 : 10} gap={8} style={highlighted ? { borderWidth: 1.5, borderColor: colors.accent.ember, backgroundColor: colors.accent.soft } : isCurrent ? { borderWidth: 1.5, borderColor: colors.accent.ember } : undefined}>
+      <Card
+        padding={expanded ? 16 : 10}
+        gap={8}
+        style={
+          highlighted
+            ? { borderWidth: 1.5, borderColor: colors.accent.ember, borderTopWidth: 1.5, borderTopColor: colors.accent.ember, backgroundColor: colors.accent.soft }
+            : isCurrent
+              ? { borderWidth: 1.5, borderColor: colors.accent.ember, borderTopWidth: 1.5, borderTopColor: colors.accent.ember }
+              : undefined
+        }
+      >
         <Row gap={12} align="center">
           <GestureDetector gesture={drag}>
             <Animated.View accessibilityRole="button" accessibilityLabel={t("Drag to reorder")} style={{ width: 28, height: 28, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg.raised }}>
@@ -600,7 +610,7 @@ function SetRow({ set, label, isCurrent, error, onType, onChange, onDone, onRemo
   }, [error, shake]);
   useEffect(() => {
     if (set.done) {
-      pop.value = withSequence(withTiming(1.18, { duration: 90 }), withSpring(1, springs.bouncy));
+      pop.value = withSequence(withTiming(1.08, { duration: 80 }), withSpring(1, springs.snappy));
       tx.value = withSpring(0, springs.base);
     }
   }, [set.done, pop, tx]);
@@ -691,22 +701,16 @@ function RestRing({ progress }: { progress: number }) {
 
 
 /**
- * A number that travels to its new value in a quarter of a second and pulses
- * in the direction it moved: up when a set is ticked, down when one is removed
- * or unticked. The tween is plain state so it behaves the same everywhere.
+ * A number that travels to its new value in a quarter of a second, so a ticked
+ * set is visible in the total. Nothing else moves: no pulse, no colour.
  */
 function CountUp({ value, format }: { value: number; format: (n: number) => string }) {
-  const { colors } = useTheme();
   const [shown, setShown] = useState(value);
-  const [dir, setDir] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const pop = useSharedValue(1);
 
   useEffect(() => {
     const a = shown;
     if (Math.abs(a - value) < 0.5) return;
-    setDir(value > a ? 1 : -1);
-    pop.value = withSequence(withSpring(1.12, springs.snappy), withSpring(1, springs.snappy));
     const started = Date.now();
     if (timer.current) clearInterval(timer.current);
     timer.current = setInterval(() => {
@@ -715,7 +719,6 @@ function CountUp({ value, format }: { value: number; format: (n: number) => stri
       if (p >= 1 && timer.current) {
         clearInterval(timer.current);
         timer.current = null;
-        setTimeout(() => setDir(0), 260);
       }
     }, 16);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -725,12 +728,9 @@ function CountUp({ value, format }: { value: number; format: (n: number) => stri
     if (timer.current) clearInterval(timer.current);
   }, []);
 
-  const style = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
   return (
-    <Animated.View style={style}>
-      <Txt variant="numberM" tabular style={{ color: dir === 0 ? colors.text.primary : dir > 0 ? colors.status.success : colors.status.warning }}>
-        {format(shown)}
-      </Txt>
-    </Animated.View>
+    <Txt variant="numberM" tabular>
+      {format(shown)}
+    </Txt>
   );
 }

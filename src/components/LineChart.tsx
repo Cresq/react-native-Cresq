@@ -17,7 +17,7 @@ export type ChartPoint = { value: number; record?: boolean };
  * Put a finger on it and a marker follows, snapping to the nearest session
  * with a light tick; the value and its date read above the finger.
  */
-export function LineChart({ points, forecast, height = 96, labels, target, scrubLabels, unit = "kg", onScrub, onPress }: { points: ChartPoint[]; forecast?: number[]; height?: number; labels?: string[]; target?: number; /** One label per point, shown while scrubbing (usually the date). */ scrubLabels?: string[]; unit?: string; /** Fires true when a scrub starts and false when it ends, so a parent Pressable can ignore the release. */ onScrub?: (active: boolean) => void; /** A quick tap, and only that: a scrub never counts as one. */ onPress?: () => void }) {
+export function LineChart({ points, forecast, height = 96, labels, target, scrubLabels, unit = "kg", onScrub, onPress, still }: { points: ChartPoint[]; forecast?: number[]; height?: number; labels?: string[]; target?: number; /** One label per point, shown while scrubbing (usually the date). */ scrubLabels?: string[]; unit?: string; /** Fires true when a scrub starts and false when it ends, so a parent Pressable can ignore the release. */ onScrub?: (active: boolean) => void; /** A quick tap, and only that: a scrub never counts as one. */ onPress?: () => void; /** A picture only: no scrubbing, no taps of its own. */ still?: boolean }) {
   const { colors } = useTheme();
   const t = useT();
   const [width, setWidth] = useState(0);
@@ -125,8 +125,7 @@ export function LineChart({ points, forecast, height = 96, labels, target, scrub
         )}
       </View>
       <View onLayout={onLayout} style={{ height }}>
-      <GestureDetector gesture={pan}>
-        <Animated.View style={{ height }}>
+      <Wrap still={still} gesture={pan} height={height}>
           {width > 0 ? (
             <Svg width={width} height={height}>
               {[0.2, 0.5, 0.8].map((f) => (
@@ -142,14 +141,13 @@ export function LineChart({ points, forecast, height = 96, labels, target, scrub
               {fline ? <Circle cx={fxs[fxs.length - 1]} cy={fys[fys.length - 1]} r={6} fill={colors.bg.surface} stroke={colors.pr.gold} strokeWidth={2} /> : null}
             </Svg>
           ) : null}
-          {width > 0 && points.length > 1 ? (
+          {width > 0 && points.length > 1 && !still ? (
             <>
               <Animated.View pointerEvents="none" style={[{ position: "absolute", top: 0, bottom: 0, left: 0, width: 1, backgroundColor: colors.text.secondary }, markerStyle]} />
               <Animated.View pointerEvents="none" style={[{ position: "absolute", top: 0, left: 0, width: 14, height: 14, borderRadius: 7, backgroundColor: colors.text.primary, borderWidth: 3, borderColor: colors.accent.ember }, dotStyle]} />
             </>
           ) : null}
-        </Animated.View>
-      </GestureDetector>
+      </Wrap>
       </View>
       {labels ? (
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
@@ -161,5 +159,15 @@ export function LineChart({ points, forecast, height = 96, labels, target, scrub
         </View>
       ) : null}
     </View>
+  );
+}
+
+/** The drawing, with the scrub gesture around it or without one. */
+function Wrap({ still, gesture, height, children }: { still?: boolean; gesture: React.ComponentProps<typeof GestureDetector>["gesture"]; height: number; children: React.ReactNode }) {
+  if (still) return <View style={{ height }}>{children}</View>;
+  return (
+    <GestureDetector gesture={gesture}>
+      <Animated.View style={{ height }}>{children}</Animated.View>
+    </GestureDetector>
   );
 }

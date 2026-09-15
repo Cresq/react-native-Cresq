@@ -227,6 +227,9 @@ export function isoWeek(t: number) {
 export const MUSCLE_GROUPS = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves", "Core"] as const;
 export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
 
+/** Short names, for a chart axis where a full word will not fit. */
+export const MUSCLE_SHORT: { [K in MuscleGroup]: string } = { Chest: "Borst", Back: "Rug", Shoulders: "Schoud", Biceps: "Biceps", Triceps: "Triceps", Quads: "Quads", Hamstrings: "Hams", Glutes: "Bil", Calves: "Kuit", Core: "Core" };
+
 /** Dutch names for the groups. Kept out of the dictionary because "Back" there means the back button. */
 export const MUSCLE_NL: { [K in MuscleGroup]: string } = { Chest: "Borst", Back: "Rug", Shoulders: "Schouders", Biceps: "Biceps", Triceps: "Triceps", Quads: "Quadriceps", Hamstrings: "Hamstrings", Glutes: "Bilspieren", Calves: "Kuiten", Core: "Core" };
 

@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useSocial } from "@/store/social";
-import { finished, liftTrend, newRecords, shortDate } from "@/db/derive";
+import { finished, liftTrend, locale, newRecords, shortDate } from "@/db/derive";
 import { DEFAULT_FAVOURITES } from "@/db/types";
 import { photos } from "@/data/mock";
 import { useT } from "@/i18n";
@@ -54,6 +54,19 @@ export default function Profile() {
   );
 
   const gap = 8;
+  // Thirty-five squares in one run is a wall; a month at a time is a page.
+  const byMonth = useMemo(() => {
+    const out: { key: string; label: string; items: typeof workouts }[] = [];
+    for (const item of workouts) {
+      const d = new Date(item.s.startedAt);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      const label = d.toLocaleDateString(locale, { month: "long", year: d.getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
+      const last = out[out.length - 1];
+      if (last && last.key === key) last.items.push(item);
+      else out.push({ key, label: label.charAt(0).toUpperCase() + label.slice(1), items: [item] });
+    }
+    return out;
+  }, [workouts]);
   const tile = Math.floor((Math.min(width, 520) - layout.screenInset * 2 - gap * 2) / 3);
   const unfavourite = (id: string) => update((d) => ({ ...d, profile: { ...d.profile, favourites: (d.profile.favourites ?? DEFAULT_FAVOURITES).filter((x) => x !== id) } }));
 
@@ -105,9 +118,18 @@ export default function Profile() {
               {t("Your finished sessions will show up here, one square each.")}
             </Txt>
           ) : (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
-              {workouts.map(({ s, prs, photo }) => (
-                <WorkoutTile key={s.id} name={s.planName} date={shortDate(s.startedAt)} photo={photo} records={prs} size={tile} onPress={() => router.push(`/workout/${s.id}`)} />
+            <View style={{ gap: 20 }}>
+              {byMonth.map((group) => (
+                <View key={group.key} style={{ gap: 12 }}>
+                  <Txt variant="labelS" tone="tertiary">
+                    {group.label}
+                  </Txt>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
+                    {group.items.map(({ s, prs, photo }) => (
+                      <WorkoutTile key={s.id} name={s.planName} date={String(new Date(s.startedAt).getDate())} photo={photo} records={prs} size={tile} onPress={() => router.push(`/workout/${s.id}`)} />
+                    ))}
+                  </View>
+                </View>
               ))}
             </View>
           )

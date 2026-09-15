@@ -3,7 +3,7 @@ import { View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
-import { MUSCLE_NL, fmtKg, muscleLoad } from "@/db/derive";
+import { MUSCLE_GROUPS, MUSCLE_NL, MUSCLE_SHORT, fmtKg, muscleLoad } from "@/db/derive";
 import { useLanguage, useT } from "@/i18n";
 import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
@@ -11,6 +11,8 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/Icon";
 import { Divider } from "@/components/ui/Card";
 import { Segmented } from "@/components/ui/Segmented";
+import { Card } from "@/components/ui/Card";
+import { RadarChart } from "@/components/RadarChart";
 
 /**
  * What each muscle group actually got. Sets lead, because that is what people
@@ -30,6 +32,8 @@ export default function Muscles() {
   const peak = Math.max(1, ...rows.map((r) => r.sets));
   const total = rows.reduce((n, r) => n + r.sets, 0);
   const untouched = rows.filter((r) => r.sets === 0);
+  // The radar keeps the anatomical order, not the ranking, so the shape means something week to week.
+  const radar = useMemo(() => MUSCLE_GROUPS.map((g) => ({ label: lang === "nl" ? MUSCLE_SHORT[g] : g, value: rows.find((r) => r.group === g)?.sets ?? 0 })), [rows, lang]);
 
   return (
     <Screen>
@@ -43,6 +47,15 @@ export default function Muscles() {
           { key: "28", label: t("28 days") },
         ]}
       />
+
+      {total > 0 ? (
+        <Card padding={16} gap={12}>
+          <RadarChart data={radar} max={peak} />
+          <Txt variant="labelS" tone="tertiary" align="center">
+            {t("Each ring is a quarter of {n} sets, your hardest-worked group", { n: peak })}
+          </Txt>
+        </Card>
+      ) : null}
 
       {total === 0 ? (
         <View style={{ gap: 4, paddingVertical: 8 }}>

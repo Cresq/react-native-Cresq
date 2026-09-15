@@ -15,8 +15,9 @@ export function abbreviate(name: string) {
 
 /**
  * One square in the workouts grid. A photo when the session has one; otherwise
- * the workout's abbreviation on a surface, so the grid still reads at a glance.
- * A record shows as a small trophy in the corner. Nothing else: the tile is a door.
+ * the workout's abbreviation, quiet, so thirty of them read as a pattern and not
+ * as thirty things shouting. A record is one small gold dot. Nothing else: the
+ * tile is a door, the session page holds the detail.
  */
 export function WorkoutTile({ name, date, photo, records, size, onPress }: { name: string; date: string; photo?: ImageSourcePropType; records?: number; size: number; onPress?: () => void }) {
   const { colors } = useTheme();
@@ -25,21 +26,18 @@ export function WorkoutTile({ name, date, photo, records, size, onPress }: { nam
       {photo ? <Image source={photo} style={{ width: size, height: size }} resizeMode="cover" /> : null}
       {!photo ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <Txt variant="displayL" tone="secondary">
+          <Txt variant="displayM" tone="tertiary">
             {abbreviate(name)}
           </Txt>
         </View>
       ) : null}
-      <View style={{ position: "absolute", left: 8, bottom: 8, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 999, backgroundColor: photo ? colors.bg.ground : "transparent", opacity: photo ? 0.9 : 1 }}>
-        <Txt variant="labelS" tone={photo ? "primary" : "tertiary"}>
-          {date}
-        </Txt>
-      </View>
-      {records ? (
-        <View style={{ position: "absolute", right: 8, top: 8, width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: photo ? colors.bg.ground : "transparent" }}>
-          <Icon name="trophy" size={14} color={colors.pr.gold} strokeWidth={2} />
+      {/* The day, only on a photo where it would otherwise be lost, and one dot for a record. */}
+      {photo ? (
+        <View style={{ position: "absolute", left: 8, bottom: 8, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 999, backgroundColor: colors.bg.ground }}>
+          <Txt variant="labelS">{date}</Txt>
         </View>
       ) : null}
+      {records ? <View style={{ position: "absolute", right: 8, top: 8, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.pr.gold }} /> : null}
     </Press>
   );
 }

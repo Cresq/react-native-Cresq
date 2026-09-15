@@ -6,7 +6,12 @@
 
 export type SetType = "warmup" | "working" | "drop" | "failure";
 
-export type Exercise = { id: string; name: string; muscles: string; equipment: string; bodyweight?: boolean };
+/**
+ * `image` and `animation` are where the bought artwork goes: a still for lists
+ * and a loop for the exercise's own page. Both are uris, both optional, and the
+ * UI already reserves their place so nothing shifts when they arrive.
+ */
+export type Exercise = { id: string; name: string; muscles: string; equipment: string; bodyweight?: boolean; image?: string; animation?: string };
 
 export type PlannedSet = { kg: number; reps: number; type: SetType };
 

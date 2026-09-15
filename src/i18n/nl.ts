@@ -638,4 +638,6 @@ export const nl: Record<string, string> = {
   "Twelve weeks, a bar each": "Twaalf weken, een balk per week",
   "All exercises": "Alle oefeningen",
   "Every lift you follow, with its records": "Elke oefening die je volgt, met zijn records",
+  "Each ring is a quarter of {n} sets, your hardest-worked group": "Elke ring is een kwart van {n} sets, je zwaarst getrainde groep",
+  "Animation coming": "Animatie volgt",
 };

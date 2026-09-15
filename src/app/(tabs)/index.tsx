@@ -195,7 +195,7 @@ export default function Home() {
                   </Txt>
                 </Row>
               </Row>
-              <LineChart points={lift.points.slice(-8)} height={56} />
+              <LineChart points={lift.points.slice(-8)} height={56} still />
             </View>
           ) : null}
 

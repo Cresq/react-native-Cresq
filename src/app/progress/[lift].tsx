@@ -15,6 +15,7 @@ import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
 import { LineChart } from "@/components/LineChart";
 import { useT } from "@/i18n";
+import { ExerciseMedia } from "@/components/ExerciseMedia";
 
 const RANGES: Record<string, number> = { "1m": 30, "3m": 91, "6m": 182, "1y": 365, all: 100000 };
 
@@ -53,6 +54,8 @@ export default function LiftDetail() {
   return (
     <Screen>
       <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={exercise.name} subtitle={`${exercise.muscles}, ${exercise.equipment}`} right={<IconButton name="share" onPress={() => Share.share({ message: `${exercise.name}: ${t("Estimated 1RM")} ${current} kg, ${delta >= 0 ? "+" : ""}${delta} kg. CresQ.` })} accessibilityLabel={t("Share")} />} />
+
+      <ExerciseMedia exercise={exercise} size={200} style={{ width: "100%" }} />
 
       {all.length === 0 ? (
         <View style={{ gap: 8, paddingTop: 8 }}>
