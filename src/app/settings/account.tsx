@@ -15,6 +15,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { useT } from "@/i18n";
+import { pickBackupText, readBackup } from "@/backup";
 import { longDate } from "@/db/derive";
 
 /**
@@ -27,10 +28,11 @@ export default function Account() {
   const { colors } = useTheme();
   const router = useRouter();
   const t = useT();
-  const { db, update, reset } = useDb();
+  const { db, update, reset, restore } = useDb();
   const { signOut, account } = useAuth();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [exported, setExported] = useState(false);
+  const [restoring, setRestoring] = useState<null | { sessions: number; data: Parameters<typeof restore>[0] } | { error: string }>(null);
   const p = db.profile;
   const c = db.consent;
   const year = new Date().getFullYear();
@@ -40,7 +42,7 @@ export default function Account() {
   const setConsent = (patch: Partial<typeof c>) => update((d) => ({ ...d, consent: { ...d.consent, ...patch } }));
 
   const exportData = async () => {
-    const json = JSON.stringify({ exportedAt: new Date().toISOString(), app: "CresQ", version: db.version, account, profile: db.profile, consent: db.consent, exercises: db.exercises, plans: db.plans, sessions: db.sessions, split: db.split, following: db.following }, null, 2);
+    const json = JSON.stringify({ exportedAt: new Date().toISOString(), app: "CresQ", version: db.version, auth: db.auth, account, profile: db.profile, consent: db.consent, exercises: db.exercises, plans: db.plans, sessions: db.sessions, split: db.split, following: db.following }, null, 2);
     if (Platform.OS === "web") {
       const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -53,6 +55,14 @@ export default function Account() {
       await Share.share({ title: t("My CresQ data"), message: json });
     }
     setExported(true);
+  };
+
+  const chooseBackup = async () => {
+    const text = await pickBackupText();
+    if (text === null) return;
+    const read = readBackup(text);
+    if (!read.ok) return setRestoring({ error: read.why === "not-json" ? t("That file is not readable.") : t("That is not a CresQ export.") });
+    setRestoring({ sessions: read.sessions, data: read.data });
   };
 
   const deleteAccount = async () => {
@@ -121,6 +131,16 @@ export default function Account() {
         <Divider />
         <Row style={{ paddingVertical: 12 }}>
           <View style={{ flex: 1, gap: 2 }}>
+            <Txt variant="labelL">{t("Restore from a file")}</Txt>
+            <Txt variant="bodyS" tone="tertiary">
+              {t("Read back an export, from this phone or your old one. It replaces what is here.")}
+            </Txt>
+          </View>
+          <Button label={t("Restore")} variant="secondary" size="S" full={false} icon="reload" onPress={() => void chooseBackup()} />
+        </Row>
+        <Divider />
+        <Row style={{ paddingVertical: 12 }}>
+          <View style={{ flex: 1, gap: 2 }}>
             <Txt variant="labelL">{t("Delete my account")}</Txt>
             <Txt variant="bodyS" tone="tertiary">
               {t("Removes your account, log, photos and settings. Cannot be undone.")}
@@ -149,6 +169,18 @@ export default function Account() {
           </View>
         ))}
       </Section>
+
+      <BottomSheet
+        visible={!!restoring}
+        onClose={() => setRestoring(null)}
+        title={restoring && "error" in restoring ? t("Could not read that file") : t("Replace everything with this backup?")}
+        subtitle={restoring && "error" in restoring ? restoring.error : restoring ? t("{n} sessions in the file. Everything now on this phone is replaced, including your settings. This cannot be undone.", { n: restoring.sessions }) : undefined}
+      >
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
+          {restoring && !("error" in restoring) ? <Button label={t("Restore this backup")} variant="danger" size="M" onPress={() => { const d = restoring.data; setRestoring(null); restore(d); }} /> : null}
+          <Button label={t("Cancel")} variant="secondary" size="M" onPress={() => setRestoring(null)} />
+        </View>
+      </BottomSheet>
 
       <BottomSheet visible={confirmDelete} onClose={() => setConfirmDelete(false)} title={t("Delete your account?")} subtitle={t("Your log, photos and settings are removed from this phone. There is nowhere else to remove them from: nothing has been sent anywhere. This cannot be undone.")}>
         <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>

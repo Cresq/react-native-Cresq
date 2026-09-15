@@ -13,6 +13,8 @@ type DbState = {
   update: (fn: (db: Db) => Db) => void;
   /** Wipe everything and reseed. Used by Settings › Reset. */
   reset: () => Promise<void>;
+  /** Replace everything with a document from a backup file. */
+  restore: (data: Partial<Db>) => void;
 };
 
 const DbContext = createContext<DbState | null>(null);
@@ -99,7 +101,23 @@ export function DbProvider({ children }: PropsWithChildren) {
     saveDb(fresh);
   }, []);
 
-  const value = useMemo(() => ({ db, ready, saveFailed, update, reset }), [db, ready, saveFailed, update, reset]);
+  /**
+   * A backup replaces the document rather than merging into it: half of one log
+   * and half of another is nobody's training history. It still goes through
+   * `migrate`, so an export from an older version comes back whole.
+   */
+  const restore = useCallback((data: Partial<Db>) => {
+    setDb((cur) => {
+      // Restoring your own log must not sign you out. An older export carries no
+      // account, so the one this device already holds stays.
+      const auth = data.auth?.account ? data.auth : cur.auth;
+      const next = migrate({ ...createSeedDb(), ...data, auth } as Db);
+      saveDb(next);
+      return next;
+    });
+  }, []);
+
+  const value = useMemo(() => ({ db, ready, saveFailed, update, reset, restore }), [db, ready, saveFailed, update, reset, restore]);
   return <DbContext.Provider value={value}>{children}</DbContext.Provider>;
 }
 

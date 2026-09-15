@@ -6,7 +6,6 @@ import { useDb } from "@/db/DbProvider";
 import { useMe } from "@/store/me";
 import { useWorkout } from "@/store/workout";
 import { fmtKg, newRecords, sessionRows, sessionStats } from "@/db/derive";
-import { photos } from "@/data/mock";
 import { useSocial } from "@/store/social";
 import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";

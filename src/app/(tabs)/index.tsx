@@ -10,7 +10,6 @@ import { useSplit } from "@/store/split";
 import { finished, fmtKg, liftTrend, locale, shortDate, startOfWeek, weekDays, weeklyVolume } from "@/db/derive";
 import { estimateMinutes } from "@/db/seed";
 import { DEFAULT_FAVOURITES } from "@/db/types";
-import { photos } from "@/data/mock";
 import { useLanguage, useT, usePlural } from "@/i18n";
 import { Screen, Row, Section } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";

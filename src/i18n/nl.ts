@@ -710,4 +710,13 @@ export const nl: Record<string, string> = {
   "Your split says this one is due.": "Volgens je schema is deze aan de beurt.",
   "Up {kg} kg on your previous best.": "{kg} kg meer dan je vorige beste.",
   "Your first logged best for this lift.": "Je eerste geregistreerde beste voor deze oefening.",
+  "That file is not readable.": "Dat bestand is niet leesbaar.",
+  "That is not a CresQ export.": "Dat is geen CresQ-export.",
+  "Restore from a file": "Herstellen uit een bestand",
+  "Read back an export, from this phone or your old one. It replaces what is here.": "Lees een export terug, van deze telefoon of je vorige. Het vervangt wat er nu staat.",
+  "Restore": "Herstellen",
+  "Could not read that file": "Dit bestand kon niet gelezen worden",
+  "Replace everything with this backup?": "Alles vervangen door deze back-up?",
+  "{n} sessions in the file. Everything now on this phone is replaced, including your settings. This cannot be undone.": "{n} sessies in het bestand. Alles wat nu op deze telefoon staat wordt vervangen, inclusief je instellingen. Dit kun je niet terugdraaien.",
+  "Restore this backup": "Deze back-up herstellen",
 };

@@ -8,7 +8,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { useSocial } from "@/store/social";
 import { liveProgress } from "@/data/people";
 import { finished, fmtKg, newRecords, relativeDay, sessionRows, sessionStats } from "@/db/derive";
-import { otherPosts, photos } from "@/data/mock";
+import { otherPosts } from "@/data/mock";
 import { useT } from "@/i18n";
 import { Screen, Row } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
