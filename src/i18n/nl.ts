@@ -622,4 +622,13 @@ export const nl: Record<string, string> = {
   "Name of the gym": "Naam van de sportschool",
   "Places you train": "Waar je traint",
   "Leave it out": "Laat het weg",
+  "Muscle groups": "Spiergroepen",
+  "Working sets per muscle, this week and last": "Werksets per spier, deze week en vorige",
+  "{n} working sets": "{n} werksets",
+  "7 days": "7 dagen",
+  "28 days": "28 dagen",
+  "Nothing logged yet": "Nog niets gelogd",
+  "Finish a session and the muscles it worked appear here.": "Rond een sessie af en de spieren die je hebt getraind verschijnen hier.",
+  "Nothing for these": "Niets voor deze",
+  "A set counts for every muscle the exercise names. The kilos count once, for the first.": "Een set telt voor elke spier die de oefening noemt. De kilo's tellen één keer, voor de eerste.",
 };

@@ -131,6 +131,19 @@ export default function Profile() {
 
         {tab === "lifts" ? (
           <View style={{ marginTop: -8 }}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t("Muscle groups")} onPress={() => router.push("/progress/muscles")} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
+              <View style={{ width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg.raised }}>
+                <Icon name="chartLine" size={18} color={colors.icon.strong} strokeWidth={1.9} />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Txt variant="labelL">{t("Muscle groups")}</Txt>
+                <Txt variant="bodyS" tone="tertiary">
+                  {t("Working sets per muscle, this week and last")}
+                </Txt>
+              </View>
+              <Icon name="chevronRight" size={18} color={colors.text.tertiary} />
+            </Pressable>
+            <Divider />
             {lifts.map((l, i) => (
               <View key={l.ex.id}>
                 {i > 0 ? <Divider /> : null}

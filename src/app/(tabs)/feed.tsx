@@ -143,7 +143,7 @@ export default function Feed() {
             {[...seedComments(commentsFor), ...(comments[commentsFor.id] ?? [])].map((c, i) => (
               <Row key={i} gap={12} align="flex-start">
                 <Avatar source={c.avatar} size={32} initial={c.name[0]} />
-                <View style={{ flex: 1, gap: 2, backgroundColor: colors.bg.raised, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8 }}>
+                <View style={{ flex: 1, gap: 2, backgroundColor: colors.bg.raised, borderRadius: 16, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 8 }}>
                   <Txt variant="labelM">{c.name}</Txt>
                   <Txt variant="bodyM" tone="secondary">
                     {c.text}

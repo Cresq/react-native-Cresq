@@ -219,6 +219,86 @@ export function isoWeek(t: number) {
   return 1 + Math.round(((d.getTime() - first.getTime()) / 86400000 - 3 + ((first.getDay() + 6) % 7)) / 7);
 }
 
+/**
+ * Muscle groups, in the order people think about them. An exercise names its
+ * muscles in plain words ("Chest, triceps"); these patterns turn those words
+ * into the group they belong to.
+ */
+export const MUSCLE_GROUPS = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves", "Core"] as const;
+export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
+
+/** Dutch names for the groups. Kept out of the dictionary because "Back" there means the back button. */
+export const MUSCLE_NL: { [K in MuscleGroup]: string } = { Chest: "Borst", Back: "Rug", Shoulders: "Schouders", Biceps: "Biceps", Triceps: "Triceps", Quads: "Quadriceps", Hamstrings: "Hamstrings", Glutes: "Bilspieren", Calves: "Kuiten", Core: "Core" };
+
+const MUSCLE_WORDS: [RegExp, MuscleGroup][] = [
+  [/chest|pec/i, "Chest"],
+  [/back|lat|rhomboid|trap/i, "Back"],
+  [/delt|shoulder/i, "Shoulders"],
+  [/bicep/i, "Biceps"],
+  [/tricep/i, "Triceps"],
+  [/quad/i, "Quads"],
+  [/hamstring/i, "Hamstrings"],
+  [/glute/i, "Glutes"],
+  [/calf|calve/i, "Calves"],
+  [/core|oblique|abs/i, "Core"],
+];
+
+/** Every group an exercise works, first one first. Lower back counts as Back, forearms and grip as nothing. */
+export function musclesOf(exercise: Exercise | undefined): MuscleGroup[] {
+  if (!exercise) return [];
+  const out: MuscleGroup[] = [];
+  for (const part of exercise.muscles.split(",")) {
+    for (const [re, group] of MUSCLE_WORDS) {
+      if (re.test(part) && !out.includes(group)) {
+        out.push(group);
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+export type MuscleLoad = { group: MuscleGroup; sets: number; previous: number; volume: number; exercises: string[] };
+
+/**
+ * Working sets per muscle group over the last `days`, against the same length
+ * of time before it. Sets are what people plan by, so they lead; every muscle
+ * an exercise names gets the set, and only the first gets the volume, so the
+ * kilos are never counted twice.
+ */
+export function muscleLoad(sessions: Session[], exercises: Exercise[], days = 7, now = Date.now(), active?: Session | null): MuscleLoad[] {
+  const from = startOfDay(now) - (days - 1) * 86400000;
+  const before = from - days * 86400000;
+  const byId = new Map(exercises.map((e) => [e.id, e]));
+  const load = new Map<MuscleGroup, MuscleLoad>();
+  for (const g of MUSCLE_GROUPS) load.set(g, { group: g, sets: 0, previous: 0, volume: 0, exercises: [] });
+
+  const count = (s: Session, window: "now" | "before") => {
+    for (const e of s.exercises) {
+      const groups = musclesOf(byId.get(e.exerciseId));
+      const sets = e.sets.filter(isWorking);
+      if (!groups.length || !sets.length) continue;
+      const volume = sets.reduce((n, x) => n + x.kg * x.reps, 0);
+      groups.forEach((g, i) => {
+        const row = load.get(g)!;
+        if (window === "before") row.previous += sets.length;
+        else {
+          row.sets += sets.length;
+          if (i === 0) row.volume += volume;
+          if (!row.exercises.includes(e.name)) row.exercises.push(e.name);
+        }
+      });
+    }
+  };
+
+  const all = [...finished(sessions), ...(active && !active.finishedAt ? [active] : [])];
+  for (const s of all) {
+    if (s.startedAt >= from) count(s, "now");
+    else if (s.startedAt >= before) count(s, "before");
+  }
+  return [...load.values()].sort((a, b) => b.sets - a.sets || a.group.localeCompare(b.group));
+}
+
 /** Consecutive weeks, ending this or last week, with at least one finished session. */
 export function streakWeeks(sessions: Session[], now = Date.now()) {
   let weeks = 0;

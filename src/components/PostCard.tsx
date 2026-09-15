@@ -168,8 +168,8 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
         {!preview && post.commentList?.length ? (
           <Pressable accessibilityRole="button" accessibilityLabel={t("Comments")} disabled={!onComment} onPress={onComment} style={({ pressed }) => ({ gap: 8, opacity: pressed ? 0.7 : 1 })}>
             {post.commentList.slice(0, 2).map((c, i) => (
-              <Row key={i} gap={8} align="flex-start">
-                <Avatar source={c.avatar} size={22} initial={c.name[0]} />
+              <Row key={i} gap={8} align="center">
+                <Avatar source={c.avatar} size={24} initial={c.name[0]} />
                 <Txt variant="bodyS" tone="secondary" style={{ flex: 1 }} numberOfLines={2}>
                   <Txt variant="labelS">{c.name.split(" ")[0]} </Txt>
                   {c.text}
