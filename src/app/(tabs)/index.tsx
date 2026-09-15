@@ -5,7 +5,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useWorkout } from "@/store/workout";
 import { useSplit } from "@/store/split";
-import { finished, fmtKg, forecast, liftTrend, locale, relativeDay, shortDate, startOfWeek, weekDays, weeklyVolume } from "@/db/derive";
+import { finished, fmtKg, liftTrend, locale, shortDate, startOfWeek, weekDays, weeklyVolume } from "@/db/derive";
 import { estimateMinutes } from "@/db/seed";
 import { DEFAULT_FAVOURITES } from "@/db/types";
 import { photos } from "@/data/mock";
@@ -15,10 +15,8 @@ import { Txt } from "@/components/ui/Text";
 import { Icon } from "@/components/ui/Icon";
 import { IconButton } from "@/components/ui/IconButton";
 import { Avatar } from "@/components/ui/PhotoSlot";
-import { Segmented } from "@/components/ui/Segmented";
 import { WeekStrip } from "@/components/WeekStrip";
 import { Card } from "@/components/ui/Card";
-import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
 import { Stat, StatDivider } from "@/components/StatCard";
 import { LineChart } from "@/components/LineChart";
@@ -44,9 +42,9 @@ const greetingKey = () => {
 };
 
 /**
- * Home is one glance: the week so far, the next session with its name up
- * front, two figures, and one card for your favourite lifts, where the chips
- * choose and the chart answers.
+ * Home is one glance and nothing more: the week so far, the session you are
+ * about to do, two figures, and one lift's trend. Everything that can be read
+ * a level deeper lives a level deeper.
  */
 export default function Home() {
   const { colors } = useTheme();
@@ -57,7 +55,6 @@ export default function Home() {
   const { session, start } = useWorkout();
   const { split, nextDay, setOverride } = useSplit();
   const { isFollowing } = useSocial();
-  const [mode, setMode] = useState("gym");
   const [choosing, setChoosing] = useState(false);
   const { width: screenWidth } = useWindowDimensions();
 
@@ -74,7 +71,6 @@ export default function Home() {
   const volume = useMemo(() => weeklyVolume(db.sessions), [db.sessions]);
   const thisWeek = useMemo(() => done.filter((s) => s.startedAt >= startOfWeek(Date.now())).length, [done]);
   const goal = db.profile.daysPerWeek ?? 3;
-  const lastSame = [...done].reverse().find((s) => s.planName === (plan?.name ?? nextDay?.name));
 
   const favourites = db.profile.favourites ?? DEFAULT_FAVOURITES;
   const lifts = useMemo(
@@ -83,7 +79,6 @@ export default function Home() {
   );
   const [liftId, setLiftId] = useState<string | null>(null);
   const lift = lifts.find((l) => l.ex.id === liftId) ?? lifts.find((l) => l.points.length >= 2) ?? lifts[0] ?? null;
-  const fc = lift && lift.points.length >= 2 ? forecast(lift.points) : null;
   const current = lift && lift.points.length ? lift.points[lift.points.length - 1].value : 0;
   const delta = lift && lift.points.length ? Math.round((current - lift.points[0].value) * 2) / 2 : 0;
 
@@ -95,7 +90,6 @@ export default function Home() {
   const three = names.slice(0, 3).join(", ");
   const more = (n: number) => (lang === "nl" ? `+${n} meer` : `+${n} more`);
   const exerciseLine = names.length === 0 ? (nextDay?.focus ?? "") : three.length <= 44 ? (names.length > 3 ? `${three} ${more(names.length - 3)}` : three) : `${names.slice(0, 2).join(", ")} ${more(names.length - 2)}`;
-  const weeksWord = (w: number) => t(w === 1 ? "Next record {kg} kg, likely in {w} week" : "Next record {kg} kg, likely in {w} weeks", { kg: fc?.target ?? 0, w });
 
   return (
     <Screen tabs>
@@ -114,31 +108,13 @@ export default function Home() {
         <IconButton name="bell" badge onPress={() => router.push("/notifications")} accessibilityLabel={t("Notifications")} />
       </Row>
 
-      <Segmented
-        value={mode}
-        onChange={setMode}
-        segments={[
-          { key: "gym", label: t("Gym"), icon: "dumbbell", color: "ember" },
-          { key: "food", label: t("Food"), icon: "leaf", color: "sage" },
-        ]}
-      />
+      <View style={{ gap: 20 }}>
+        <WeekStrip days={week} onPress={(d) => d.sessionId && router.push(`/workout/${d.sessionId}`)} />
 
-      {mode === "food" ? (
-        <View style={{ gap: 6, paddingVertical: 8 }}>
-          <Txt variant="displayM">{t("Food is on its way")}</Txt>
-          <Txt variant="bodyM" tone="secondary">
-            {t("Calories, macros and meals will live here, using the energy your sessions burn.")}
+        <Card padding={20} gap={14}>
+          <Txt variant="labelM" tone={running ? "ember" : "tertiary"}>
+            {running ? t("Session running") : t("Today")}
           </Txt>
-        </View>
-      ) : (
-        <>
-          <View style={{ gap: 20 }}>
-            <WeekStrip days={week} onPress={(d) => d.sessionId && router.push(`/workout/${d.sessionId}`)} />
-
-            <Card padding={20} gap={14}>
-              <Txt variant="labelM" tone={running ? "ember" : "tertiary"}>
-                {running ? t("Session running") : t("Today, day {a} of {b}", { a: split.nextIndex + 1, b: split.days.length })}
-              </Txt>
               <Pressable accessibilityRole="button" accessibilityLabel={t("Choose another workout")} disabled={running} onPress={() => setChoosing(true)} style={({ pressed }) => ({ gap: 4, opacity: pressed ? 0.7 : 1 })}>
                 <Row gap={6}>
                   <Txt variant="displayL">{running ? session?.planName : plan ? plan.name : (nextDay?.rest ? t("Rest day") : nextDay?.name) ?? t("Quick session")}</Txt>
@@ -155,14 +131,14 @@ export default function Home() {
                   </Txt>
                 ) : null}
               </Pressable>
-              <Row gap={16}>
-                {plan ? <Meta icon="calendar" text={t("{n} exercises", { n: plan.exercises.length })} /> : null}
-                {plan ? <Meta icon="clock" text={t("{n} min", { n: estimateMinutes(plan) })} /> : null}
-                {lastSame ? <Meta icon="check" text={t("Last {when}", { when: relativeDay(lastSame.startedAt) })} /> : <Meta icon="star" text={t("First time")} />}
-              </Row>
-              <Button label={running ? t("Continue session") : nextDay?.rest ? t("Rest day, start anyway") : t("Start session")} iconRight="arrowRight" onPress={startSession} style={{ marginTop: 4 }} />
-            </Card>
-          </View>
+          {plan ? (
+            <Txt variant="labelS" tone="tertiary">
+              {t("{n} exercises", { n: plan.exercises.length })}, {t("{n} min", { n: estimateMinutes(plan) })}
+            </Txt>
+          ) : null}
+          <Button label={running ? t("Continue session") : nextDay?.rest ? t("Rest day, start anyway") : t("Start session")} iconRight="arrowRight" onPress={startSession} style={{ marginTop: 4 }} />
+        </Card>
+      </View>
 
           {missed.length ? (
             <Pressable accessibilityRole="button" accessibilityLabel={t("Open the feed")} onPress={() => router.push("/(tabs)/feed")} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, opacity: pressed ? 0.7 : 1 })}>
@@ -183,91 +159,59 @@ export default function Home() {
             </Pressable>
           ) : null}
 
-          <Row gap={16} align="stretch">
-            <Stat
-              label={t("This week")}
-              value={fmtKg(volume.current)}
-              unit="kg"
-              delta={volume.delta === null ? t("No sessions last week") : t("{p}% on last week", { p: `${volume.delta >= 0 ? "+" : ""}${volume.delta}` })}
-              deltaTone={volume.delta === null ? "tertiary" : volume.delta >= 0 ? "ember" : "warning"}
-              deltaIcon={volume.delta !== null && volume.delta < 0 ? "trendingDown" : "trendingUp"}
-            />
-            <StatDivider />
-            <Stat
-              label={t("Sessions")}
-              value={String(thisWeek)}
-              unit={t("of {n}", { n: goal })}
-              delta={thisWeek >= goal ? t("Week's goal done") : t("{n} to go this week", { n: goal - thisWeek })}
-              deltaTone={thisWeek >= goal ? "sage" : "tertiary"}
-              deltaIcon={thisWeek >= goal ? "circleCheck" : "calendar"}
-            />
-          </Row>
+      {/* Two figures, no change lines: the week strip above already says how the week is going. */}
+      <Row gap={16} align="stretch">
+        <Stat label={t("This week")} value={fmtKg(volume.current)} unit="kg" />
+        <StatDivider />
+        <Stat label={t("Sessions")} value={String(thisWeek)} unit={t("of {n}", { n: goal })} />
+      </Row>
 
-          <Section title={t("Progress")}>
-            <Card padding={18} gap={14}>
-              <Row gap={10}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }} style={{ flex: 1, marginLeft: -18, paddingLeft: 18 }}>
-                  {lifts.map((l) => (
-                    <Chip key={l.ex.id} label={l.ex.name} selected={lift?.ex.id === l.ex.id} onPress={() => setLiftId(l.ex.id)} />
-                  ))}
-                </ScrollView>
-                <IconButton name="addPlus" size={36} iconSize={18} tone="raised" onPress={() => router.push("/exercises?favourite=1")} accessibilityLabel={t("Add a lift to follow")} />
-              </Row>
+      <Section title={t("Progress")} action={t("All lifts")} onAction={() => router.push("/(tabs)/profile")}>
+        <Card padding={18} gap={14}>
+          {/* One lift at a time. The names switch it; the chart answers. */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 18, paddingRight: 18 }} style={{ marginLeft: -18, paddingLeft: 18 }}>
+            {lifts.map((l) => (
+              <Pressable key={l.ex.id} accessibilityRole="button" accessibilityState={{ selected: lift?.ex.id === l.ex.id }} onPress={() => setLiftId(l.ex.id)} hitSlop={8}>
+                <Txt variant="labelM" tone={lift?.ex.id === l.ex.id ? "primary" : "tertiary"}>
+                  {l.ex.name}
+                </Txt>
+              </Pressable>
+            ))}
+          </ScrollView>
 
-              {lift && lift.points.length >= 2 ? (
-                <View style={{ gap: 12 }}>
-                  <Pressable accessibilityRole="button" accessibilityLabel={lift.ex.name} onPress={() => router.push(`/progress/${lift.ex.id}`)} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
-                  <Row justify="space-between" align="flex-end">
-                    <View style={{ gap: 2 }}>
-                      <Txt variant="labelS" tone="tertiary">
-                        {t("Estimated 1RM, {n} sessions", { n: lift.points.length })}
-                      </Txt>
-                      <Row gap={4}>
-                        <Txt variant="displayM">{lift.ex.name}</Txt>
-                        <Icon name="chevronRight" size={16} color={colors.text.tertiary} strokeWidth={2} />
-                      </Row>
-                    </View>
-                    <View style={{ alignItems: "flex-end", gap: 2 }}>
-                      <Row gap={4} align="baseline">
-                        <Txt variant="numberL" tabular>
-                          {current}
-                        </Txt>
-                        <Txt variant="labelM" tone="secondary">
-                          kg
-                        </Txt>
-                      </Row>
-                      <Row gap={4}>
-                        <Icon name={delta >= 0 ? "trendingUp" : "trendingDown"} size={12} color={delta >= 0 ? colors.accent.ember : colors.status.warning} strokeWidth={2.2} />
-                        <Txt variant="labelS" tone={delta >= 0 ? "ember" : "warning"}>
-                          {delta >= 0 ? "+" : ""}
-                          {delta} kg
-                        </Txt>
-                      </Row>
-                    </View>
-                  </Row>
-                  </Pressable>
-                  <LineChart points={lift.points.slice(-8)} labels={lift.points.slice(-8).map((p, i, a) => (i === a.length - 1 ? t("Now") : shortDate(p.date)))} scrubLabels={lift.points.slice(-8).map((p) => shortDate(p.date))} height={110} onPress={() => router.push(`/progress/${lift.ex.id}`)} />
-                  <Pressable accessibilityRole="button" accessibilityLabel={t("Open {name}", { name: lift.ex.name })} onPress={() => router.push(`/progress/${lift.ex.id}`)}>
-                  <Row gap={6}>
-                    <Icon name="star" size={12} color={fc?.weeksToTarget ? colors.fuel.sage : colors.text.tertiary} strokeWidth={2} />
-                    <Txt variant="labelS" tone={fc?.weeksToTarget ? "sage" : "tertiary"}>
-                      {fc?.weeksToTarget ? weeksWord(fc.weeksToTarget) : t("Holding steady, add a rep or a small jump in weight")}
+          {lift && lift.points.length >= 2 ? (
+            <View style={{ gap: 12 }}>
+              <Pressable accessibilityRole="button" accessibilityLabel={t("Open {name}", { name: lift.ex.name })} onPress={() => router.push(`/progress/${lift.ex.id}`)} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+                <Row justify="space-between" align="flex-end">
+                  <Txt variant="labelS" tone="tertiary">
+                    {t("Estimated 1RM")}
+                  </Txt>
+                  <Row gap={4} align="baseline">
+                    <Txt variant="numberL" tabular>
+                      {current}
+                    </Txt>
+                    <Txt variant="labelM" tone="secondary">
+                      kg
+                    </Txt>
+                    <Txt variant="labelS" tone={delta >= 0 ? "ember" : "warning"} style={{ paddingLeft: 4 }}>
+                      {delta >= 0 ? "+" : ""}
+                      {delta}
                     </Txt>
                   </Row>
-                  </Pressable>
-                </View>
-              ) : (
-                <View style={{ gap: 4, paddingVertical: 8 }}>
-                  <Txt variant="displayM">{lift ? lift.ex.name : t("Pick your lifts")}</Txt>
-                  <Txt variant="bodyM" tone="secondary">
-                    {lift ? t("Log {name} in two sessions and its trend appears here.", { name: lift.ex.name.toLowerCase() }) : t("Add the exercises you want to follow and their trend shows here.")}
-                  </Txt>
-                </View>
-              )}
-            </Card>
-          </Section>
-        </>
-      )}
+                </Row>
+              </Pressable>
+              <LineChart points={lift.points.slice(-8)} labels={lift.points.slice(-8).map((p, i, a) => (i === a.length - 1 ? t("Now") : shortDate(p.date)))} scrubLabels={lift.points.slice(-8).map((p) => shortDate(p.date))} height={110} onPress={() => router.push(`/progress/${lift.ex.id}`)} />
+            </View>
+          ) : (
+            <View style={{ gap: 4, paddingVertical: 8 }}>
+              <Txt variant="displayM">{lift ? lift.ex.name : t("Pick your lifts")}</Txt>
+              <Txt variant="bodyM" tone="secondary">
+                {lift ? t("Log {name} in two sessions and its trend appears here.", { name: lift.ex.name.toLowerCase() }) : t("Add the exercises you want to follow and their trend shows here.")}
+              </Txt>
+            </View>
+          )}
+        </Card>
+      </Section>
 
       <BottomSheet visible={choosing} onClose={() => setChoosing(false)} title={t("Today's workout")} subtitle={t("Your split says {name}. Pick something else for today; the split keeps its order.", { name: nextDay?.rest ? t("Rest day") : (nextDay?.name ?? "") })}>
         {db.plans.map((p) => (
@@ -279,14 +223,3 @@ export default function Home() {
   );
 }
 
-function Meta({ icon, text }: { icon: "calendar" | "clock" | "check" | "star"; text: string }) {
-  const { colors } = useTheme();
-  return (
-    <Row gap={6}>
-      <Icon name={icon} size={14} color={colors.text.tertiary} strokeWidth={1.8} />
-      <Txt variant="bodyS" tone="secondary">
-        {text}
-      </Txt>
-    </Row>
-  );
-}

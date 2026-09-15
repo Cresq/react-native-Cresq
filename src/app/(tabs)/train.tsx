@@ -84,13 +84,6 @@ export default function Train() {
             {running ? t("{n} exercises", { n: session?.exercises.length ?? 0 }) : (nextDay?.focus ?? t("Pick any workout below"))}
           </Txt>
         </View>
-        {nextPlan && !running ? (
-          <Row gap={16}>
-            <Meta icon="calendar" text={t("{n} exercises", { n: nextPlan.exercises.length })} />
-            <Meta icon="clock" text={t("{n} min", { n: estimateMinutes(nextPlan) })} />
-            {lastDone(nextPlan.name) ? <Meta icon="check" text={t("Last {when}", { when: relativeDay(lastDone(nextPlan.name)!.startedAt) })} /> : null}
-          </Row>
-        ) : null}
         <Button label={running ? t("Continue session") : nextDay?.rest ? t("Rest day, start anyway") : t("Start session")} iconRight="arrowRight" onPress={() => begin(nextPlan?.id, nextDay?.name)} style={{ marginTop: 4 }} />
       </Card>
 
@@ -104,7 +97,7 @@ export default function Train() {
                 <View style={{ flex: 1, gap: 3 }}>
                   <Txt variant="labelL">{p.name}</Txt>
                   <Txt variant="bodyS" tone="tertiary">
-                    {[p.focus, t("{n} exercises", { n: p.exercises.length }), t("{n} min", { n: estimateMinutes(p) })].filter(Boolean).join(", ")}
+                    {p.focus || t("{n} exercises", { n: p.exercises.length })}
                   </Txt>
                 </View>
                 <Txt variant="labelS" tone="tertiary">
@@ -125,14 +118,3 @@ export default function Train() {
   );
 }
 
-function Meta({ icon, text }: { icon: "calendar" | "clock" | "check"; text: string }) {
-  const { colors } = useTheme();
-  return (
-    <Row gap={6}>
-      <Icon name={icon} size={14} color={colors.text.tertiary} strokeWidth={1.8} />
-      <Txt variant="bodyS" tone="secondary">
-        {text}
-      </Txt>
-    </Row>
-  );
-}

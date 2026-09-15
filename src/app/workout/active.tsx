@@ -16,7 +16,6 @@ import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
 import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
-import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { Field } from "@/components/ui/Field";
@@ -121,6 +120,20 @@ export default function ActiveWorkout() {
     setBlocked(null);
     haptic(s.done ? "tap" : "done");
     w.completeSet(ex.id, s.id);
+    // The set that finishes an exercise folds it away and opens the next one that
+    // still has sets, after a beat so the tick lands before anything moves.
+    const wasLast = !s.done && ex.sets.filter((x) => !x.done).length === 1;
+    if (!wasLast) return;
+    const order = session.exercises;
+    const from = order.findIndex((e) => e.id === ex.id);
+    const next = order.slice(from + 1).find((e) => e.sets.some((x) => !x.done));
+    setTimeout(() => {
+      setOpen((o) => {
+        const rest = (o ?? []).filter((x) => x !== ex.id);
+        return next && !rest.includes(next.id) ? [...rest, next.id] : rest;
+      });
+      if (next) w.setCurrent(order.findIndex((e) => e.id === next.id));
+    }, 420);
   };
   const openNote = (ex: ExerciseEntry) => {
     setNoteText(ex.note ?? "");
@@ -352,11 +365,6 @@ export default function ActiveWorkout() {
         {sheet?.kind === "rest" ? (
           <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
             <WheelPicker values={REST_CHOICES} value={restValue} onChange={setRestValue} format={fmtTime} />
-            <Row gap={8}>
-              {[60, 90, 120, 180].map((s) => (
-                <Chip key={s} label={fmtTime(s)} selected={restValue === s} onPress={() => setRestValue(s)} style={{ flex: 1, justifyContent: "center" }} />
-              ))}
-            </Row>
             <Button label={t("Use {time}", { time: fmtTime(restValue) })} onPress={() => { w.setRestSeconds(sheet.ex.id, restValue); setSheet(null); }} />
           </View>
         ) : null}

@@ -52,7 +52,7 @@ export const radius = {
  */
 export const layout = {
   screenInset: 20,
-  sectionGap: 24,
+  sectionGap: 28,
   innerGap: 12,
   rowGap: 8,
   tabBarHeight: 74,

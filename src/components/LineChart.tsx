@@ -120,7 +120,7 @@ export function LineChart({ points, forecast, height = 96, labels, target, scrub
           </Animated.View>
         ) : (
           <Txt variant="labelS" tone="tertiary">
-            {points.length > 1 ? t("Touch the line to read a session") : ""}
+            {points.length > 1 && height >= 140 ? t("Touch the line to read a session") : ""}
           </Txt>
         )}
       </View>
@@ -133,8 +133,8 @@ export function LineChart({ points, forecast, height = 96, labels, target, scrub
                 <Line key={f} x1={0} x2={width} y1={height * f} y2={height * f} stroke={colors.border.subtle} strokeWidth={1} />
               ))}
               {target ? <Line x1={0} x2={width} y1={y(target)} y2={y(target)} stroke={colors.pr.gold} strokeWidth={1} strokeDasharray="3 4" opacity={0.7} /> : null}
-              <Path d={area} fill={colors.accent.ember} opacity={0.14} />
-              <Path d={line} stroke={colors.accent.ember} strokeWidth={2.5} fill="none" strokeLinecap="round" />
+              <Path d={area} fill={colors.accent.ember} opacity={0.07} />
+              <Path d={line} stroke={colors.accent.ember} strokeWidth={2} fill="none" strokeLinecap="round" />
               {fline ? <Path d={fline} stroke={colors.fuel.sage} strokeWidth={2.5} fill="none" strokeLinecap="round" strokeDasharray="5 6" /> : null}
               {points.map((p, i) => (p.record ? <Circle key={i} cx={xs[i]} cy={ys[i]} r={4} fill={colors.bg.surface} stroke={colors.pr.gold} strokeWidth={2} /> : null))}
               <Circle cx={xs[xs.length - 1]} cy={ys[ys.length - 1]} r={6} fill={colors.accent.ember} opacity={0.25} />

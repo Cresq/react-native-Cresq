@@ -589,4 +589,5 @@ export const nl: Record<string, string> = {
   "first time": "eerste keer",
   "new": "nieuw",
   "same": "gelijk",
+  "All lifts": "Alle oefeningen",
 };
