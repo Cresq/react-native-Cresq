@@ -28,7 +28,7 @@ export function SessionBreakdown({ exercises }: { exercises: BreakdownExercise[]
         return (
           <View key={`${e.name}-${i}`}>
             {i > 0 ? <Divider /> : null}
-            <View style={{ paddingVertical: 12, gap: 6 }}>
+            <View style={{ paddingVertical: 12, gap: 8 }}>
               <Row gap={8}>
                 <Txt variant="labelL" style={{ flex: 1 }}>
                   {e.name}

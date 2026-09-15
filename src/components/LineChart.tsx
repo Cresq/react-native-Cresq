@@ -100,7 +100,7 @@ export function LineChart({ points, forecast, height = 96, labels, target, scrub
     <View style={{ gap: 8 }}>
       <View style={{ height: 22, justifyContent: "flex-end" }}>
         {active !== null ? (
-          <Animated.View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
+          <Animated.View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
             <Txt variant="numberM" tabular>
               {value}
             </Txt>

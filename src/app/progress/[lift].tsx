@@ -55,7 +55,7 @@ export default function LiftDetail() {
       <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={exercise.name} subtitle={`${exercise.muscles}, ${exercise.equipment}`} right={<IconButton name="share" onPress={() => Share.share({ message: `${exercise.name}: ${t("Estimated 1RM")} ${current} kg, ${delta >= 0 ? "+" : ""}${delta} kg. CresQ.` })} accessibilityLabel={t("Share")} />} />
 
       {all.length === 0 ? (
-        <View style={{ gap: 6, paddingTop: 8 }}>
+        <View style={{ gap: 8, paddingTop: 8 }}>
           <Txt variant="displayL">{t("No sessions yet")}</Txt>
           <Txt variant="bodyM" tone="secondary">
             {t("Log {name} in a session and the trend, records and forecast appear here.", { name: exercise.name.toLowerCase() })}
@@ -67,7 +67,7 @@ export default function LiftDetail() {
             <Txt variant="labelM" tone="tertiary">
               {t("Estimated one-rep max")}
             </Txt>
-            <Row gap={6} align="baseline">
+            <Row gap={8} align="baseline">
               <Txt variant="numberXL" tabular>
                 {current}
               </Txt>
@@ -75,7 +75,7 @@ export default function LiftDetail() {
                 kg
               </Txt>
             </Row>
-            <Row gap={6}>
+            <Row gap={8}>
               <Icon name="trendingUp" size={13} color={delta >= 0 ? colors.accent.ember : colors.status.warning} strokeWidth={2.2} />
               <Txt variant="labelM" tone={delta >= 0 ? "ember" : "warning"}>
                 {delta >= 0 ? "+" : ""}
@@ -102,8 +102,8 @@ export default function LiftDetail() {
               <View style={{ gap: 20 }}>
                 <View style={{ gap: 12 }}>
                   <Segmented size="M" value={range} onChange={setRange} segments={[{ key: "1m", label: "1M" }, { key: "3m", label: "3M" }, { key: "6m", label: "6M" }, { key: "1y", label: "1Y" }, { key: "all", label: "All" }]} />
-                  <Card padding={18} gap={12}>
-                    <Row gap={14}>
+                  <Card padding={20} gap={12}>
+                    <Row gap={12}>
                       <Legend color={colors.accent.ember} label={t("Estimated 1RM")} />
                       <Legend color={colors.pr.gold} label={t("Record")} />
                       {fc ? <Legend color={colors.fuel.sage} label={t("Forecast")} /> : null}
@@ -112,11 +112,11 @@ export default function LiftDetail() {
                   </Card>
                 </View>
 
-                <Row gap={14} align="flex-start">
+                <Row gap={12} align="flex-start">
                   <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: colors.bg.surface, alignItems: "center", justifyContent: "center" }}>
                     <Icon name="sun" size={18} color={colors.pr.gold} strokeWidth={2} />
                   </View>
-                  <View style={{ flex: 1, gap: 6 }}>
+                  <View style={{ flex: 1, gap: 8 }}>
                     {fc && fc.weeksToTarget ? (
                       <>
                         <Txt variant="displayS">{t("{kg} kg is close", { kg: fc.target })}</Txt>
@@ -150,10 +150,10 @@ export default function LiftDetail() {
                 {bestRecords.map((r, i) => (
                   <View key={r.date}>
                     {i > 0 ? <Divider /> : null}
-                    <Row gap={14} style={{ paddingVertical: 12 }}>
+                    <Row gap={12} style={{ paddingVertical: 12 }}>
                       <Icon name="trophy" size={20} color={i === 0 ? colors.pr.gold : colors.text.tertiary} strokeWidth={1.9} />
                       <View style={{ flex: 1, gap: 1 }}>
-                        <Row gap={6} align="baseline">
+                        <Row gap={8} align="baseline">
                           <Txt variant="numberM" tabular>
                             {r.kg} kg
                           </Txt>
@@ -181,7 +181,7 @@ export default function LiftDetail() {
                 {history.map((h, i) => (
                   <View key={h.sessionId}>
                     {i > 0 ? <Divider /> : null}
-                    <Row gap={14} style={{ paddingVertical: 12 }}>
+                    <Row gap={12} style={{ paddingVertical: 12 }}>
                       <View style={{ flex: 1, gap: 2 }}>
                         <Txt variant="labelL">{h.top ? `${h.top.kg ? `${h.top.kg} kg × ` : ""}${h.top.reps}` : t("no working sets")}</Txt>
                         <Txt variant="bodyS" tone="tertiary">
@@ -220,7 +220,7 @@ export default function LiftDetail() {
 
 function Legend({ color, label }: { color: string; label: string }) {
   return (
-    <Row gap={6}>
+    <Row gap={8}>
       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
       <Txt variant="labelS" tone="tertiary">
         {label}

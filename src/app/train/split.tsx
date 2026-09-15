@@ -37,7 +37,7 @@ export default function SplitEditor() {
       <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Your split")} right={<IconButton name="noteEdit" onPress={() => { setNameText(split.name); setRenaming(true); }} accessibilityLabel={t("Rename split")} />} />
 
       <BottomSheet visible={renaming} onClose={() => setRenaming(false)} title={t("Rename your split")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
           <Field label={t("Name")} value={nameText} onChangeText={setNameText} placeholder="Push Pull Legs" autoFocus />
           <Button label={t("Save name")} onPress={() => { if (nameText.trim()) rename(nameText.trim()); setRenaming(false); }} disabled={!nameText.trim()} />
         </View>
@@ -50,13 +50,13 @@ export default function SplitEditor() {
         </Txt>
       </View>
 
-      <Card padding={6} gap={0}>
+      <Card padding={8} gap={0}>
         {split.days.map((d, i) => {
           const isNext = d.id === nextDay?.id;
           return (
             <View key={d.id}>
               {i > 0 ? <Divider inset={58} /> : null}
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingHorizontal: 10 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 12 }}>
                 <View style={{ width: 30, height: 30, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: isNext ? colors.accent.ember : colors.bg.raised }}>
                   <Txt variant="labelM" style={{ color: isNext ? colors.accent.on : colors.text.secondary }}>
                     {i + 1}
@@ -85,7 +85,7 @@ export default function SplitEditor() {
           );
         })}
         <Divider inset={58} />
-        <Pressable accessibilityRole="button" onPress={() => setSheet({ kind: "add" })} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 10 }}>
+        <Pressable accessibilityRole="button" onPress={() => setSheet({ kind: "add" })} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 12 }}>
           <View style={{ width: 30, alignItems: "center" }}>
             <Icon name="addPlus" size={16} color={colors.text.secondary} strokeWidth={2} />
           </View>
@@ -96,9 +96,9 @@ export default function SplitEditor() {
       </Card>
 
       <Section title={t("How it flows")}>
-        <Row gap={6} style={{ flexWrap: "wrap" }}>
+        <Row gap={8} style={{ flexWrap: "wrap" }}>
           {split.days.map((d, i) => (
-            <Row key={d.id} gap={6}>
+            <Row key={d.id} gap={8}>
               <Txt variant="labelM" tone={d.id === nextDay?.id ? "ember" : d.rest ? "tertiary" : "secondary"}>
                 {d.name}
               </Txt>

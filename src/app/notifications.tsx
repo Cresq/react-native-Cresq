@@ -39,7 +39,7 @@ export default function Notifications() {
             return (
               <View key={n.id}>
                 {i > 0 ? <Divider inset={54} /> : null}
-                <Pressable accessibilityRole="button" onPress={() => { setRead((r) => ({ ...r, [n.id]: true })); if (n.href) router.push(n.href); }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "flex-start", gap: 14, paddingVertical: 14, opacity: pressed ? 0.7 : 1 })}>
+                <Pressable accessibilityRole="button" onPress={() => { setRead((r) => ({ ...r, [n.id]: true })); if (n.href) router.push(n.href); }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "flex-start", gap: 12, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
                   {n.avatar ? (
                     <Avatar source={n.avatar} size={40} />
                   ) : (
@@ -47,7 +47,7 @@ export default function Notifications() {
                       <Icon name={kindIcon[n.kind]} size={18} color={gold ? colors.pr.gold : colors.text.secondary} strokeWidth={1.9} />
                     </View>
                   )}
-                  <View style={{ flex: 1, gap: 3 }}>
+                  <View style={{ flex: 1, gap: 4 }}>
                     <Txt variant={isUnread ? "labelL" : "bodyM"} tone={isUnread ? "primary" : "secondary"}>
                       {n.title}
                     </Txt>
@@ -57,7 +57,7 @@ export default function Notifications() {
                       </Txt>
                     ) : null}
                   </View>
-                  <View style={{ alignItems: "flex-end", gap: 6, paddingTop: 2 }}>
+                  <View style={{ alignItems: "flex-end", gap: 8, paddingTop: 2 }}>
                     <Txt variant="labelS" tone="tertiary">
                       {n.when}
                     </Txt>

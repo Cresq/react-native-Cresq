@@ -65,7 +65,7 @@ export default function LiveSession() {
       <Row gap={12}>
         <Avatar source={p.avatar} size={44} initial={p.name[0]} />
         <View style={{ flex: 1, gap: 2 }}>
-          <Row gap={6}>
+          <Row gap={8}>
             <Animated.View style={[{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.status.danger }, dot]} />
             <Txt variant="labelM" style={{ color: colors.status.danger }}>
               {prog.finished ? t("Just finished") : t("Live now")}
@@ -86,7 +86,7 @@ export default function LiveSession() {
       </Row>
 
       {current && !prog.finished ? (
-        <Card padding={18} gap={6}>
+        <Card padding={20} gap={8}>
           <Txt variant="labelS" tone="ember">
             {t("Now on")}
           </Txt>
@@ -104,7 +104,7 @@ export default function LiveSession() {
         {prog.exercises.some((e) => !e.doneSets.length) ? (
           <View>
             <Divider />
-            <View style={{ paddingTop: 12, gap: 6 }}>
+            <View style={{ paddingTop: 12, gap: 8 }}>
               <Txt variant="labelS" tone="tertiary">
                 {t("Still to come")}
               </Txt>

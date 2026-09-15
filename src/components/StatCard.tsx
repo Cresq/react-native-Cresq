@@ -26,7 +26,7 @@ export function Stat({ label, value, unit, delta, deltaTone = "ember", deltaIcon
         ) : null}
       </View>
       {delta ? (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
           <Icon name={deltaIcon} size={12} color={toneColor} strokeWidth={2.2} />
           <Txt variant="labelS" style={{ color: toneColor }}>
             {delta}

@@ -36,7 +36,7 @@ export function Tabs({ tabs, value, onChange }: { tabs: Tab[]; value: string; on
         {tabs.map((t) => {
           const on = t.key === value;
           return (
-            <Pressable key={t.key} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => onChange(t.key)} onLayout={onLayout(t.key)} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "baseline", gap: 5, paddingVertical: 10, opacity: pressed ? 0.7 : 1 })}>
+            <Pressable key={t.key} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => onChange(t.key)} onLayout={onLayout(t.key)} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "baseline", gap: 4, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
               <Txt variant="labelL" tone={on ? "primary" : "tertiary"}>
                 {t.label}
               </Txt>

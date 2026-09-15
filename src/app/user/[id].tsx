@@ -49,7 +49,7 @@ export default function UserProfile() {
 
       <Row gap={16}>
         <Avatar source={p.avatar} size={72} initial={p.name[0]} />
-        <View style={{ flex: 1, gap: 3 }}>
+        <View style={{ flex: 1, gap: 4 }}>
           <Txt variant="displayL">{p.name}</Txt>
           <Txt variant="bodyS" tone="secondary">
             {p.city}, {t("since {year}", { year: p.since })}

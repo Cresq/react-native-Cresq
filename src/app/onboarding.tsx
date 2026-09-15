@@ -63,7 +63,7 @@ export default function Onboarding() {
       <Header left={i > 0 || edit ? <IconButton name="chevronLeft" onPress={() => (i > 0 ? setI(i - 1) : router.back())} accessibilityLabel={t("Back")} /> : undefined} />
       <ProgressBar value={0.2 + (i / STEPS.length) * 0.8} label={t("Step {a} of {b}", { a: i + 1, b: STEPS.length })} right={`${Math.round((0.2 + (i / STEPS.length) * 0.8) * 100)}%`} />
 
-      <View style={{ gap: 6 }}>
+      <View style={{ gap: 8 }}>
         <Txt variant="displayL">{stepTitle}</Txt>
         <Txt variant="bodyM" tone="secondary">
           {stepSub}
@@ -71,7 +71,7 @@ export default function Onboarding() {
       </View>
 
       {step.key === "birth" ? (
-        <View style={{ gap: 10 }}>
+        <View style={{ gap: 12 }}>
           <Field label={t("Year of birth")} value={yearText} onChangeText={(t) => { const v = t.replace(/\D/g, "").slice(0, 4); setYearText(v); setA({ ...a, birthYear: v.length === 4 ? Number(v) : undefined }); }} keyboardType="number-pad" maxLength={4} placeholder="1998" autoFocus />
           {tooYoung ? (
             <Row gap={8} align="flex-start">
@@ -119,7 +119,7 @@ export default function Onboarding() {
       ) : null}
       {step.key === "data" ? (
         <View>
-          <Row gap={14} style={{ paddingVertical: 12 }}>
+          <Row gap={12} style={{ paddingVertical: 12 }}>
             <View style={{ flex: 1, gap: 2 }}>
               <Txt variant="labelL">{t("Anonymous usage statistics")}</Txt>
               <Txt variant="bodyS" tone="tertiary">
@@ -129,7 +129,7 @@ export default function Onboarding() {
             <Toggle value={c.analytics} onChange={(v) => setC({ ...c, analytics: v })} />
           </Row>
           <Divider />
-          <Row gap={14} style={{ paddingVertical: 12 }}>
+          <Row gap={12} style={{ paddingVertical: 12 }}>
             <View style={{ flex: 1, gap: 2 }}>
               <Txt variant="labelL">{t("Age statistics")}</Txt>
               <Txt variant="bodyS" tone="tertiary">
@@ -156,7 +156,7 @@ export default function Onboarding() {
 function Option({ icon, label, sub, on, onPress }: { icon: IconName; label: string; sub: string; on: boolean; onPress: () => void }) {
   const { colors } = useTheme();
   return (
-    <Pressable accessibilityRole="button" accessibilityState={{ selected: on }} onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, padding: 14, borderRadius: 16, backgroundColor: on ? colors.accent.soft : pressed ? colors.bg.raised : colors.bg.surface })}>
+    <Pressable accessibilityRole="button" accessibilityState={{ selected: on }} onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 16, backgroundColor: on ? colors.accent.soft : pressed ? colors.bg.raised : colors.bg.surface })}>
       <View style={{ width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: on ? colors.accent.ember : colors.bg.raised }}>
         <Icon name={icon} size={18} color={on ? colors.accent.on : colors.icon.strong} strokeWidth={1.9} />
       </View>

@@ -51,7 +51,7 @@ export function Chip({
   const base: ViewStyle = {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
     paddingVertical: size === "S" ? 4 : 8,
     paddingHorizontal: size === "S" ? 9 : 12,
     borderRadius: radius.pill,

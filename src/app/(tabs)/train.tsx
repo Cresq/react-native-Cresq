@@ -44,14 +44,14 @@ export default function Train() {
 
   return (
     <Screen tabs>
-      <Row gap={10}>
+      <Row gap={12}>
         <Txt variant="displayXL" style={{ flex: 1 }}>
           {t("Train")}
         </Txt>
         <IconButton name="search" onPress={() => router.push("/exercises")} accessibilityLabel={t("Exercise library")} />
       </Row>
 
-      <Card padding={20} gap={14}>
+      <Card padding={20} gap={12}>
         {/* The split is one quiet line on the card it governs, not a section of its own. */}
         {running ? (
           <Txt variant="labelM" tone="ember">
@@ -59,7 +59,7 @@ export default function Train() {
           </Txt>
         ) : (
           <Pressable accessibilityRole="button" accessibilityLabel={t("Edit your split")} onPress={() => router.push("/train/split")} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
-            <Row gap={5}>
+            <Row gap={4}>
               <Txt variant="labelM" tone="tertiary">
                 {split.name}, {t("day {a} of {b}", { a: split.nextIndex + 1, b: split.days.length })}
               </Txt>
@@ -82,8 +82,8 @@ export default function Train() {
           return (
             <View key={p.id}>
               {i > 0 ? <Divider /> : null}
-              <Pressable accessibilityRole="button" onPress={() => router.push(`/train/plan/${p.id}`)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14, opacity: pressed ? 0.7 : 1 })}>
-                <View style={{ flex: 1, gap: 3 }}>
+              <Pressable accessibilityRole="button" onPress={() => router.push(`/train/plan/${p.id}`)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
+                <View style={{ flex: 1, gap: 4 }}>
                   <Txt variant="labelL">{p.name}</Txt>
                   <Txt variant="bodyS" tone="tertiary">
                     {p.focus || t("{n} exercises", { n: p.exercises.length })}

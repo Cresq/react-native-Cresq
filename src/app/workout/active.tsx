@@ -17,6 +17,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
+import { Pill } from "@/components/ui/Pill";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { WheelPicker } from "@/components/ui/WheelPicker";
 import { SUPERSET_INK, supersetColor } from "@/superset";
@@ -204,7 +205,7 @@ export default function ActiveWorkout() {
           title={session.planName}
           subtitle={t("Exercise {a} of {b}", { a: session.currentIndex + 1, b: session.exercises.length })}
           right={
-            <Row gap={6}>
+            <Row gap={8}>
               <IconButton name="trash" size={34} iconSize={17} tone="danger" onPress={() => setSheet({ kind: "discard" })} accessibilityLabel={t("Stop and discard session")} />
               <Button label={t("Finish")} variant="inverse" size="S" full={false} onPress={() => setSheet({ kind: "finish" })} />
             </Row>
@@ -227,7 +228,7 @@ export default function ActiveWorkout() {
               <Animated.View key={ex.id} layout={LinearTransition.springify().damping(20).stiffness(190)} onLayout={measure(ex.id)} style={{ gap: 8 }}>
                 {lineAbove ? <DropLine /> : null}
                 {groupStart && groupColor ? (
-                  <Row gap={6} style={{ paddingHorizontal: 4, paddingTop: 4 }}>
+                  <Row gap={8} style={{ paddingHorizontal: 4, paddingTop: 4 }}>
                     <Icon name="link" size={13} color={groupColor} strokeWidth={2} />
                     <Txt variant="labelS" style={{ color: groupColor }}>
                       {t("Superset, alternate, no rest between")}
@@ -267,10 +268,10 @@ export default function ActiveWorkout() {
 
       {rest ? (
         <Animated.View entering={FadeInDown.springify().damping(18).stiffness(180)} exiting={FadeOutDown.duration(180)} style={{ position: "absolute", left: 16, right: 16, bottom: Math.max(insets.bottom, 16) + 8 }}>
-          <View style={[{ flexDirection: "row", alignItems: "center", gap: 12, padding: 12, paddingLeft: 14, borderRadius: radius.bar, backgroundColor: colors.bg.raised }, shadow.floating]}>
+          <View style={[{ flexDirection: "row", alignItems: "center", gap: 12, padding: 12, paddingLeft: 16, borderRadius: radius.bar, backgroundColor: colors.bg.raised }, shadow.floating]}>
             <RestRing progress={rest.left / rest.total} />
             <View style={{ flex: 1, gap: 1 }}>
-              <Row gap={6} align="baseline">
+              <Row gap={8} align="baseline">
                 <Txt variant="numberL" tabular>
                   {fmtTime(rest.left)}
                 </Txt>
@@ -282,9 +283,9 @@ export default function ActiveWorkout() {
                 {rest.nextLabel}
               </Txt>
             </View>
-            <SmallPill label="−15" onPress={() => w.adjustRest(-15)} />
-            <SmallPill label="+15" onPress={() => w.adjustRest(15)} />
-            <SmallPill label={t("Skip")} inverse onPress={w.skipRest} />
+            <Pill label="−15" accessibilityLabel={t("15 seconds less")} onPress={() => w.adjustRest(-15)} />
+            <Pill label="+15" accessibilityLabel={t("15 seconds more")} onPress={() => w.adjustRest(15)} />
+            <Pill label={t("Skip")} tone="accent" accessibilityLabel={t("Skip rest")} onPress={w.skipRest} />
           </View>
         </Animated.View>
       ) : null}
@@ -406,8 +407,8 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
   let working = 0;
   return (
     <Animated.View style={style}>
-      <Card padding={expanded ? 16 : 10} gap={6} style={highlighted ? { borderWidth: 1.5, borderColor: colors.accent.ember, backgroundColor: colors.accent.soft } : isCurrent ? { borderWidth: 1.5, borderColor: colors.accent.ember } : undefined}>
-        <Row gap={10} align="center">
+      <Card padding={expanded ? 16 : 10} gap={8} style={highlighted ? { borderWidth: 1.5, borderColor: colors.accent.ember, backgroundColor: colors.accent.soft } : isCurrent ? { borderWidth: 1.5, borderColor: colors.accent.ember } : undefined}>
+        <Row gap={12} align="center">
           <GestureDetector gesture={drag}>
             <Animated.View accessibilityRole="button" accessibilityLabel={t("Drag to reorder")} style={{ width: 28, height: 28, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg.raised }}>
               <Icon name="dragVertical" size={16} color={colors.text.secondary} strokeWidth={2} />
@@ -443,9 +444,9 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
         </Row>
 
         {expanded ? (
-          <View style={{ gap: 6 }}>
+          <View style={{ gap: 8 }}>
             <Row gap={8} style={{ paddingTop: 8 }}>
-              <Pressable accessibilityRole="button" accessibilityLabel={t("Rest timer")} onPress={onRest} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingLeft: 10, paddingRight: 8, height: 34, borderRadius: radius.pill, backgroundColor: colors.bg.raised }}>
+              <Pressable accessibilityRole="button" accessibilityLabel={t("Rest timer")} onPress={onRest} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 12, paddingRight: 8, height: 34, borderRadius: radius.pill, backgroundColor: colors.bg.raised }}>
                 <Icon name="timer" size={14} color={colors.text.secondary} strokeWidth={1.9} />
                 <Txt variant="labelM">{fmtTime(ex.restSeconds)}</Txt>
                 <Icon name="chevronDown" size={12} color={colors.text.tertiary} strokeWidth={2.2} />
@@ -468,17 +469,17 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
                 placeholder={t("Feet planted, pause on the chest")}
                 placeholderTextColor={colors.text.tertiary}
                 accessibilityLabel={t("Note")}
-                style={{ fontFamily: fontFamily.italic, fontSize: 13, lineHeight: 18, color: colors.text.secondary, paddingVertical: 2, paddingTop: 6 }}
+                style={{ fontFamily: fontFamily.italic, fontSize: 13, lineHeight: 18, color: colors.text.secondary, paddingVertical: 2, paddingTop: 8 }}
               />
             ) : (
-              <Pressable accessibilityRole="button" accessibilityLabel={ex.note ? t("Edit note") : t("Add a note")} onPress={() => setNoteEditing(true)} hitSlop={6} style={{ paddingTop: 6 }}>
+              <Pressable accessibilityRole="button" accessibilityLabel={ex.note ? t("Edit note") : t("Add a note")} onPress={() => setNoteEditing(true)} hitSlop={6} style={{ paddingTop: 8 }}>
                 <Txt variant="bodyS" tone={ex.note ? "secondary" : "tertiary"} italic numberOfLines={2}>
                   {ex.note || t("Add a note")}
                 </Txt>
               </Pressable>
             )}
 
-            <Row gap={8} style={{ paddingHorizontal: 6, paddingTop: 10 }}>
+            <Row gap={8} style={{ paddingHorizontal: 8, paddingTop: 12 }}>
               <Txt variant="labelS" tone="tertiary" style={{ width: 28 }}>
                 {t("Set")}
               </Txt>
@@ -557,7 +558,7 @@ function Strip({ label, value, count, format, unit }: { label: string; value?: s
       <Txt variant="labelS" tone="tertiary">
         {label}
       </Txt>
-      <Row gap={3} align="baseline">
+      <Row gap={4} align="baseline">
         {count !== undefined && format ? (
           <CountUp value={count} format={format} />
         ) : (
@@ -632,7 +633,7 @@ function SetRow({ set, label, isCurrent, error, onType, onChange, onDone, onRemo
           </Pressable>
         </Animated.View>
         <GestureDetector gesture={pan}>
-          <Animated.View style={[{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4, paddingHorizontal: 6, borderRadius: radius.setRow, backgroundColor: isCurrent ? colors.accent.soft : colors.bg.surface, opacity: dim && !error ? 0.6 : 1, borderWidth: error ? 1.5 : 0, borderColor: error ? colors.status.danger : "transparent" }, rowAnim]}>
+          <Animated.View style={[{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4, paddingHorizontal: 8, borderRadius: radius.setRow, backgroundColor: isCurrent ? colors.accent.soft : colors.bg.surface, opacity: dim && !error ? 0.6 : 1, borderWidth: error ? 1.5 : 0, borderColor: error ? colors.status.danger : "transparent" }, rowAnim]}>
             <Pressable accessibilityRole="button" onPress={onType} hitSlop={6} style={{ width: 28 }} accessibilityLabel={t("Set type")}>
               <Txt variant="labelL" tone={isCurrent ? "ember" : set.type === "warmup" ? "tertiary" : "primary"}>
                 {label}
@@ -665,7 +666,7 @@ function SetRow({ set, label, isCurrent, error, onType, onChange, onDone, onRemo
         </GestureDetector>
       </View>
       {error ? (
-        <Row gap={6} style={{ paddingHorizontal: 8, paddingTop: 4, paddingBottom: 2 }}>
+        <Row gap={8} style={{ paddingHorizontal: 8, paddingTop: 4, paddingBottom: 2 }}>
           <Icon name="info" size={13} color={colors.status.danger} strokeWidth={2.2} />
           <Txt variant="labelS" style={{ color: colors.status.danger }}>
             {error}
@@ -688,16 +689,6 @@ function RestRing({ progress }: { progress: number }) {
   );
 }
 
-export function SmallPill({ label, onPress, inverse }: { label: string; onPress: () => void; inverse?: boolean }) {
-  const { colors, radius } = useTheme();
-  return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ paddingHorizontal: 12, height: 40, justifyContent: "center", borderRadius: radius.pill, backgroundColor: inverse ? colors.bg.inverse : colors.bg.surface, opacity: pressed ? 0.8 : 1 })}>
-      <Txt variant="buttonM" tone={inverse ? "inverse" : "primary"}>
-        {label}
-      </Txt>
-    </Pressable>
-  );
-}
 
 /**
  * A number that travels to its new value in a quarter of a second and pulses

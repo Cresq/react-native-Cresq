@@ -15,7 +15,7 @@ export function WeekStrip({ days, onPress }: { days: Day[]; onPress?: (day: Day)
         const s = d.state;
         const bg = s === "done" ? colors.status.success : s === "today" ? colors.accent.soft : colors.bg.surface;
         return (
-          <Pressable key={i} accessibilityRole={d.sessionId ? "button" : undefined} accessibilityLabel={d.sessionId ? `Session on the ${d.num}th` : undefined} disabled={!d.sessionId || !onPress} onPress={() => onPress?.(d)} style={({ pressed }) => ({ alignItems: "center", gap: 6, opacity: pressed ? 0.7 : 1 })}>
+          <Pressable key={i} accessibilityRole={d.sessionId ? "button" : undefined} accessibilityLabel={d.sessionId ? `Session on the ${d.num}th` : undefined} disabled={!d.sessionId || !onPress} onPress={() => onPress?.(d)} style={({ pressed }) => ({ alignItems: "center", gap: 8, opacity: pressed ? 0.7 : 1 })}>
             <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: bg, borderWidth: s === "today" ? 2 : 0, borderColor: colors.accent.ember, alignItems: "center", justifyContent: "center" }}>
               {s === "done" ? <Icon name="check" size={18} color={colors.accent.on} strokeWidth={2.6} /> : null}
               {s === "missed" ? <Icon name="close" size={16} color={colors.text.tertiary} strokeWidth={2.2} /> : null}

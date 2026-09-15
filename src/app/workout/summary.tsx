@@ -61,7 +61,7 @@ export default function Summary() {
   const footer = (
     <>
       <Button label={t("Share to feed")} icon="share" onPress={() => router.replace("/workout/posted")} />
-      <Row gap={10}>
+      <Row gap={12}>
         <Button label={t("Save privately")} variant="secondary" size="M" icon="lock" onPress={savePrivately} style={{ flex: 1 }} />
         <Button label={t("View session")} variant="tertiary" size="M" iconRight="chevronRight" onPress={viewSession} style={{ flex: 1 }} />
       </Row>
@@ -75,7 +75,7 @@ export default function Summary() {
     <Screen bottom={170} footer={footer}>
       <Header left={<IconButton name="close" onPress={savePrivately} accessibilityLabel={t("Close")} />} title={t("Session complete")} subtitle={`${session?.planName ?? t("Session")}, ${longDate(session?.startedAt ?? Date.now())}`} />
 
-      <Animated.View entering={FadeInUp.duration(360).delay(60)} style={{ gap: 10, paddingTop: 8 }}>
+      <Animated.View entering={FadeInUp.duration(360).delay(60)} style={{ gap: 12, paddingTop: 8 }}>
         {record ? (
           <>
             <Chip label={recs.length > 1 ? t("{n} new personal records", { n: recs.length }) : t("New personal record")} icon="trophy" tone="gold" size="S" style={{ alignSelf: "flex-start" }} />
@@ -110,9 +110,9 @@ export default function Summary() {
 
       <Section title={t("Your post")} gap={12}>
         {session?.photo ? (
-          <View style={{ gap: 10 }}>
+          <View style={{ gap: 12 }}>
             <PhotoSlot source={{ uri: session.photo }} height={300} radius={18} />
-            <Row gap={10}>
+            <Row gap={12}>
               <Button label={t("Change photo")} variant="secondary" size="S" full={false} icon="camera" onPress={() => setPhotoSheet(true)} />
               <Button label={t("Remove")} variant="tertiary" size="S" full={false} onPress={() => setPhoto(null)} />
             </Row>
@@ -184,7 +184,7 @@ export default function Summary() {
               <HR icon="flame" label={t("Energy")} value="412" unit="kcal" color={colors.accent.ember} />
             </Row>
             <View style={{ gap: 8 }}>
-              <Row gap={3}>
+              <Row gap={4}>
                 {(
                   [
                     [4, colors.border.strong],
@@ -201,7 +201,7 @@ export default function Summary() {
                 {t("Minutes per zone, easy to hard.")}
               </Txt>
             </View>
-            <Row gap={6}>
+            <Row gap={8}>
               <Icon name="watch" size={13} color={colors.text.tertiary} strokeWidth={1.8} />
               <Txt variant="labelS" tone="tertiary">
                 {t("Sample data until a watch is connected.")}
@@ -216,7 +216,7 @@ export default function Summary() {
 
 function ShareRow({ label, value, onChange }: { label: string; value: boolean; onChange: () => void }) {
   return (
-    <Row gap={12} style={{ paddingVertical: 10 }}>
+    <Row gap={12} style={{ paddingVertical: 12 }}>
       <Txt variant="labelL" style={{ flex: 1 }}>
         {label}
       </Txt>
@@ -227,14 +227,14 @@ function ShareRow({ label, value, onChange }: { label: string; value: boolean; o
 
 function HR({ icon, label, value, unit, color }: { icon: "heart" | "pulse" | "flame"; label: string; value: string; unit: string; color: string }) {
   return (
-    <View style={{ flex: 1, gap: 3 }}>
-      <Row gap={5}>
+    <View style={{ flex: 1, gap: 4 }}>
+      <Row gap={4}>
         <Icon name={icon} size={12} color={color} strokeWidth={2.2} />
         <Txt variant="labelS" tone="tertiary">
           {label}
         </Txt>
       </Row>
-      <Row gap={3} align="baseline">
+      <Row gap={4} align="baseline">
         <Txt variant="numberM" tabular>
           {value}
         </Txt>

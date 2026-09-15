@@ -15,7 +15,7 @@ export function PersonRow({ person, sub }: { person: Person; sub?: string }) {
   const { isFollowing, toggleFollow } = useSocial();
   const on = isFollowing(person.id);
   return (
-    <Row gap={12} style={{ paddingVertical: 10 }}>
+    <Row gap={12} style={{ paddingVertical: 12 }}>
       <Pressable accessibilityRole="button" accessibilityLabel={t("{name}'s profile", { name: person.name })} onPress={() => router.push(`/user/${person.id}`)} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 12, opacity: pressed ? 0.7 : 1 })}>
         <Avatar source={person.avatar} size={44} initial={person.name[0]} />
         <View style={{ flex: 1, gap: 1 }}>

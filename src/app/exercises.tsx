@@ -86,7 +86,7 @@ export default function Exercises() {
           return (
             <View key={e.id}>
               {i > 0 ? <Divider /> : null}
-              <Pressable accessibilityRole="button" accessibilityState={mode === "favourite" ? { selected: fav } : undefined} onPress={() => pick(e.id)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 13, opacity: pressed ? 0.7 : 1 })}>
+              <Pressable accessibilityRole="button" accessibilityState={mode === "favourite" ? { selected: fav } : undefined} onPress={() => pick(e.id)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 13, opacity: pressed ? 0.7 : 1 })}>
                 <View style={{ flex: 1, gap: 2 }}>
                   <Txt variant="labelL">{e.name}</Txt>
                   <Txt variant="bodyS" tone="tertiary">
@@ -112,7 +112,7 @@ export default function Exercises() {
       <Button label={t("New exercise")} variant="secondary" size="M" icon="addPlus" onPress={() => { setName(q); setCreating(true); }} />
 
       <BottomSheet visible={creating} onClose={() => setCreating(false)} title={t("New exercise")} subtitle={t("It goes into your library and can be used in any workout.")}>
-        <View style={{ gap: 10, paddingHorizontal: 8, paddingVertical: 8 }}>
+        <View style={{ gap: 12, paddingHorizontal: 8, paddingVertical: 8 }}>
           <Field label={t("Name")} value={name} onChangeText={setName} placeholder="Seated cable row" autoFocus />
           <Field label={t("Muscles")} value={muscles} onChangeText={setMuscles} placeholder={t("Back, biceps")} />
           <Button label={t("Add exercise")} onPress={create} disabled={!name.trim()} style={{ marginTop: 4 }} />

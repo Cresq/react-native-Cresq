@@ -24,7 +24,7 @@ export function Field({ label, icon, style, onFocus, onBlur, ...rest }: TextInpu
       <Txt variant="labelS" tone="tertiary">
         {label}
       </Txt>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <TextInput
           placeholderTextColor={colors.text.tertiary}
           selectionColor={colors.accent.ember}

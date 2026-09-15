@@ -122,12 +122,12 @@ export default function Home() {
       <View style={{ gap: 20 }}>
         <WeekStrip days={week} onPress={(d) => d.sessionId && router.push(`/workout/${d.sessionId}`)} />
 
-        <Card padding={20} gap={14}>
+        <Card padding={20} gap={12}>
           <Txt variant="labelM" tone={running ? "ember" : "tertiary"}>
             {running ? t("Session running") : t("Today")}
           </Txt>
               <Pressable accessibilityRole="button" accessibilityLabel={t("Choose another workout")} disabled={running} onPress={() => setChoosing(true)} style={({ pressed }) => ({ gap: 4, opacity: pressed ? 0.7 : 1 })}>
-                <Row gap={6}>
+                <Row gap={8}>
                   <Txt variant="displayL">{running ? session?.planName : plan ? plan.name : (nextDay?.rest ? t("Rest day") : nextDay?.name) ?? t("Quick session")}</Txt>
                   {!running ? <Icon name="chevronDown" size={18} color={colors.text.tertiary} strokeWidth={2} /> : null}
                 </Row>
@@ -186,9 +186,9 @@ export default function Home() {
       </Pressable>
 
       <Section title={t("Progress")} action={t("All lifts")} onAction={() => router.push("/(tabs)/profile")}>
-        <Card padding={18} gap={14}>
+        <Card padding={20} gap={12}>
           {/* One lift at a time: the chips say which, the chart answers. */}
-          <Row gap={10}>
+          <Row gap={12}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }} style={{ flex: 1, marginLeft: -18, paddingLeft: 18 }}>
               {lifts.map((l) => (
                 <Chip key={l.ex.id} label={l.ex.name} selected={lift?.ex.id === l.ex.id} onPress={() => setLiftId(l.ex.id)} />

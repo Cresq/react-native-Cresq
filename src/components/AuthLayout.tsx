@@ -29,23 +29,23 @@ export function AuthLayout({ title, subtitle, children, footerCopy, footerAction
         <Lockup width={LOCKUP_WIDTH} />
       </View>
 
-      <View style={{ gap: 6, paddingTop: 48 }}>
+      <View style={{ gap: 8, paddingTop: 48 }}>
         <Txt variant="displayL">{title}</Txt>
         <Txt variant="bodyM" tone="secondary">
           {subtitle}
         </Txt>
       </View>
 
-      <View style={{ gap: 10, paddingTop: 28 }}>{children}</View>
+      <View style={{ gap: 12, paddingTop: 28 }}>{children}</View>
 
-      <View style={{ gap: 10, paddingTop: 28 }}>
+      <View style={{ gap: 12, paddingTop: 28 }}>
         <OrDivider />
         <Button label={t("Continue with Apple")} variant="secondary" size="M" leading={<BrandLogo brand="apple" size={16} />} onPress={onSocial} />
         <Button label={t("Continue with Google")} variant="secondary" size="M" leading={<BrandLogo brand="google" size={16} />} onPress={onSocial} />
       </View>
 
       <View style={{ flex: 1 }} />
-      <Row justify="center" gap={6} style={{ paddingTop: 24 }}>
+      <Row justify="center" gap={8} style={{ paddingTop: 24 }}>
         <Txt variant="bodyS" tone="tertiary">
           {footerCopy}
         </Txt>
@@ -61,7 +61,7 @@ function OrDivider() {
   const { colors } = useTheme();
   const t = useT();
   return (
-    <Row gap={12} style={{ paddingVertical: 6 }}>
+    <Row gap={12} style={{ paddingVertical: 8 }}>
       <View style={{ flex: 1, height: 1, backgroundColor: colors.border.subtle }} />
       <Txt variant="labelS" tone="tertiary">
         {t("or")}

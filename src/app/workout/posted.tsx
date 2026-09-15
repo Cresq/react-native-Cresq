@@ -63,7 +63,7 @@ export default function Posted() {
   return (
     <Screen bottom={130} footer={footer}>
       <Header left={<IconButton name="close" onPress={done} accessibilityLabel={t("Close")} />} />
-      <View style={{ alignItems: "center", gap: 10, paddingVertical: 8 }}>
+      <View style={{ alignItems: "center", gap: 12, paddingVertical: 8 }}>
         <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.accent.soft, alignItems: "center", justifyContent: "center" }}>
           <Icon name="check" size={30} color={colors.accent.ember} strokeWidth={2.4} />
         </View>
@@ -95,7 +95,7 @@ export default function Posted() {
         }}
       />
       <Pressable accessibilityRole="button" hitSlop={8} onPress={() => { setCaptionText(session?.caption ?? ""); setEditing(true); }} style={{ alignSelf: "center" }}>
-        <Row gap={6}>
+        <Row gap={8}>
           <Icon name="noteEdit" size={14} color={colors.text.secondary} strokeWidth={1.7} />
           <Txt variant="labelM" tone="secondary">
             {t("Edit caption")}
@@ -104,7 +104,7 @@ export default function Posted() {
       </Pressable>
 
       <BottomSheet visible={editing} onClose={() => setEditing(false)} title={t("Caption")} subtitle={t("Leave it empty and CresQ writes one from your session.")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
           <Field label={t("Caption")} value={captionText} onChangeText={setCaptionText} placeholder={t("How did it go?")} multiline autoFocus />
           <Button label={t("Save caption")} onPress={() => { setCaption(captionText.trim()); setEditing(false); }} />
         </View>

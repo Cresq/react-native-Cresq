@@ -35,11 +35,11 @@ export default function Settings() {
     <Screen>
       <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Settings")} />
 
-      <Card padding={6} gap={0}>
+      <Card padding={8} gap={0}>
         {rows.map((r, i) => (
           <View key={r.label}>
             {i > 0 ? <Divider inset={52} /> : null}
-            <Pressable accessibilityRole="button" onPress={r.onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, paddingHorizontal: 10, borderRadius: 16, backgroundColor: pressed ? colors.bg.raised : "transparent" })}>
+            <Pressable accessibilityRole="button" onPress={r.onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 12, borderRadius: 16, backgroundColor: pressed ? colors.bg.raised : "transparent" })}>
               <Icon name={r.icon} size={20} color={colors.text.secondary} strokeWidth={1.8} />
               <View style={{ flex: 1, gap: 1 }}>
                 <Txt variant="labelL">{r.label}</Txt>
@@ -95,7 +95,7 @@ export default function Settings() {
           router.replace("/(auth)/sign-in");
         }}
       />
-      <Row gap={14} justify="center">
+      <Row gap={12} justify="center">
         {[["privacy", t("Privacy")], ["terms", t("Terms")], ["licences", t("Licences")]].map(([k, l]) => (
           <Pressable key={k} accessibilityRole="link" onPress={() => router.push(`/legal/${k}`)} hitSlop={8}>
             <Txt variant="labelS" tone="secondary">

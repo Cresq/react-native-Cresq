@@ -29,7 +29,7 @@ export function Screen({ children, tabs, bottom = 0, scroll = true, footer, styl
         <View style={[{ flex: 1 }, content, contentStyle]}>{children}</View>
       )}
       {footer ? (
-        <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: layout.screenInset, paddingTop: 16, paddingBottom: Math.max(insets.bottom, 16) + 8, gap: 10, backgroundColor: colors.bg.ground }}>
+        <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: layout.screenInset, paddingTop: 16, paddingBottom: Math.max(insets.bottom, 16) + 8, gap: 12, backgroundColor: colors.bg.ground }}>
           {footer}
         </View>
       ) : null}

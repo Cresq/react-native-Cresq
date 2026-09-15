@@ -78,7 +78,7 @@ export default function Devices() {
         {devices.permissions.map((p, i) => (
           <View key={p.key}>
             {i > 0 ? <Divider inset={50} /> : null}
-            <Row gap={14} style={{ paddingVertical: 12, paddingHorizontal: 8 }}>
+            <Row gap={12} style={{ paddingVertical: 12, paddingHorizontal: 8 }}>
               <Icon name={p.icon} size={20} color={colors.text.secondary} strokeWidth={1.8} />
               <View style={{ flex: 1, gap: 1 }}>
                 <Txt variant="labelL">{t(p.name)}</Txt>
@@ -99,7 +99,7 @@ export default function Devices() {
 function DeviceRow({ icon, iconColor, letter, name, sub, children }: { icon?: IconName; iconColor?: string; letter?: string; name: string; sub: string; children: React.ReactNode }) {
   const { colors } = useTheme();
   return (
-    <Row gap={14} style={{ paddingVertical: 12 }}>
+    <Row gap={12} style={{ paddingVertical: 12 }}>
       <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: colors.bg.raised, alignItems: "center", justifyContent: "center" }}>
         {icon ? <Icon name={icon} size={18} color={iconColor} strokeWidth={2} /> : <Txt variant="labelL">{letter}</Txt>}
       </View>

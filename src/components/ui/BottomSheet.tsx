@@ -87,7 +87,7 @@ export function BottomSheet({ visible, onClose, title, subtitle, children }: Pro
             style={[styles.sheet, { backgroundColor: colors.bg.surface, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, paddingBottom: Math.max(insets.bottom, 16) + 16 }, sheetStyle]}
           >
             <View style={[styles.handle, { backgroundColor: colors.border.strong }]} />
-            <View style={{ gap: 2, paddingHorizontal: 8, paddingTop: 14, paddingBottom: 6 }}>
+            <View style={{ gap: 2, paddingHorizontal: 8, paddingTop: 16, paddingBottom: 8 }}>
               <Txt variant="displayM">{title}</Txt>
               {subtitle ? (
                 <Txt variant="bodyS" tone="tertiary">
@@ -115,7 +115,7 @@ export function SheetOption({ icon, label, sub, onPress, danger, selected }: { i
       accessibilityRole="button"
       accessibilityState={{ selected: !!selected }}
       scaleTo={0.985}
-      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, paddingHorizontal: 8, borderRadius: radius.button, backgroundColor: pressed ? colors.bg.raised : "transparent" })}
+      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 8, borderRadius: radius.button, backgroundColor: pressed ? colors.bg.raised : "transparent" })}
     >
       <View style={{ width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: selected ? colors.accent.soft : colors.bg.raised }}>
         <Icon name={icon} size={18} color={danger ? colors.status.danger : selected ? colors.accent.ember : colors.icon.strong} strokeWidth={1.9} />
@@ -136,6 +136,6 @@ export function SheetOption({ icon, label, sub, onPress, danger, selected }: { i
 }
 
 const styles = StyleSheet.create({
-  sheet: { paddingTop: 10, paddingHorizontal: 12 },
+  sheet: { paddingTop: 12, paddingHorizontal: 12 },
   handle: { width: 36, height: 4, borderRadius: 2, alignSelf: "center" },
 });

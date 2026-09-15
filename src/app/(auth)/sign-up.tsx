@@ -80,7 +80,7 @@ export default function SignUp() {
 function Check({ on, onPress, label, children }: { on: boolean; onPress: () => void; label?: string; children?: React.ReactNode }) {
   const { colors } = useTheme();
   return (
-    <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: on }} accessibilityLabel={label} onPress={onPress} hitSlop={6} style={{ paddingVertical: 6 }}>
+    <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: on }} accessibilityLabel={label} onPress={onPress} hitSlop={6} style={{ paddingVertical: 8 }}>
       <Row gap={12} align="flex-start">
         <View style={{ width: 22, height: 22, borderRadius: 7, alignItems: "center", justifyContent: "center", backgroundColor: on ? colors.accent.ember : colors.bg.raised, borderWidth: on ? 0 : 1, borderColor: colors.border.strong }}>
           {on ? <Icon name="check" size={14} color={colors.accent.on} strokeWidth={2.6} /> : null}

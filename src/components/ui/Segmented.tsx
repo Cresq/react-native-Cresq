@@ -43,7 +43,7 @@ export function Segmented({ segments, value, onChange, size = "L" }: { segments:
             onPress={() => onChange(s.key)}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
-            style={({ pressed }) => ({ flex: 1, flexDirection: "row", gap: 7, alignItems: "center", justifyContent: "center", paddingVertical: size === "L" ? 10 : 8, borderRadius: radius.pill, opacity: pressed && !on ? 0.7 : 1 })}
+            style={({ pressed }) => ({ flex: 1, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", paddingVertical: size === "L" ? 10 : 8, borderRadius: radius.pill, opacity: pressed && !on ? 0.7 : 1 })}
           >
             {s.icon ? <Icon name={s.icon} size={17} color={fg} strokeWidth={2} /> : null}
             <Txt variant={size === "L" ? "labelL" : "labelM"} style={{ color: fg }}>

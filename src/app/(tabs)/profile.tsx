@@ -53,13 +53,13 @@ export default function Profile() {
     [favourites, db.exercises, db.sessions],
   );
 
-  const gap = 6;
+  const gap = 8;
   const tile = Math.floor((Math.min(width, 520) - layout.screenInset * 2 - gap * 2) / 3);
   const unfavourite = (id: string) => update((d) => ({ ...d, profile: { ...d.profile, favourites: (d.profile.favourites ?? DEFAULT_FAVOURITES).filter((x) => x !== id) } }));
 
   return (
     <Screen tabs>
-      <Row gap={10}>
+      <Row gap={12}>
         <Txt variant="displayXL" style={{ flex: 1 }}>
           {t("Profile")}
         </Txt>
@@ -68,7 +68,7 @@ export default function Profile() {
 
       <Row gap={16}>
         <Avatar source={photos.selfie} size={72} />
-        <View style={{ flex: 1, gap: 3 }}>
+        <View style={{ flex: 1, gap: 4 }}>
           <Txt variant="displayL">{db.profile.name}</Txt>
           <Txt variant="bodyS" tone="secondary">
             {db.profile.handle}
@@ -134,8 +134,8 @@ export default function Profile() {
             {lifts.map((l, i) => (
               <View key={l.ex.id}>
                 {i > 0 ? <Divider /> : null}
-                <Row gap={14}>
-                  <Pressable accessibilityRole="button" onPress={() => router.push(`/progress/${l.ex.id}`)} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
+                <Row gap={12}>
+                  <Pressable accessibilityRole="button" onPress={() => router.push(`/progress/${l.ex.id}`)} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
                     <View style={{ flex: 1, gap: 2 }}>
                       <Txt variant="labelL">{l.ex.name}</Txt>
                       <Txt variant="bodyS" tone="tertiary">
@@ -144,7 +144,7 @@ export default function Profile() {
                     </View>
                     {l.current !== null ? (
                       <View style={{ alignItems: "flex-end", gap: 1 }}>
-                        <Row gap={3} align="baseline">
+                        <Row gap={4} align="baseline">
                           <Txt variant="numberM" tabular>
                             {l.current}
                           </Txt>
@@ -168,7 +168,7 @@ export default function Profile() {
               </View>
             ))}
             {lifts.length ? <Divider /> : null}
-            <Pressable accessibilityRole="button" onPress={() => router.push("/exercises?favourite=1")} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
+            <Pressable accessibilityRole="button" onPress={() => router.push("/exercises?favourite=1")} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
               <Icon name="addPlus" size={18} color={colors.text.secondary} strokeWidth={2} />
               <Txt variant="labelL" tone="secondary" style={{ flex: 1 }}>
                 {t("Add a lift")}

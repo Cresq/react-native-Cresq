@@ -82,7 +82,7 @@ export default function PlanEditor() {
     <Screen bottom={90} footer={<Button label={session && !session.finishedAt ? t("Continue session") : t("Start this workout")} iconRight="arrowRight" onPress={begin} disabled={plan.exercises.length === 0} />}>
       <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Workout")} subtitle={`${t("{n} exercises", { n: plan.exercises.length })}, ${t("{n} min", { n: estimateMinutes(plan) })}`} right={<IconButton name="trash" onPress={() => setSheet({ kind: "delete" })} accessibilityLabel={t("Delete workout")} />} />
 
-      <View style={{ gap: 10 }}>
+      <View style={{ gap: 12 }}>
         <Field label={t("Name")} value={plan.name} onChangeText={(v) => patch((p) => ({ ...p, name: v }))} placeholder={t("Push day")} />
         <Field label={t("Focus")} value={plan.focus} onChangeText={(v) => patch((p) => ({ ...p, focus: v }))} placeholder={t("Chest, shoulders, triceps")} />
       </View>
@@ -129,7 +129,7 @@ export default function PlanEditor() {
 
               {isOpen ? (
                 <View style={{ gap: 4, paddingTop: 12 }}>
-                  <Row gap={8} style={{ paddingHorizontal: 6, paddingBottom: 4 }}>
+                  <Row gap={8} style={{ paddingHorizontal: 8, paddingBottom: 4 }}>
                     <Txt variant="labelS" tone="tertiary" style={{ width: 28 }}>
                       {t("Set")}
                     </Txt>
@@ -144,7 +144,7 @@ export default function PlanEditor() {
                   {sets.map((s, si) => {
                     if (s.type === "working") working++;
                     return (
-                      <View key={si} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4, paddingHorizontal: 6, borderRadius: radius.setRow }}>
+                      <View key={si} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4, paddingHorizontal: 8, borderRadius: radius.setRow }}>
                         <Pressable accessibilityRole="button" accessibilityLabel={t("Set type")} hitSlop={6} onPress={() => setSheet({ kind: "type", index: i, set: si })} style={{ width: 28 }}>
                           <Txt variant="labelL" tone={s.type === "warmup" ? "tertiary" : "primary"}>
                             {typeLabel(s.type, working)}
@@ -162,14 +162,14 @@ export default function PlanEditor() {
                       </View>
                     );
                   })}
-                  <Row gap={10} style={{ paddingTop: 8, paddingHorizontal: 6 }}>
-                    <Pressable accessibilityRole="button" onPress={() => setSets(i, [...sets, { ...(sets[sets.length - 1] ?? { kg: e.kg, reps: e.reps }), type: "working" }])} hitSlop={6} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6 }}>
+                  <Row gap={12} style={{ paddingTop: 8, paddingHorizontal: 8 }}>
+                    <Pressable accessibilityRole="button" onPress={() => setSets(i, [...sets, { ...(sets[sets.length - 1] ?? { kg: e.kg, reps: e.reps }), type: "working" }])} hitSlop={6} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8 }}>
                       <Icon name="addPlus" size={14} color={colors.text.secondary} strokeWidth={2.2} />
                       <Txt variant="labelM" tone="secondary">
                         {t("Add set")}
                       </Txt>
                     </Pressable>
-                    <Pressable accessibilityRole="button" accessibilityLabel={t("Rest between sets")} onPress={() => setSheet({ kind: "rest", index: i })} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingLeft: 10, paddingRight: 8, height: 32, borderRadius: radius.pill, backgroundColor: colors.bg.raised }}>
+                    <Pressable accessibilityRole="button" accessibilityLabel={t("Rest between sets")} onPress={() => setSheet({ kind: "rest", index: i })} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 12, paddingRight: 8, height: 32, borderRadius: radius.pill, backgroundColor: colors.bg.raised }}>
                       <Icon name="timer" size={13} color={colors.text.secondary} strokeWidth={1.9} />
                       <Txt variant="labelS">{t("{time} rest", { time: fmtTime(e.restSeconds) })}</Txt>
                       <Icon name="chevronDown" size={12} color={colors.text.tertiary} strokeWidth={2.2} />
@@ -181,7 +181,7 @@ export default function PlanEditor() {
           );
         })}
         {plan.exercises.length ? (
-          <Pressable accessibilityRole="button" onPress={() => router.push(`/exercises?plan=${plan.id}`)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingHorizontal: 14 }}>
+          <Pressable accessibilityRole="button" onPress={() => router.push(`/exercises?plan=${plan.id}`)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 16 }}>
             <Icon name="addPlus" size={16} color={colors.text.secondary} strokeWidth={2} />
             <Txt variant="labelM" tone="secondary">
               {t("Add exercise")}

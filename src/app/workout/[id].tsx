@@ -123,7 +123,7 @@ export default function SessionDetail() {
 
       <SessionBreakdown exercises={exercises} />
 
-      <Row gap={6}>
+      <Row gap={8}>
         <Icon name={s.shared ? "users" : "lock"} size={13} color={colors.text.tertiary} strokeWidth={1.8} />
         <Txt variant="labelS" tone="tertiary">
           {s.shared ? t("Shared to your feed") : t("Private")}
@@ -151,7 +151,7 @@ export default function SessionDetail() {
           </>
         ) : null}
         {menu === "caption" ? (
-          <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
+          <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
             <Field label={t("Caption")} value={captionText} onChangeText={setCaptionText} placeholder={t("How did it go?")} multiline autoFocus />
             <Button label={t("Save caption")} onPress={() => { update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, caption: captionText.trim() } : x)) })); setMenu(null); }} />
           </View>

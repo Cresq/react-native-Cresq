@@ -30,7 +30,7 @@ export function WorkoutTile({ name, date, photo, records, size, onPress }: { nam
           </Txt>
         </View>
       ) : null}
-      <View style={{ position: "absolute", left: 8, bottom: 8, paddingVertical: 3, paddingHorizontal: 7, borderRadius: 999, backgroundColor: photo ? colors.bg.ground : "transparent", opacity: photo ? 0.9 : 1 }}>
+      <View style={{ position: "absolute", left: 8, bottom: 8, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 999, backgroundColor: photo ? colors.bg.ground : "transparent", opacity: photo ? 0.9 : 1 }}>
         <Txt variant="labelS" tone={photo ? "primary" : "tertiary"}>
           {date}
         </Txt>

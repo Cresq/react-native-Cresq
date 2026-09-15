@@ -10,6 +10,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { fmtTime, sessionStats, useWorkout } from "@/store/workout";
 import { springs, to } from "@/motion";
 import { Txt } from "./ui/Text";
+import { Pill } from "./ui/Pill";
 import { Icon, type IconName } from "./ui/Icon";
 import { Press } from "./ui/Press";
 import { useT } from "@/i18n";
@@ -97,14 +98,14 @@ function RunningStrip() {
   if (!running || !session) {
     if (!lastDiscarded) return null;
     return (
-      <View style={[{ marginHorizontal: layout.tabBarInset, marginBottom: 8, borderRadius: radius.pill, backgroundColor: colors.bg.raised, flexDirection: "row", alignItems: "center", paddingVertical: 10, paddingLeft: 16, paddingRight: 8, gap: 12 }, shadow.floating]}>
+      <View style={[{ marginHorizontal: layout.tabBarInset, marginBottom: 8, borderRadius: radius.pill, backgroundColor: colors.bg.raised, flexDirection: "row", alignItems: "center", paddingVertical: 12, paddingLeft: 16, paddingRight: 8, gap: 12 }, shadow.floating]}>
         <View style={{ flex: 1, gap: 1 }}>
           <Txt variant="labelL">{t("Session discarded")}</Txt>
           <Txt variant="labelS" tone="tertiary" numberOfLines={1}>
             {t("{plan}, nothing was saved", { plan: lastDiscarded.planName })}
           </Txt>
         </View>
-        <StripPill label={t("Undo")} accent onPress={undoDiscard} />
+        <Pill label={t("Undo")} tone="accent" onPress={undoDiscard} />
       </View>
     );
   }
@@ -113,7 +114,7 @@ function RunningStrip() {
   const resting = !!rest;
   return (
     <Animated.View style={[style, { marginHorizontal: layout.tabBarInset, marginBottom: 8, borderRadius: radius.pill, backgroundColor: resting ? colors.bg.raised : colors.accent.ember, flexDirection: "row", alignItems: "center", paddingRight: 8 }, shadow.floating]}>
-      <Pressable accessibilityRole="button" accessibilityLabel={t("Return to your running session")} onPress={() => router.push("/workout/active")} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingLeft: 16, paddingRight: 8, opacity: pressed ? 0.8 : 1 })}>
+      <Pressable accessibilityRole="button" accessibilityLabel={t("Return to your running session")} onPress={() => router.push("/workout/active")} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingLeft: 16, paddingRight: 8, opacity: pressed ? 0.8 : 1 })}>
         <Pulse color={resting ? colors.accent.ember : colors.accent.on} />
         <View style={{ flex: 1, gap: 1 }}>
           <Txt variant="labelL" style={{ color: resting ? colors.text.primary : colors.accent.on }} numberOfLines={1}>
@@ -130,10 +131,10 @@ function RunningStrip() {
         )}
       </Pressable>
       {resting ? (
-        <View style={{ flexDirection: "row", gap: 6 }}>
-          <StripPill label="−15" onPress={() => adjustRest(-15)} />
-          <StripPill label="+15" onPress={() => adjustRest(15)} />
-          <StripPill label={t("Skip")} accent onPress={skipRest} />
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Pill label="−15" accessibilityLabel={t("15 seconds less")} onPress={() => adjustRest(-15)} />
+          <Pill label="+15" accessibilityLabel={t("15 seconds more")} onPress={() => adjustRest(15)} />
+          <Pill label={t("Skip")} tone="accent" accessibilityLabel={t("Skip rest")} onPress={skipRest} />
         </View>
       ) : (
         <Icon name="chevronRight" size={16} color={colors.accent.on} strokeWidth={2.2} />
@@ -142,16 +143,6 @@ function RunningStrip() {
   );
 }
 
-function StripPill({ label, onPress, accent }: { label: string; onPress: () => void; accent?: boolean }) {
-  const { colors, radius } = useTheme();
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label === "Skip" ? "Skip rest" : `${label} seconds`} onPress={onPress} style={({ pressed }) => ({ paddingHorizontal: 12, height: 36, justifyContent: "center", borderRadius: radius.pill, backgroundColor: accent ? colors.accent.ember : colors.bg.surface, opacity: pressed ? 0.8 : 1 })}>
-      <Txt variant="buttonM" style={{ color: accent ? colors.accent.on : colors.text.primary }}>
-        {label}
-      </Txt>
-    </Pressable>
-  );
-}
 
 /** A slow breath, one cycle every two seconds: alive, not blinking. */
 function Pulse({ color }: { color: string }) {

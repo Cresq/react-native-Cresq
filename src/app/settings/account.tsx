@@ -95,7 +95,7 @@ export default function Account() {
         <Divider />
         <Setting label={t("Product emails")} sub={t("News about CresQ, at most twice a month. No partner offers.")} value={c.marketing} onChange={(v) => setConsent({ marketing: v })} />
         {c.termsAcceptedAt ? (
-          <Txt variant="labelS" tone="tertiary" style={{ paddingTop: 10 }}>
+          <Txt variant="labelS" tone="tertiary" style={{ paddingTop: 12 }}>
             {t("Terms and Privacy Policy accepted on {date}.", { date: longDate(c.termsAcceptedAt) })}
           </Txt>
         ) : null}
@@ -155,7 +155,7 @@ export default function Account() {
 
 function Setting({ label, sub, value, onChange, disabled }: { label: string; sub: string; value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
-    <Row gap={14} style={{ paddingVertical: 12, opacity: disabled ? 0.5 : 1 }}>
+    <Row gap={12} style={{ paddingVertical: 12, opacity: disabled ? 0.5 : 1 }}>
       <View style={{ flex: 1, gap: 2 }}>
         <Txt variant="labelL">{label}</Txt>
         <Txt variant="bodyS" tone="tertiary">

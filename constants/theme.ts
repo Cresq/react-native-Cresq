@@ -30,7 +30,12 @@ export type Colors = {
   [G in keyof typeof darkColors]: { [K in keyof (typeof darkColors)[G]]: string };
 };
 
-export const spacing = { 1: 4, 2: 6, 3: 8, 4: 10, 5: 12, 6: 14, 7: 16, 8: 18, 9: 20, 10: 24, 12: 32, 14: 40 } as const;
+/**
+ * A 4 pt grid. Every gap, padding and inset is one of these; nothing in between.
+ * The two exceptions are the 1 and 2 pt nudges that hold a label against the
+ * figure it belongs to, which are typography, not layout.
+ */
+export const spacing = { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32, 10: 40, 12: 48 } as const;
 
 export const radius = {
   pill: 999,

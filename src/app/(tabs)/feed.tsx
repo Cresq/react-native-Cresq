@@ -86,7 +86,7 @@ export default function Feed() {
   return (
     <Screen tabs>
       <View style={{ gap: 16 }}>
-        <Row gap={10}>
+        <Row gap={12}>
           <Txt variant="displayXL" style={{ flex: 1 }}>
             {t("Feed")}
           </Txt>
@@ -100,15 +100,15 @@ export default function Feed() {
       </View>
 
       {live.length ? (
-        <View style={{ gap: 10 }}>
+        <View style={{ gap: 12 }}>
           <Txt variant="labelS" tone="tertiary">
             {t("Training right now")}
           </Txt>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 18, paddingRight: 20 }} style={{ marginHorizontal: -20, paddingHorizontal: 20 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingRight: 20 }} style={{ marginHorizontal: -20, paddingHorizontal: 20 }}>
             {live.map((p) => {
               const prog = liveProgress(p.live!);
               return (
-                <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={t("{name} is training now", { name: p.name })} onPress={() => router.push(`/live/${p.id}`)} style={({ pressed }) => ({ alignItems: "center", gap: 6, width: 72, opacity: pressed ? 0.7 : 1 })}>
+                <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={t("{name} is training now", { name: p.name })} onPress={() => router.push(`/live/${p.id}`)} style={({ pressed }) => ({ alignItems: "center", gap: 8, width: 72, opacity: pressed ? 0.7 : 1 })}>
                   <View style={{ padding: 3, borderRadius: 32, borderWidth: 2, borderColor: colors.status.danger }}>
                     <Avatar source={p.avatar} size={50} initial={p.name[0]} />
                   </View>
@@ -140,9 +140,9 @@ export default function Feed() {
         {commentsFor ? (
           <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
             {[...seedComments(commentsFor), ...(comments[commentsFor.id] ?? [])].map((c, i) => (
-              <Row key={i} gap={10} align="flex-start">
+              <Row key={i} gap={12} align="flex-start">
                 <Avatar source={c.avatar} size={32} initial={c.name[0]} />
-                <View style={{ flex: 1, gap: 2, backgroundColor: colors.bg.raised, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 9 }}>
+                <View style={{ flex: 1, gap: 2, backgroundColor: colors.bg.raised, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8 }}>
                   <Txt variant="labelM">{c.name}</Txt>
                   <Txt variant="bodyM" tone="secondary">
                     {c.text}
@@ -175,7 +175,7 @@ export default function Feed() {
         subtitle={reported ? t("We look at every report within two days.") : moreView === "delete" ? t("It disappears from the feed and from your log. Records from it are recalculated. This cannot be undone.") : moreView === "caption" ? (more?.title ?? undefined) : undefined}
       >
         {!reported && more && moreView === "caption" ? (
-          <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
+          <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
             <Field label={t("Caption")} value={captionText} onChangeText={setCaptionText} placeholder={t("How did it go?")} multiline autoFocus />
             <Button label={t("Save caption")} onPress={() => { patchSession(more.id, (x) => ({ ...x, caption: captionText.trim() })); closeMore(); }} />
           </View>

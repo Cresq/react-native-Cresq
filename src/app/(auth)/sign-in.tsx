@@ -35,7 +35,7 @@ export default function SignIn() {
       </Pressable>
       <Button label={t("Sign in")} onPress={go} style={{ marginTop: 6 }} />
       <BottomSheet visible={forgot} onClose={() => { setForgot(false); setSent(false); }} title={t("Reset your password")} subtitle={sent ? undefined : t("We email you a link. It works for one hour.")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 10 }}>
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
           {sent ? (
             <Txt variant="bodyM" tone="secondary">
               {t("If an account exists for {email}, a reset link is on its way. Check your spam folder too.", { email: email || t("that address") })}

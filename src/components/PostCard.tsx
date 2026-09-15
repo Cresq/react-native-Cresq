@@ -54,8 +54,8 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
   const { toggleLike, heartStyle, ringStyle } = useLikeMotion(liked, setLiked);
   return (
     <Card padding={0} gap={0} style={{ overflow: "hidden" }}>
-      <Row style={{ paddingHorizontal: 16, paddingVertical: 14 }} gap={10}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t("{name}'s profile", { name: post.name })} disabled={!post.userId} onPress={() => router.push(`/user/${post.userId}`)} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10 }}>
+      <Row style={{ paddingHorizontal: 16, paddingVertical: 12 }} gap={12}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t("{name}'s profile", { name: post.name })} disabled={!post.userId} onPress={() => router.push(`/user/${post.userId}`)} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 12 }}>
           <Avatar source={post.avatar} size={36} initial={post.name[0]} />
           <View style={{ flex: 1, gap: 1 }}>
             <Txt variant="labelL">{post.name}</Txt>
@@ -83,7 +83,7 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
       ) : null}
       <View style={{ paddingHorizontal: 16, paddingTop: post.photo ? 14 : 4, paddingBottom: 16, gap: 12 }}>
         {/* The workout's name, then what was said about it, then what it held. */}
-        <Pressable accessibilityRole={onPress ? "button" : undefined} accessibilityLabel={t("Open this workout")} disabled={!onPress} onPress={onPress} style={{ gap: 10 }}>
+        <Pressable accessibilityRole={onPress ? "button" : undefined} accessibilityLabel={t("Open this workout")} disabled={!onPress} onPress={onPress} style={{ gap: 12 }}>
           {post.title ? <Txt variant="displayS">{post.title}</Txt> : null}
           <Txt variant="bodyM" tone="secondary">
             {post.caption}
@@ -93,7 +93,7 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
             <View style={{ gap: 0 }}>
               {/* Three exercises at most. The rest is one tap away, on the post's own page. */}
               {(post.exercises ?? []).slice(0, 3).map((e, i) => (
-                <View key={i} style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12, paddingVertical: 5 }}>
+                <View key={i} style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12, paddingVertical: 4 }}>
                   <Txt variant="labelM" style={{ flex: 1 }} numberOfLines={1}>
                     {e.name}
                   </Txt>
@@ -121,7 +121,7 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
           </Txt>
         ) : (
           <Row gap={20}>
-            <Pressable onPress={toggleLike} accessibilityRole="button" accessibilityLabel={t("Like")} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Pressable onPress={toggleLike} accessibilityRole="button" accessibilityLabel={t("Like")} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <View style={{ width: 20, height: 20, alignItems: "center", justifyContent: "center" }}>
                 <Animated.View pointerEvents="none" style={[{ position: "absolute", width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: colors.accent.ember }, ringStyle]} />
                 <Animated.View style={heartStyle}>
@@ -132,7 +132,7 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
                 {likes}
               </Txt>
             </Pressable>
-            <Pressable onPress={onComment} disabled={!onComment} accessibilityRole="button" accessibilityLabel={t("Comments")} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Pressable onPress={onComment} disabled={!onComment} accessibilityRole="button" accessibilityLabel={t("Comments")} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Icon name="chatCircle" size={20} color={colors.text.secondary} strokeWidth={1.8} />
               <Txt variant="labelM" tone="secondary">
                 {post.comments}
