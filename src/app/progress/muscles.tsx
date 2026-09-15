@@ -11,8 +11,6 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/Icon";
 import { Divider } from "@/components/ui/Card";
 import { Segmented } from "@/components/ui/Segmented";
-import { Card } from "@/components/ui/Card";
-import { BodyMap } from "@/components/BodyMap";
 
 /**
  * What each muscle group actually got. Sets lead, because that is what people
@@ -32,7 +30,6 @@ export default function Muscles() {
   const peak = Math.max(1, ...rows.map((r) => r.sets));
   const total = rows.reduce((n, r) => n + r.sets, 0);
   const untouched = rows.filter((r) => r.sets === 0);
-  const byGroup = useMemo(() => Object.fromEntries(rows.map((r) => [r.group, r.sets])), [rows]);
 
   return (
     <Screen>
@@ -55,12 +52,6 @@ export default function Muscles() {
           </Txt>
         </View>
       ) : (
-        <Card padding={20} gap={16}>
-          <BodyMap load={byGroup} peak={peak} />
-        </Card>
-      )}
-
-      {total === 0 ? null : (
         <View>
           {rows
             .filter((r) => r.sets > 0)
