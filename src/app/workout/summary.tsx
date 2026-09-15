@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
-import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
@@ -33,7 +32,10 @@ export default function Summary() {
   const router = useRouter();
   const t = useT();
   const { db } = useDb();
-  const { session, file, setPhoto, setCaption, setShare } = useWorkout();
+  const { session, file, setPhoto, setCaption, setShare, setGym } = useWorkout();
+  const [gymSheet, setGymSheet] = useState(false);
+  const [gymText, setGymText] = useState("");
+  const gyms = db.profile.gyms ?? [];
   const share: SharePrefs = session?.share ?? { exercises: true, stats: true, records: true };
   const flip = (key: keyof SharePrefs) => setShare({ ...share, [key]: !share[key] });
   const [photoSheet, setPhotoSheet] = useState(false);
@@ -75,7 +77,7 @@ export default function Summary() {
     <Screen bottom={170} footer={footer}>
       <Header left={<IconButton name="close" onPress={savePrivately} accessibilityLabel={t("Close")} />} title={t("Session complete")} subtitle={`${session?.planName ?? t("Session")}, ${longDate(session?.startedAt ?? Date.now())}`} />
 
-      <Animated.View entering={FadeInUp.duration(360).delay(60)} style={{ gap: 12, paddingTop: 8 }}>
+      <View style={{ gap: 12, paddingTop: 8 }}>
         {record ? (
           <>
             <Chip label={recs.length > 1 ? t("{n} new personal records", { n: recs.length }) : t("New personal record")} icon="trophy" tone="gold" size="S" style={{ alignSelf: "flex-start" }} />
@@ -96,9 +98,9 @@ export default function Summary() {
             </Txt>
           </>
         )}
-      </Animated.View>
+      </View>
 
-      <Animated.View entering={FadeInDown.duration(360).delay(180)}>
+      <View>
       <Row gap={12} align="stretch">
         <Stat label={t("Duration")} value={String(stats.minutes)} unit="min" />
         <StatDivider />
@@ -106,7 +108,7 @@ export default function Summary() {
         <StatDivider />
         <Stat label={t("Sets")} value={String(stats.setsDone)} unit={t("of {n}", { n: stats.setsTotal })} />
       </Row>
-      </Animated.View>
+      </View>
 
       <Section title={t("Your post")} gap={12}>
         {session?.photo ? (
@@ -129,6 +131,13 @@ export default function Summary() {
           </Pressable>
         )}
         <Field label={t("Caption")} value={session?.caption ?? ""} onChangeText={setCaption} placeholder={t("How did it go?")} multiline />
+        <Pressable accessibilityRole="button" accessibilityLabel={t("Where did you train?")} onPress={() => { setGymText(session?.gym ?? ""); setGymSheet(true); }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
+          <Icon name="mapPin" size={16} color={session?.gym ? colors.accent.ember : colors.text.tertiary} strokeWidth={1.9} />
+          <Txt variant="labelL" tone={session?.gym ? "primary" : "tertiary"} style={{ flex: 1 }}>
+            {session?.gym || t("Add the gym")}
+          </Txt>
+          <Icon name="chevronRight" size={16} color={colors.text.tertiary} strokeWidth={2} />
+        </Pressable>
         <View>
           <Txt variant="labelS" tone="tertiary" style={{ paddingBottom: 4 }}>
             {t("What your post shows")}
@@ -140,6 +149,25 @@ export default function Summary() {
           <ShareRow label={t("New records")} value={share.records} onChange={() => flip("records")} />
         </View>
       </Section>
+
+      <BottomSheet visible={gymSheet} onClose={() => setGymSheet(false)} title={t("Where did you train?")} subtitle={t("It shows with a pin on your post. Your gyms are remembered for next time.")}>
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
+          <Field label={t("Gym")} value={gymText} onChangeText={setGymText} placeholder={t("Name of the gym")} autoFocus />
+          {gyms.length ? (
+            <View style={{ gap: 8 }}>
+              <Txt variant="labelS" tone="tertiary">
+                {t("Places you train")}
+              </Txt>
+              <Row gap={8} style={{ flexWrap: "wrap" }}>
+                {gyms.map((g) => (
+                  <Chip key={g} label={g} selected={gymText === g} onPress={() => setGymText(g)} />
+                ))}
+              </Row>
+            </View>
+          ) : null}
+          <Button label={gymText.trim() ? t("Save") : t("Leave it out")} onPress={() => { setGym(gymText); setGymSheet(false); }} />
+        </View>
+      </BottomSheet>
 
       <BottomSheet visible={photoSheet} onClose={() => setPhotoSheet(false)} title={t("Add a photo")} subtitle={t("It goes on this session, and on your post if you share it.")}>
         <SheetOption icon="camera" label={t("Take a photo")} onPress={() => choose("camera")} />

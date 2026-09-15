@@ -123,6 +123,15 @@ export default function SessionDetail() {
 
       <SessionBreakdown exercises={exercises} />
 
+      {s.gym ? (
+        <Row gap={4}>
+          <Icon name="mapPin" size={14} color={colors.text.tertiary} strokeWidth={1.9} />
+          <Txt variant="labelM" tone="secondary">
+            {s.gym}
+          </Txt>
+        </Row>
+      ) : null}
+
       <Row gap={8}>
         <Icon name={s.shared ? "users" : "lock"} size={13} color={colors.text.tertiary} strokeWidth={1.8} />
         <Txt variant="labelS" tone="tertiary">

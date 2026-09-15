@@ -67,6 +67,7 @@ type WorkoutState = {
   toggleSuperset: (entryId: string) => void;
   groupExercises: (ids: string[]) => void;
   setShare: (share: SharePrefs) => void;
+  setGym: (gym: string) => void;
   adjustRest: (delta: number) => void;
   skipRest: () => void;
 };
@@ -261,14 +262,28 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
   const setRestSeconds = useCallback((exerciseId: string, seconds: number) => mutate((s) => mapEx(s, exerciseId, (e) => ({ ...e, restSeconds: seconds }))), [mutate]);
   const setNote = useCallback((exerciseId: string, note: string) => mutate((s) => mapEx(s, exerciseId, (e) => ({ ...e, note }))), [mutate]);
   const setShare = useCallback((share: SharePrefs) => mutate((s) => ({ ...s, share })), [mutate]);
+  /** Name where you trained, and keep it at the top of the list for next time. */
+  const setGym = useCallback(
+    (gym: string) =>
+      update((d) => {
+        const name = gym.trim();
+        const rest = (d.profile.gyms ?? []).filter((g) => g.toLowerCase() !== name.toLowerCase());
+        return {
+          ...d,
+          activeSession: d.activeSession ? { ...d.activeSession, gym: name || undefined } : d.activeSession,
+          profile: { ...d.profile, gyms: name ? [name, ...rest].slice(0, 8) : rest },
+        };
+      }),
+    [update],
+  );
   const setCaption = useCallback((caption: string) => mutate((s) => ({ ...s, caption })), [mutate]);
   const setPhoto = useCallback((photo: string | null) => mutate((s) => ({ ...s, photo: photo ?? undefined })), [mutate]);
   const adjustRest = useCallback((delta: number) => setRest((r) => (r ? { ...r, left: Math.max(1, r.left + delta), total: Math.max(r.total, r.left + delta) } : r)), []);
   const skipRest = useCallback(() => setRest(null), []);
 
   const value = useMemo<WorkoutState>(
-    () => ({ session, rest, lastDiscarded, undoDiscard, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, setShare, adjustRest, skipRest }),
-    [session, rest, lastDiscarded, undoDiscard, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, setShare, adjustRest, skipRest],
+    () => ({ session, rest, lastDiscarded, undoDiscard, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, setShare, setGym, adjustRest, skipRest }),
+    [session, rest, lastDiscarded, undoDiscard, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, setShare, setGym, adjustRest, skipRest],
   );
   return <WorkoutContext.Provider value={value}>{children}</WorkoutContext.Provider>;
 }

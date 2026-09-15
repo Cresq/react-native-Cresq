@@ -614,4 +614,12 @@ export const nl: Record<string, string> = {
   "No sessions": "Geen sessies",
   "Volume is weight times reps, warm-up sets left out.": "Volume is gewicht maal herhalingen, warming-upsets tellen niet mee.",
   "{n} session": "{n} sessie",
+  "15 seconds less": "15 seconden minder",
+  "15 seconds more": "15 seconden meer",
+  "Where did you train?": "Waar heb je getraind?",
+  "Add the gym": "Voeg de sportschool toe",
+  "It shows with a pin on your post. Your gyms are remembered for next time.": "Het komt met een speld op je post te staan. Je sportscholen worden onthouden voor de volgende keer.",
+  "Name of the gym": "Naam van de sportschool",
+  "Places you train": "Waar je traint",
+  "Leave it out": "Laat het weg",
 };

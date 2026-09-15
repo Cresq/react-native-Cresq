@@ -40,6 +40,8 @@ export type Session = {
   photo?: string;
   /** What a shared post shows. Everything on when absent. */
   share?: SharePrefs;
+  /** Where you trained, shown with a pin on the post. Free text for now; a map lookup can fill it later. */
+  gym?: string;
 };
 
 export type SharePrefs = { exercises: boolean; stats: boolean; records: boolean };
@@ -70,6 +72,8 @@ export type Profile = {
   /** Let followers watch a session while it runs. Off by default. */
   shareLive?: boolean;
   language?: "nl" | "en";
+  /** Gyms you have trained at, most recent first, offered when a session asks where you were. */
+  gyms?: string[];
   /** When the feed was last opened; Home lists what followed people did since. */
   lastFeedSeen?: number;
 };

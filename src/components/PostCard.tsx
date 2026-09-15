@@ -13,6 +13,7 @@ import { Chip } from "./ui/Chip";
 import { Row } from "./ui/Screen";
 import { useT } from "@/i18n";
 import type { BreakdownExercise } from "./SessionBreakdown";
+import { Stat, StatDivider } from "./StatCard";
 import { PhotoViewer } from "./PhotoViewer";
 
 export type Post = {
@@ -25,6 +26,8 @@ export type Post = {
   photo?: ImageSourcePropType;
   /** The workout's own name, the first thing a post says. */
   title?: string;
+  /** Where it happened. Shown with a pin under the caption. */
+  place?: string;
   photoHeight?: number;
   /** Shown instead of a photo: what the session contained. */
   exercises?: { name: string; detail: string }[];
@@ -54,18 +57,21 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
   const { toggleLike, heartStyle, ringStyle } = useLikeMotion(liked, setLiked);
   return (
     <Card padding={0} gap={0} style={{ overflow: "hidden" }}>
-      <Row style={{ paddingHorizontal: 16, paddingVertical: 12 }} gap={12}>
+      {/* Avatar and the two lines beside it are the same height, so they share one centre line. */}
+      <Row style={{ paddingHorizontal: 16, paddingVertical: 12 }} gap={12} align="center">
         <Pressable accessibilityRole="button" accessibilityLabel={t("{name}'s profile", { name: post.name })} disabled={!post.userId} onPress={() => router.push(`/user/${post.userId}`)} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <Avatar source={post.avatar} size={36} initial={post.name[0]} />
-          <View style={{ flex: 1, gap: 1 }}>
-            <Txt variant="labelL">{post.name}</Txt>
-            <Txt variant="labelS" tone="tertiary">
+          <Avatar source={post.avatar} size={40} initial={post.name[0]} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Txt variant="labelL" numberOfLines={1}>
+              {post.name}
+            </Txt>
+            <Txt variant="labelS" tone="tertiary" numberOfLines={1}>
               {t(post.meta)}
             </Txt>
           </View>
         </Pressable>
         {onMore ? (
-          <Pressable accessibilityRole="button" accessibilityLabel={t("Post options")} hitSlop={10} onPress={onMore}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("Post options")} hitSlop={8} onPress={onMore} style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
             <Icon name="moreHorizontal" size={20} color={colors.text.tertiary} />
           </Pressable>
         ) : null}
@@ -88,6 +94,25 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
           <Txt variant="bodyM" tone="secondary">
             {post.caption}
           </Txt>
+          {post.place ? (
+            <Row gap={4}>
+              <Icon name="mapPin" size={13} color={colors.text.tertiary} strokeWidth={1.9} />
+              <Txt variant="labelS" tone="tertiary" numberOfLines={1}>
+                {post.place}
+              </Txt>
+            </Row>
+          ) : null}
+          {/* The figures sit under the caption, at the size the rest of the app gives a figure. */}
+          {post.stats.length ? (
+            <Row gap={12} align="stretch" style={{ paddingTop: 4 }}>
+              {post.stats.map((s, i) => (
+                <View key={i} style={{ flexDirection: "row", flex: 1 }}>
+                  {i > 0 ? <StatDivider /> : null}
+                  <Stat size="M" label={s.unit === "min" ? t("Duration") : s.unit === "kg" ? t("Volume") : t("Sets")} value={s.value} unit={s.unit === "sets" ? undefined : s.unit} />
+                </View>
+              ))}
+            </Row>
+          ) : null}
           {!post.photo && post.record ? <Chip label={t(post.record)} icon="trophy" tone="gold" size="S" style={{ alignSelf: "flex-start" }} /> : null}
           {!post.photo && (post.exercises ?? []).length ? (
             <View style={{ gap: 0 }}>
@@ -108,11 +133,6 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
                 </Txt>
               ) : null}
             </View>
-          ) : null}
-          {post.stats.length ? (
-            <Txt variant="labelS" tone="tertiary" tabular>
-              {post.stats.map((s) => `${s.value} ${s.unit}`).join(", ")}
-            </Txt>
           ) : null}
         </Pressable>
         {preview ? (

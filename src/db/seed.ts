@@ -145,7 +145,7 @@ export function createSeedDb(): Db {
     plans,
     sessions: seedSampleSessions(exercises, plans),
     activeSession: null,
-    split: { name: "Push Pull Legs, 5 days", days: seedSplitDays(), nextIndex: 0 },
+    split: { name: "Push Pull Legs", days: seedSplitDays(), nextIndex: 0 },
     consent: { analytics: false, ageStats: false, marketing: false },
     following: ["u2", "u3", "u4", "u5", "u6", "u7"],
     blocked: [],
