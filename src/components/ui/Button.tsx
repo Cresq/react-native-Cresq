@@ -29,7 +29,7 @@ export type ButtonProps = Omit<PressableProps, "style" | "children"> & {
 };
 
 export function Button({ label, variant = "primary", size = "L", icon, iconRight, leading, trailing, loading, full = true, style, disabled, ...rest }: ButtonProps) {
-  const { colors, radius } = useTheme();
+  const { colors, radius, shadow } = useTheme();
   const palette: Record<Variant, { bg: string; fg: string; pressed: string }> = {
     primary: { bg: colors.accent.ember, fg: colors.accent.on, pressed: colors.accent.pressed },
     secondary: { bg: colors.bg.raised, fg: colors.text.primary, pressed: colors.border.strong },
@@ -46,7 +46,7 @@ export function Button({ label, variant = "primary", size = "L", icon, iconRight
       accessibilityRole="button"
       disabled={disabled || loading}
       scaleTo={0.97}
-      wrapperStyle={[{ alignSelf: full ? "stretch" : "flex-start", opacity: disabled ? 0.4 : 1 }, style]}
+      wrapperStyle={[{ alignSelf: full ? "stretch" : "flex-start", opacity: disabled ? 0.4 : 1 }, !disabled && size === "L" && (variant === "primary" || variant === "gold") ? (variant === "gold" ? shadow.gold : shadow.ember) : null, style]}
       {...rest}
       style={({ pressed }) => [styles.base, { height, borderRadius: size === "S" ? radius.pill : radius.button, backgroundColor: pressed ? p.pressed : p.bg, paddingHorizontal: size === "L" ? 20 : 16 }]}
     >

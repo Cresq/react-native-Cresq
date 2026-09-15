@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Platform, Pressable, View } from "react-native";
 import { BlurView } from "expo-blur";
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import type { ComponentProps } from "react";
@@ -66,7 +66,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
                 }}
                 style={{ flex: 1, height: "100%", alignItems: "center", justifyContent: "center", gap: 4 }}
               >
-                <Icon name={name} size={22} color={on ? colors.text.primary : colors.text.tertiary} strokeWidth={on ? 2 : 1.7} />
+                <TabIcon name={name} on={on} />
                 <Txt variant="labelS" tone={on ? "primary" : "tertiary"}>
                   {labels[route.name] ?? route.name}
                 </Txt>
@@ -156,4 +156,20 @@ function StripPill({ label, onPress, accent }: { label: string; onPress: () => v
 /** A slow breath, one cycle every two seconds: alive, not blinking. */
 function Pulse({ color }: { color: string }) {
   return <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />;
+}
+
+
+/** The chosen tab gives a short hop, so a tap lands somewhere. */
+function TabIcon({ name, on }: { name: IconName; on: boolean }) {
+  const { colors } = useTheme();
+  const s = useSharedValue(1);
+  useEffect(() => {
+    if (on) s.value = withSequence(withSpring(1.2, springs.snappy), withSpring(1, springs.snappy));
+  }, [on, s]);
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: s.value }] }));
+  return (
+    <Animated.View style={style}>
+      <Icon name={name} size={22} color={on ? colors.text.primary : colors.text.tertiary} strokeWidth={on ? 2 : 1.7} />
+    </Animated.View>
+  );
 }

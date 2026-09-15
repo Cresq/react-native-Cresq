@@ -5,7 +5,7 @@
 
 export const darkColors = {
   bg: { ground: "#151311", surface: "#1E1B18", raised: "#292520", inverse: "#F4EFE6" },
-  border: { subtle: "#2E2A25", strong: "#3D3831" },
+  border: { subtle: "#2E2A25", strong: "#3D3831", highlight: "rgba(255,255,255,0.06)" },
   text: { primary: "#F4EFE6", secondary: "#A8A197", tertiary: "#6F695F", inverse: "#16100A" },
   icon: { default: "#A8A197", strong: "#F4EFE6" },
   accent: { ember: "#F26B1D", pressed: "#D4581A", soft: "#3A2416", on: "#16100A" },
@@ -17,7 +17,7 @@ export const darkColors = {
 /** Proposed light theme. Same keys, second set of values. Not shipped in v1. */
 export const lightColors: Colors = {
   bg: { ground: "#F6F3EE", surface: "#FFFFFF", raised: "#EFEBE4", inverse: "#1B1815" },
-  border: { subtle: "#E3DED6", strong: "#CFC9BF" },
+  border: { subtle: "#E3DED6", strong: "#CFC9BF", highlight: "rgba(255,255,255,0.9)" },
   text: { primary: "#1B1815", secondary: "#5E5850", tertiary: "#8C867C", inverse: "#F6F3EE" },
   icon: { default: "#5E5850", strong: "#1B1815" },
   accent: { ember: "#E8621A", pressed: "#C9520F", soft: "#FDE6D8", on: "#1B1815" },
@@ -106,6 +106,10 @@ export type TypeVariant = keyof typeof type;
 export const motion = { fast: 120, base: 200, slow: 320 } as const;
 
 export const shadow = {
+  /** A surface resting on the page. Every card carries this; it is what stops the app reading flat. */
+  card: { shadowColor: "#000000", shadowOpacity: 0.3, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 5 },
+  /** Picked up: a dragged exercise, a sheet on its way in. */
+  lifted: { shadowColor: "#000000", shadowOpacity: 0.45, shadowRadius: 26, shadowOffset: { width: 0, height: 16 }, elevation: 14 },
   ember: { shadowColor: "#F26B1D", shadowOpacity: 0.35, shadowRadius: 14, shadowOffset: { width: 0, height: 10 }, elevation: 8 },
   gold: { shadowColor: "#F2B826", shadowOpacity: 0.18, shadowRadius: 20, shadowOffset: { width: 0, height: 16 }, elevation: 6 },
   floating: { shadowColor: "#000000", shadowOpacity: 0.45, shadowRadius: 16, shadowOffset: { width: 0, height: 12 }, elevation: 12 },

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Pressable, TextInput, View, type LayoutChangeEvent } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, { FadeInDown, FadeOutDown, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeOutDown, LinearTransition, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import { project, rubberband, springs } from "@/motion";
 import { useRouter } from "expo-router";
 import Svg, { Circle } from "react-native-svg";
@@ -224,7 +224,7 @@ export default function ActiveWorkout() {
             const groupStart = ex.supersetGroup && (index === 0 || session.exercises[index - 1].supersetGroup !== ex.supersetGroup);
             const groupColor = supersetColor(ex.supersetGroup);
             return (
-              <View key={ex.id} onLayout={measure(ex.id)} style={{ gap: 8 }}>
+              <Animated.View key={ex.id} layout={LinearTransition.springify().damping(20).stiffness(190)} onLayout={measure(ex.id)} style={{ gap: 8 }}>
                 {lineAbove ? <DropLine /> : null}
                 {groupStart && groupColor ? (
                   <Row gap={6} style={{ paddingHorizontal: 4, paddingTop: 4 }}>
@@ -258,7 +258,7 @@ export default function ActiveWorkout() {
                   onAddSet={() => w.addSet(ex.id)}
                 />
                 {lineBelow ? <DropLine /> : null}
-              </View>
+              </Animated.View>
             );
           })}
           <Button label={t("Add exercise")} variant="secondary" size="M" icon="addPlus" onPress={() => router.push("/exercises?session=1")} style={{ marginTop: 4 }} />
@@ -443,7 +443,7 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
         </Row>
 
         {expanded ? (
-          <>
+          <View style={{ gap: 6 }}>
             <Row gap={8} style={{ paddingTop: 8 }}>
               <Pressable accessibilityRole="button" accessibilityLabel={t("Rest timer")} onPress={onRest} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingLeft: 10, paddingRight: 8, height: 34, borderRadius: radius.pill, backgroundColor: colors.bg.raised }}>
                 <Icon name="timer" size={14} color={colors.text.secondary} strokeWidth={1.9} />
@@ -504,7 +504,7 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
             </View>
 
             <Button label={t("Add set")} variant="secondary" size="S" icon="addPlus" onPress={onAddSet} style={{ marginTop: 8 }} />
-          </>
+          </View>
         ) : null}
       </Card>
     </Animated.View>
@@ -534,7 +534,15 @@ function useDrag(onStart: () => void, onMove: (dy: number) => void, onEnd: (dy: 
     .onFinalize(() => {
       lift.value = withSpring(0, springs.snappy);
     });
-  const style = useAnimatedStyle(() => ({ zIndex: lift.value > 0.01 ? 10 : 0, transform: [{ translateY: ty.value }, { scale: 1 + lift.value * 0.02 }], opacity: 1 - lift.value * 0.1 }));
+  const style = useAnimatedStyle(() => ({
+    zIndex: lift.value > 0.01 ? 10 : 0,
+    transform: [{ translateY: ty.value }, { scale: 1 + lift.value * 0.03 }],
+    shadowColor: "#000000",
+    shadowOpacity: 0.45 * lift.value,
+    shadowRadius: 26 * lift.value,
+    shadowOffset: { width: 0, height: 16 * lift.value },
+    elevation: 14 * lift.value,
+  }));
   return { drag, style };
 }
 
