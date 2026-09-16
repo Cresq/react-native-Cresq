@@ -28,9 +28,13 @@ export function MoveViewer({ exercise, onClose }: { exercise: Exercise | null; o
   const t = useT();
   const art = move(exercise?.move);
 
+  // Play is asked for at creation as well as in the effect below. Mounted fresh
+  // with a source already set, the effect can run before the player has loaded
+  // anything, and that play request is dropped on the floor.
   const player = useVideoPlayer(art?.clip ?? null, (p) => {
     p.loop = true;
     p.muted = true;
+    p.play();
   });
 
   // A player survives the sheet closing, so it is told to start over each time.

@@ -18,6 +18,7 @@ import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { Pill } from "@/components/ui/Pill";
+import { SwipeAway } from "@/components/ui/SwipeAway";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { WheelPicker } from "@/components/ui/WheelPicker";
 import { SUPERSET_INK, supersetColor } from "@/superset";
@@ -272,6 +273,7 @@ export default function ActiveWorkout() {
 
       {rest ? (
         <Animated.View entering={FadeInDown.springify().damping(18).stiffness(180)} exiting={FadeOutDown.duration(180)} style={{ position: "absolute", left: 16, right: 16, bottom: Math.max(insets.bottom, 16) + 8 }}>
+          <SwipeAway onDismiss={w.skipRest}>
           <View style={[{ flexDirection: "row", alignItems: "center", gap: 12, padding: 12, paddingLeft: 16, borderRadius: radius.bar, backgroundColor: colors.bg.raised }, shadow.floating]}>
             <RestRing progress={rest.total > 0 ? rest.left / rest.total : 0} />
             <View style={{ flex: 1, gap: 1 }}>
@@ -291,6 +293,7 @@ export default function ActiveWorkout() {
             <Pill label="+15" accessibilityLabel={t("15 seconds more")} onPress={() => w.adjustRest(15)} />
             <Pill label={t("Skip")} tone="accent" accessibilityLabel={t("Skip rest")} onPress={w.skipRest} />
           </View>
+          </SwipeAway>
         </Animated.View>
       ) : null}
 
@@ -435,8 +438,8 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
             {done ? (
               <Icon name="check" size={14} color={colors.accent.on} strokeWidth={2.4} />
             ) : groupColor ? (
-              <Txt variant="labelS" style={{ color: SUPERSET_INK, letterSpacing: 0.3 }}>
-                SS
+              <Txt variant="labelM" style={{ color: SUPERSET_INK }}>
+                S
               </Txt>
             ) : (
               <Txt variant="labelM" style={{ color: isCurrent ? colors.accent.on : colors.text.secondary }}>

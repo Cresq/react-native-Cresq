@@ -11,6 +11,7 @@ import { fmtTime, sessionStats, useWorkout } from "@/store/workout";
 import { springs, to } from "@/motion";
 import { Txt } from "./ui/Text";
 import { Pill } from "./ui/Pill";
+import { SwipeAway } from "./ui/SwipeAway";
 import { Icon, type IconName } from "./ui/Icon";
 import { Press } from "./ui/Press";
 import { useT } from "@/i18n";
@@ -83,7 +84,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
 function RunningStrip() {
   const { colors, layout, radius, shadow } = useTheme();
   const router = useRouter();
-  const { session, rest, adjustRest, skipRest, lastDiscarded, undoDiscard } = useWorkout();
+  const { session, rest, adjustRest, skipRest, lastDiscarded, undoDiscard, dismissDiscarded } = useWorkout();
   const t = useT();
   const [, tick] = useState(0);
   const running = !!session && !session.finishedAt;
@@ -98,6 +99,7 @@ function RunningStrip() {
   if (!running || !session) {
     if (!lastDiscarded) return null;
     return (
+      <SwipeAway onDismiss={dismissDiscarded}>
       <View style={[{ marginHorizontal: layout.tabBarInset, marginBottom: 8, borderRadius: radius.pill, backgroundColor: colors.bg.raised, flexDirection: "row", alignItems: "center", paddingVertical: 12, paddingLeft: 16, paddingRight: 8, gap: 12 }, shadow.floating]}>
         <View style={{ flex: 1, gap: 1 }}>
           <Txt variant="labelL">{t("Session discarded")}</Txt>
@@ -107,6 +109,7 @@ function RunningStrip() {
         </View>
         <Pill label={t("Undo")} tone="accent" onPress={undoDiscard} />
       </View>
+      </SwipeAway>
     );
   }
   const stats = sessionStats(session);

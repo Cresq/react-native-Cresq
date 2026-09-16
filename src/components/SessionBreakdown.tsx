@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { View } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import type { SetType } from "@/db/types";
@@ -7,7 +8,8 @@ import { Row } from "./ui/Screen";
 import { Txt } from "./ui/Text";
 import { Icon } from "./ui/Icon";
 import { Card } from "./ui/Card";
-import { ExerciseMark } from "./ExerciseMark";
+import { ExerciseMark, findExercise } from "./ExerciseMark";
+import { MoveViewer } from "./MoveViewer";
 
 export type BreakdownSet = { kg: number; reps: number; type?: SetType; done?: boolean };
 export type BreakdownExercise = {
@@ -46,6 +48,7 @@ export function SessionBreakdown({ exercises }: { exercises: BreakdownExercise[]
   const t = useT();
   const plural = usePlural();
   const typeWord = (ty?: SetType) => (ty === "warmup" ? t("warm-up") : ty === "drop" ? t("drop set") : ty === "failure" ? t("to failure") : "");
+  const [watching, setWatching] = useState<{ exerciseId?: string; name: string } | null>(null);
 
   return (
     <View style={{ gap: 12 }}>
@@ -53,15 +56,6 @@ export function SessionBreakdown({ exercises }: { exercises: BreakdownExercise[]
         const hue = supersetColor(group[0].supersetGroup);
         return (
           <View key={`${group[0].name}-${gi}`} style={{ gap: 8 }}>
-            {hue ? (
-              <Row gap={8} style={{ paddingHorizontal: 4 }}>
-                <Icon name="link" size={13} color={hue} strokeWidth={2} />
-                <Txt variant="labelS" style={{ color: hue }}>
-                  {t("Superset, alternate, no rest between")}
-                </Txt>
-              </Row>
-            ) : null}
-
             {group.map((e, i) => {
               const done = e.sets.filter((s) => s.done !== false);
               // Bodyweight work has no weight to scale, so the reps carry the bar instead.
@@ -71,17 +65,21 @@ export function SessionBreakdown({ exercises }: { exercises: BreakdownExercise[]
               return (
                 <Card key={`${e.name}-${i}`} padding={14} gap={10}>
                   <Row gap={10} align="center">
-                    {hue ? (
-                      <View style={{ width: 24, height: 24, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: hue }}>
-                        <Txt variant="labelS" style={{ color: SUPERSET_INK, letterSpacing: 0.3 }}>
-                          SS
-                        </Txt>
-                      </View>
-                    ) : null}
-                    <ExerciseMark exerciseId={e.exerciseId} name={e.name} size={30} />
-                    <Txt variant="labelL" style={{ flex: 1 }} numberOfLines={2}>
-                      {e.name}
-                    </Txt>
+                    <ExerciseMark exerciseId={e.exerciseId} name={e.name} size={30} onPress={() => setWatching({ exerciseId: e.exerciseId, name: e.name })} />
+                    <View style={{ flex: 1, gap: 3 }}>
+                      <Txt variant="labelL" numberOfLines={2}>
+                        {e.name}
+                      </Txt>
+                      {/* Afterwards there is room for the word, and the word is clearer than a badge. */}
+                      {hue ? (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: hue }}>
+                          <Icon name="link" size={11} color={SUPERSET_INK} strokeWidth={2.2} />
+                          <Txt variant="labelS" style={{ color: SUPERSET_INK }}>
+                            {t("Superset")}
+                          </Txt>
+                        </View>
+                      ) : null}
+                    </View>
                     <Txt variant="labelS" tone="tertiary">
                       {plural(done.length, "{n} set", "{n} sets")}
                     </Txt>
@@ -141,6 +139,8 @@ export function SessionBreakdown({ exercises }: { exercises: BreakdownExercise[]
           </View>
         );
       })}
+
+      <MoveViewer exercise={watching ? findExercise(watching.exerciseId, watching.name) ?? null : null} onClose={() => setWatching(null)} />
     </View>
   );
 }

@@ -57,6 +57,8 @@ type WorkoutState = {
   rest: Rest;
   lastDiscarded: Session | null;
   undoDiscard: () => void;
+  /** Let the undo strip go without bringing the session back. */
+  dismissDiscarded: () => void;
   /** Start from a plan id, or a quick empty session with a name. */
   start: (planId?: string, name?: string) => void;
   finish: () => void;
@@ -158,6 +160,10 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
     }
     update((d) => ({ ...d, activeSession: null }));
   }, [update]);
+  const dismissDiscarded = useCallback(() => {
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    setLastDiscarded(null);
+  }, []);
   const undoDiscard = useCallback(() => {
     if (undoTimer.current) clearTimeout(undoTimer.current);
     setLastDiscarded((s) => {
@@ -316,8 +322,8 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
   const skipRest = useCallback(() => setRest(null), []);
 
   const value = useMemo<WorkoutState>(
-    () => ({ session, rest, lastDiscarded, undoDiscard, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, setShare, setGym, adjustRest, skipRest }),
-    [session, rest, lastDiscarded, undoDiscard, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, setShare, setGym, adjustRest, skipRest],
+    () => ({ session, rest, lastDiscarded, undoDiscard, dismissDiscarded, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, setShare, setGym, adjustRest, skipRest }),
+    [session, rest, lastDiscarded, undoDiscard, dismissDiscarded, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, setShare, setGym, adjustRest, skipRest],
   );
   return <WorkoutContext.Provider value={value}>{children}</WorkoutContext.Provider>;
 }

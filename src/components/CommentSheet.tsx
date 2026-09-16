@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, TextInput, View, useWindowDimensions, type ImageSourcePropType } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
+import { project, rubberband, spring, springs } from "@/motion";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useT, usePlural } from "@/i18n";
 import { haptic } from "@/haptics";
@@ -64,6 +67,50 @@ export function CommentSheet({
   const [draft, setDraft] = useState("");
   const [liked, setLiked] = useState<Record<number, boolean>>({});
   const list = useRef<ScrollView>(null);
+  const sheetH = Math.round(screenH * 0.78);
+
+  // Dragging the sheet: it follows the finger down, resists going up past its
+  // own top, and on release carries on at the speed it was let go at.
+  const y = useSharedValue(sheetH);
+  const dragStart = useSharedValue(0);
+  const [mounted, setMounted] = useState(visible);
+
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+      y.value = sheetH;
+      requestAnimationFrame(() => {
+        y.value = withSpring(0, springs.base);
+      });
+    } else if (mounted) {
+      y.value = withTiming(sheetH, { duration: 180 }, (done) => {
+        if (done) runOnJS(setMounted)(false);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  const drag = Gesture.Pan()
+    .onStart(() => {
+      dragStart.value = y.value;
+    })
+    .onUpdate((e) => {
+      const raw = dragStart.value + e.translationY;
+      y.value = raw < 0 ? rubberband(raw, sheetH, 0.3) : raw;
+    })
+    .onEnd((e) => {
+      const projected = y.value + project(e.velocityY);
+      if (projected > sheetH * 0.3) {
+        y.value = withSpring(sheetH + 40, spring(0.3, 1, e.velocityY), (done) => {
+          if (done) runOnJS(onClose)();
+        });
+      } else {
+        y.value = withSpring(0, springs.base);
+      }
+    });
+
+  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
+  const scrimStyle = useAnimatedStyle(() => ({ opacity: 1 - Math.min(1, Math.max(0, y.value / sheetH)) }));
 
   useEffect(() => {
     if (!visible) {
@@ -82,29 +129,36 @@ export function CommentSheet({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.55)" }}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t("Close")} onPress={onClose} style={{ flex: 1 }} />
+    <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
+      <GestureHandlerRootView style={{ flex: 1, justifyContent: "flex-end" }}>
+        <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.55)" }, scrimStyle]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("Close")} onPress={onClose} style={{ flex: 1 }} />
+        </Animated.View>
 
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-          <View style={{ height: Math.round(screenH * 0.78), backgroundColor: colors.bg.surface, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, overflow: "hidden" }}>
-            <View style={{ width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginTop: 10, backgroundColor: colors.border.strong }} />
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} pointerEvents="box-none">
+          <Animated.View style={[{ height: sheetH, backgroundColor: colors.bg.surface, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, overflow: "hidden" }, sheetStyle]}>
+            {/* The grab area is the top of the sheet, so dragging never fights the list. */}
+            <GestureDetector gesture={drag}>
+              <View>
+                <View style={{ width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginTop: 10, backgroundColor: colors.border.strong }} />
 
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 }}>
-              <View style={{ flex: 1, gap: 1 }}>
-                <Txt variant="displayM">{plural(comments.length, "{n} comment", "{n} comments")}</Txt>
-                {title ? (
-                  <Txt variant="bodyS" tone="tertiary" numberOfLines={1}>
-                    {title}
-                  </Txt>
-                ) : null}
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 }}>
+                  <View style={{ flex: 1, gap: 1 }}>
+                    <Txt variant="displayM">{plural(comments.length, "{n} comment", "{n} comments")}</Txt>
+                    {title ? (
+                      <Txt variant="bodyS" tone="tertiary" numberOfLines={1}>
+                        {title}
+                      </Txt>
+                    ) : null}
+                  </View>
+                  <IconButton name="close" onPress={onClose} accessibilityLabel={t("Close")} />
+                </View>
               </View>
-              <IconButton name="close" onPress={onClose} accessibilityLabel={t("Close")} />
-            </View>
+            </GestureDetector>
 
             <View style={{ height: 1, backgroundColor: colors.border.subtle }} />
 
-            <ScrollView ref={list} contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20, gap: 18 }} keyboardShouldPersistTaps="handled" style={{ flex: 1 }}>
+            <ScrollView ref={list} contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20, gap: 18 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
               {comments.length === 0 ? (
                 <View style={{ alignItems: "center", gap: 6, paddingTop: 40 }}>
                   <Txt variant="labelL">{t("No comments yet")}</Txt>
@@ -174,9 +228,9 @@ export function CommentSheet({
                 </Pressable>
               ) : null}
             </View>
-          </View>
+          </Animated.View>
         </KeyboardAvoidingView>
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
