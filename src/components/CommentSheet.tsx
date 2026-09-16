@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, TextInput, View, useWindowDimensions, type ImageSourcePropType } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
@@ -14,13 +14,15 @@ import { IconButton } from "./ui/IconButton";
 import { Avatar } from "./ui/PhotoSlot";
 
 export type Comment = {
-  /** Who wrote it, in the people directory. Absent when it is yours. */
-  userId?: string;
+  /** Stable within one post, so an answer can point at what it answers. */
+  id: string;
   name: string;
   text: string;
   avatar?: ImageSourcePropType;
-  /** When it was written. Older seeded comments have no stamp and simply say nothing. */
+  /** When it was written. Seeded comments have no stamp and simply say nothing. */
   at?: number;
+  /** The comment this one answers, if it answers one. */
+  replyTo?: string;
 };
 
 const shortAgo = (at: number, t: (s: string, v?: Record<string, string | number>) => string) => {
@@ -33,13 +35,13 @@ const shortAgo = (at: number, t: (s: string, v?: Record<string, string | number>
 };
 
 /**
- * Comments, the way every app that does this well does it: the text is the
- * thing, the name is a small label above it, and there is no chat bubble.
- * A bubble says "two people talking"; a comment list is many people talking
- * past each other, and boxing each one makes the column unreadable.
+ * Comments, the way every app that does this well does it: the name is a small
+ * label on its own line and the words sit under it, with no chat bubble. A
+ * bubble says "two people talking"; a comment list is many people talking past
+ * each other, and boxing each one makes the column unreadable.
  *
- * The composer is docked to the bottom with your own face on it, so it is
- * always clear who is about to speak.
+ * Answers are indented under what they answer, one level and no deeper. Two
+ * levels is a forum, and nobody reads a forum on a phone.
  */
 export function CommentSheet({
   visible,
@@ -55,8 +57,7 @@ export function CommentSheet({
   title?: string;
   comments: Comment[];
   me: { initial: string; photo?: ImageSourcePropType };
-  onSend: (text: string) => void;
-  /** Called with the writer's name; the screen decides whose profile that is. */
+  onSend: (text: string, replyTo?: string) => void;
   onOpenProfile: (comment: Comment) => void;
 }) {
   const { colors, radius } = useTheme();
@@ -65,12 +66,18 @@ export function CommentSheet({
   const t = useT();
   const plural = usePlural();
   const [draft, setDraft] = useState("");
-  const [liked, setLiked] = useState<Record<number, boolean>>({});
+  const [liked, setLiked] = useState<Record<string, boolean>>({});
+  const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const list = useRef<ScrollView>(null);
+  const input = useRef<TextInput>(null);
   const sheetH = Math.round(screenH * 0.78);
 
-  // Dragging the sheet: it follows the finger down, resists going up past its
-  // own top, and on release carries on at the speed it was let go at.
+  /** Top-level comments, each carrying the answers that point at it. */
+  const threads = useMemo(
+    () => comments.filter((c) => !c.replyTo).map((c) => ({ comment: c, replies: comments.filter((r) => r.replyTo === c.id) })),
+    [comments],
+  );
+
   const y = useSharedValue(sheetH);
   const dragStart = useSharedValue(0);
   const [mounted, setMounted] = useState(visible);
@@ -88,6 +95,14 @@ export function CommentSheet({
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible) {
+      setDraft("");
+      setLiked({});
+      setReplyTo(null);
+    }
   }, [visible]);
 
   const drag = Gesture.Pan()
@@ -112,21 +127,59 @@ export function CommentSheet({
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
   const scrimStyle = useAnimatedStyle(() => ({ opacity: 1 - Math.min(1, Math.max(0, y.value / sheetH)) }));
 
-  useEffect(() => {
-    if (!visible) {
-      setDraft("");
-      setLiked({});
-    }
-  }, [visible]);
-
   const send = () => {
     const text = draft.trim();
     if (!text) return;
-    onSend(text);
+    onSend(text, replyTo?.id);
     setDraft("");
+    setReplyTo(null);
     haptic("tap");
     requestAnimationFrame(() => list.current?.scrollToEnd({ animated: true }));
   };
+
+  /** One comment. An answer is the same shape a size down and a step to the right. */
+  const line = (c: Comment, isReply: boolean) => (
+    <View key={c.id} style={{ flexDirection: "row", alignItems: "flex-start", gap: 10, paddingLeft: isReply ? 46 : 0 }}>
+      <Pressable accessibilityRole="button" accessibilityLabel={t("Open {name}", { name: c.name })} onPress={() => onOpenProfile(c)} hitSlop={4} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+        <Avatar source={c.avatar} size={isReply ? 28 : 36} initial={c.name[0]} />
+      </Pressable>
+
+      <View style={{ flex: 1, gap: 2 }}>
+        {/* The name sits above what was said, not in front of it. */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("Open {name}", { name: c.name })} onPress={() => onOpenProfile(c)} hitSlop={4} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+            <Txt variant="labelS" tone="secondary">
+              {c.name}
+            </Txt>
+          </Pressable>
+          {c.at ? (
+            <Txt variant="labelS" tone="tertiary">
+              {shortAgo(c.at, t)}
+            </Txt>
+          ) : null}
+        </View>
+
+        <Txt variant="bodyM">{c.text}</Txt>
+
+        <Pressable accessibilityRole="button" accessibilityLabel={t("Reply to {name}", { name: c.name })} onPress={() => { setReplyTo(c); input.current?.focus(); }} hitSlop={6} style={({ pressed }) => ({ alignSelf: "flex-start", paddingTop: 2, opacity: pressed ? 0.6 : 1 })}>
+          <Txt variant="labelS" tone="tertiary">
+            {t("Reply")}
+          </Txt>
+        </Pressable>
+      </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ selected: !!liked[c.id] }}
+        accessibilityLabel={t("Like this comment")}
+        hitSlop={8}
+        onPress={() => { haptic("tap"); setLiked((l) => ({ ...l, [c.id]: !l[c.id] })); }}
+        style={({ pressed }) => ({ paddingTop: 3, opacity: pressed ? 0.6 : 1 })}
+      >
+        <Icon name="heart" size={15} color={liked[c.id] ? colors.status.danger : colors.text.tertiary} fill={liked[c.id] ? colors.status.danger : undefined} strokeWidth={1.9} />
+      </Pressable>
+    </View>
+  );
 
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
@@ -141,7 +194,6 @@ export function CommentSheet({
             <GestureDetector gesture={drag}>
               <View>
                 <View style={{ width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginTop: 10, backgroundColor: colors.border.strong }} />
-
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 }}>
                   <View style={{ flex: 1, gap: 1 }}>
                     <Txt variant="displayM">{plural(comments.length, "{n} comment", "{n} comments")}</Txt>
@@ -159,7 +211,7 @@ export function CommentSheet({
             <View style={{ height: 1, backgroundColor: colors.border.subtle }} />
 
             <ScrollView ref={list} contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20, gap: 18 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
-              {comments.length === 0 ? (
+              {threads.length === 0 ? (
                 <View style={{ alignItems: "center", gap: 6, paddingTop: 40 }}>
                   <Txt variant="labelL">{t("No comments yet")}</Txt>
                   <Txt variant="bodyS" tone="tertiary">
@@ -168,51 +220,36 @@ export function CommentSheet({
                 </View>
               ) : null}
 
-              {comments.map((c, i) => (
-                <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
-                  <Pressable accessibilityRole="button" accessibilityLabel={t("Open {name}", { name: c.name })} onPress={() => onOpenProfile(c)} hitSlop={4} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
-                    <Avatar source={c.avatar} size={36} initial={c.name[0]} />
-                  </Pressable>
-
-                  <View style={{ flex: 1, gap: 3 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      <Pressable accessibilityRole="button" accessibilityLabel={t("Open {name}", { name: c.name })} onPress={() => onOpenProfile(c)} hitSlop={4} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
-                        <Txt variant="labelS" tone="tertiary">
-                          {c.name}
-                        </Txt>
-                      </Pressable>
-                      {c.at ? (
-                        <Txt variant="labelS" tone="tertiary">
-                          {shortAgo(c.at, t)}
-                        </Txt>
-                      ) : null}
-                    </View>
-                    <Txt variant="bodyM">{c.text}</Txt>
-                  </View>
-
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: !!liked[i] }}
-                    accessibilityLabel={t("Like this comment")}
-                    hitSlop={8}
-                    onPress={() => { haptic("tap"); setLiked((l) => ({ ...l, [i]: !l[i] })); }}
-                    style={({ pressed }) => ({ paddingTop: 2, opacity: pressed ? 0.6 : 1 })}
-                  >
-                    <Icon name="heart" size={15} color={liked[i] ? colors.status.danger : colors.text.tertiary} fill={liked[i] ? colors.status.danger : undefined} strokeWidth={1.9} />
-                  </Pressable>
+              {threads.map(({ comment, replies }) => (
+                <View key={comment.id} style={{ gap: 14 }}>
+                  {line(comment, false)}
+                  {replies.map((r) => line(r, true))}
                 </View>
               ))}
             </ScrollView>
 
             <View style={{ height: 1, backgroundColor: colors.border.subtle }} />
 
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(insets.bottom, 12) }}>
+            {replyTo ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 2 }}>
+                <Icon name="chatCircle" size={13} color={colors.text.tertiary} strokeWidth={1.9} />
+                <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} numberOfLines={1}>
+                  {t("Replying to {name}", { name: replyTo.name })}
+                </Txt>
+                <Pressable accessibilityRole="button" accessibilityLabel={t("Cancel reply")} hitSlop={8} onPress={() => setReplyTo(null)} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+                  <Icon name="close" size={14} color={colors.text.tertiary} strokeWidth={2.2} />
+                </Pressable>
+              </View>
+            ) : null}
+
+            <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(insets.bottom, 12) }}>
               <Avatar source={me.photo} size={32} initial={me.initial} />
-              <View style={{ flex: 1, minHeight: 40, justifyContent: "center", borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: colors.bg.raised }}>
+              <View style={{ flex: 1, minHeight: 40, justifyContent: "center", borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 9, backgroundColor: colors.bg.raised }}>
                 <TextInput
+                  ref={input}
                   value={draft}
                   onChangeText={setDraft}
-                  placeholder={t("Add a comment")}
+                  placeholder={replyTo ? t("Reply to {name}", { name: replyTo.name }) : t("Add a comment")}
                   placeholderTextColor={colors.text.tertiary}
                   selectionColor={colors.accent.ember}
                   accessibilityLabel={t("Add a comment")}

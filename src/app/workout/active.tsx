@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Pressable, TextInput, View, type LayoutChangeEvent } from "react-native";
+import { Pressable, Share, TextInput, View, type LayoutChangeEvent } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { FadeInDown, FadeOutDown, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import { project, rubberband, springs } from "@/motion";
@@ -22,6 +22,8 @@ import { SwipeAway } from "@/components/ui/SwipeAway";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { WheelPicker } from "@/components/ui/WheelPicker";
 import { SUPERSET_INK, supersetColor } from "@/superset";
+import { inviteFromSession, inviteLink } from "@/invite";
+import { useDb } from "@/db/DbProvider";
 import { ExerciseMark, findExercise } from "@/components/ExerciseMark";
 import { MoveViewer } from "@/components/MoveViewer";
 import { fontFamily } from "../../../constants/theme";
@@ -45,6 +47,7 @@ export default function ActiveWorkout() {
   const insets = useSafeAreaInsets();
   const t = useT();
   const w = useWorkout();
+  const { db } = useDb();
   const { session, rest } = w;
   const [, force] = useState(0);
   const [sheet, setSheet] = useState<Sheet>(null);
@@ -101,6 +104,13 @@ export default function ActiveWorkout() {
   const openSets = stats.setsTotal - stats.setsDone;
   const isOpen = (id: string) => (open ?? []).includes(id);
   const toggle = (id: string) => setOpen((o) => ((o ?? []).includes(id) ? (o ?? []).filter((x) => x !== id) : [...(o ?? []), id]));
+
+  /** The workout travels in the link itself, so there is nothing to upload and nobody to sign in. */
+  const invite = () => {
+    if (!session) return;
+    const payload = inviteFromSession(session, db.profile.first || db.profile.name || t("A friend"));
+    Share.share({ message: t("{name} is doing {plan} on CresQ. Do it with them: {link}", { name: db.profile.first || db.profile.name, plan: session.planName, link: inviteLink(payload) }) });
+  };
 
   const finish = () => {
     w.finish();
@@ -210,6 +220,7 @@ export default function ActiveWorkout() {
           subtitle={t("Exercise {a} of {b}", { a: session.currentIndex + 1, b: session.exercises.length })}
           right={
             <Row gap={8}>
+              <IconButton name="users" size={34} iconSize={17} onPress={invite} accessibilityLabel={t("Invite somebody to this workout")} />
               <IconButton name="trash" size={34} iconSize={17} tone="danger" onPress={() => setSheet({ kind: "discard" })} accessibilityLabel={t("Stop and discard session")} />
               <Button label={t("Finish")} variant="inverse" size="S" full={false} onPress={() => setSheet({ kind: "finish" })} />
             </Row>

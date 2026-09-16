@@ -42,14 +42,18 @@ export default function Feed() {
   const patchSession = (id: string, fn: (s: (typeof db.sessions)[number]) => (typeof db.sessions)[number]) => update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === id ? fn(x) : x)) }));
   const [commentsFor, setCommentsFor] = useState<Post | null>(null);
 
-  /** What a post already came with, plus anything written on this device. */
+  /**
+   * What a post already came with, plus anything written on this device. The
+   * seeded ones never had ids, so they get one from their position: stable for
+   * as long as the list is, which is as long as an answer needs it to be.
+   */
   const commentsOf = (p: Post): Comment[] => [
-    ...(p.commentList ?? []),
-    ...((db.comments?.[p.id] ?? []).map((c) => ({ name: db.profile.name, text: c.text, at: c.at, avatar: me.photo }))),
+    ...(p.commentList ?? []).map((c, i) => ({ ...c, id: `seed-${i}` })),
+    ...(db.comments?.[p.id] ?? []).map((c) => ({ id: String(c.at), name: db.profile.name, text: c.text, at: c.at, replyTo: c.replyTo, avatar: me.photo })),
   ];
 
-  const addComment = (postId: string, text: string) =>
-    update((d) => ({ ...d, comments: { ...(d.comments ?? {}), [postId]: [...(d.comments?.[postId] ?? []), { text, at: Date.now() }] } }));
+  const addComment = (postId: string, text: string, replyTo?: string) =>
+    update((d) => ({ ...d, comments: { ...(d.comments ?? {}), [postId]: [...(d.comments?.[postId] ?? []), { text, at: Date.now(), replyTo }] } }));
 
   /** A name is all a comment carries, so it is the way back to whoever wrote it. */
   const openWriter = (c: Comment) => {
@@ -161,7 +165,7 @@ export default function Feed() {
         title={commentsFor ? [commentsFor.name, commentsFor.title].filter(Boolean).join(", ") : undefined}
         comments={commentsFor ? commentsOf(commentsFor) : []}
         me={{ initial: me.initial, photo: me.photo }}
-        onSend={(text) => commentsFor && addComment(commentsFor.id, text)}
+        onSend={(text, replyTo) => commentsFor && addComment(commentsFor.id, text, replyTo)}
         onOpenProfile={openWriter}
       />
 

@@ -143,7 +143,7 @@ export type Db = {
    * the name and the face are read from the profile when they are shown, so a
    * change of either does not leave old comments signed by somebody else.
    */
-  comments?: Record<string, { text: string; at: number }[]>;
+  comments?: Record<string, { text: string; at: number; replyTo?: string }[]>;
 };
 
 /**

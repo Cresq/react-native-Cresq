@@ -43,6 +43,7 @@ export type Post = {
   comments: number;
   /** The first comments, shown under the post so the card has a voice before you open it. */
   commentList?: { name: string; text: string; avatar?: ImageSourcePropType }[];
+
 };
 
 /**
@@ -173,15 +174,19 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
         )}
 
         {!preview && post.commentList?.length ? (
-          <Pressable accessibilityRole="button" accessibilityLabel={t("Comments")} disabled={!onComment} onPress={onComment} style={({ pressed }) => ({ gap: 8, opacity: pressed ? 0.7 : 1 })}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("Comments")} disabled={!onComment} onPress={onComment} style={({ pressed }) => ({ gap: 12, opacity: pressed ? 0.7 : 1 })}>
             {post.commentList.slice(0, 2).map((c, i) => (
-              <Row key={i} gap={8} align="center">
-                <Avatar source={c.avatar} size={24} initial={c.name[0]} />
-                <Txt variant="bodyS" tone="secondary" style={{ flex: 1 }} numberOfLines={2}>
-                  <Txt variant="labelS">{c.name.split(" ")[0]} </Txt>
-                  {c.text}
-                </Txt>
-              </Row>
+              <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+                <Avatar source={c.avatar} size={26} initial={c.name[0]} />
+                <View style={{ flex: 1, gap: 1 }}>
+                  <Txt variant="labelS" tone="secondary" numberOfLines={1}>
+                    {c.name}
+                  </Txt>
+                  <Txt variant="bodyS" tone="secondary" numberOfLines={2}>
+                    {c.text}
+                  </Txt>
+                </View>
+              </View>
             ))}
             {post.comments > 2 ? (
               <Txt variant="labelS" tone="tertiary">

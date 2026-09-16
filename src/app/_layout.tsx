@@ -31,6 +31,7 @@ SplashScreen.preventAutoHideAsync();
  *   /progress             Redirects to Profile › Favourites (old links)
  *   /progress/volume      Volume per week
  *   /progress/muscles     Working sets per muscle group
+ *   /join?w=CODE          An invitation to somebody else's workout, carried in the link
  *   /compare              People you follow who share their figures
  *   /compare/[id]         Your figures beside theirs
  *   /progress/[lift]      One exercise: trend, forecast, records, history
@@ -109,6 +110,7 @@ function Routes() {
             <Stack.Screen name="progress/index" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="progress/volume" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="progress/muscles" options={{ animation: "slide_from_right" }} />
+            <Stack.Screen name="join" options={{ animation: "slide_from_bottom" }} />
             <Stack.Screen name="compare/index" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="compare/[id]" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="progress/[lift]" options={{ animation: "slide_from_right" }} />
