@@ -138,6 +138,12 @@ export type Db = {
   following: string[];
   /** People the user blocked: hidden everywhere, cannot follow. */
   blocked: string[];
+  /**
+   * Comments this device has written, by post id. Only the words and the time:
+   * the name and the face are read from the profile when they are shown, so a
+   * change of either does not leave old comments signed by somebody else.
+   */
+  comments?: Record<string, { text: string; at: number }[]>;
 };
 
 /**

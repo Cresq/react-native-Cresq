@@ -6,7 +6,7 @@ import { useMe } from "@/store/me";
 import { useNotes } from "@/store/notifications";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useSocial } from "@/store/social";
-import { liveProgress } from "@/data/people";
+import { liveProgress, personByName } from "@/data/people";
 import { finished, fmtKg, newRecords, relativeDay, sessionRows, sessionStats } from "@/db/derive";
 import { otherPosts } from "@/data/mock";
 import { useT } from "@/i18n";
@@ -18,11 +18,8 @@ import { Chip } from "@/components/ui/Chip";
 import { Avatar } from "@/components/ui/PhotoSlot";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { PostCard, type Post } from "@/components/PostCard";
+import { CommentSheet, type Comment } from "@/components/CommentSheet";
 import { Field } from "@/components/ui/Field";
-
-/** Placeholder replies on the mock posts, so the sheet is not empty on day one. */
-/** What a post already carries, plus anything written on this device. */
-const seedComments = (p: Post) => p.commentList ?? [];
 
 /** Feed. Your own shared sessions come from the database; other people's posts are placeholders until there is a server. */
 export default function Feed() {
@@ -44,8 +41,23 @@ export default function Feed() {
   const closeMore = () => { setMore(null); setReported(false); setMoreView("menu"); };
   const patchSession = (id: string, fn: (s: (typeof db.sessions)[number]) => (typeof db.sessions)[number]) => update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === id ? fn(x) : x)) }));
   const [commentsFor, setCommentsFor] = useState<Post | null>(null);
-  const [comments, setComments] = useState<Record<string, NonNullable<Post["commentList"]>>>({});
-  const [draft, setDraft] = useState("");
+
+  /** What a post already came with, plus anything written on this device. */
+  const commentsOf = (p: Post): Comment[] => [
+    ...(p.commentList ?? []),
+    ...((db.comments?.[p.id] ?? []).map((c) => ({ name: db.profile.name, text: c.text, at: c.at, avatar: me.photo }))),
+  ];
+
+  const addComment = (postId: string, text: string) =>
+    update((d) => ({ ...d, comments: { ...(d.comments ?? {}), [postId]: [...(d.comments?.[postId] ?? []), { text, at: Date.now() }] } }));
+
+  /** A name is all a comment carries, so it is the way back to whoever wrote it. */
+  const openWriter = (c: Comment) => {
+    const who = personByName(c.name);
+    setCommentsFor(null);
+    if (who) router.push(`/user/${who.id}`);
+    else if (c.name === db.profile.name) router.push("/(tabs)/profile");
+  };
   // Opening the feed marks everything as seen; Home's "since you were here" starts counting again.
   useEffect(() => {
     const now = Date.now();
@@ -143,37 +155,15 @@ export default function Feed() {
         ) : null}
       </View>
 
-      <BottomSheet visible={!!commentsFor} onClose={() => { setCommentsFor(null); setDraft(""); }} title={t("Comments")} subtitle={commentsFor ? `${commentsFor.name}, ${commentsFor.title ?? ""}` : undefined}>
-        {commentsFor ? (
-          <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
-            {[...seedComments(commentsFor), ...(comments[commentsFor.id] ?? [])].map((c, i) => (
-              <Row key={i} gap={12} align="flex-start">
-                <Avatar source={c.avatar} size={32} initial={c.name[0]} />
-                <View style={{ flex: 1, gap: 2, backgroundColor: colors.bg.raised, borderRadius: 16, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 8 }}>
-                  <Txt variant="labelM">{c.name}</Txt>
-                  <Txt variant="bodyM" tone="secondary">
-                    {c.text}
-                  </Txt>
-                </View>
-              </Row>
-            ))}
-            {seedComments(commentsFor).length + (comments[commentsFor.id]?.length ?? 0) === 0 ? (
-              <Txt variant="bodyM" tone="tertiary">
-                {t("No comments yet. Say something.")}
-              </Txt>
-            ) : null}
-            <Row gap={8}>
-              <View style={{ flex: 1 }}>
-                <Field label={t("Comment")} value={draft} onChangeText={setDraft} placeholder={t("Nice work")} />
-              </View>
-              <Button label={t("Post")} size="M" full={false} disabled={!draft.trim()} onPress={() => { const id = commentsFor.id; setComments((c) => ({ ...c, [id]: [...(c[id] ?? []), { name: db.profile.name, text: draft.trim(), avatar: me.photo }] })); setDraft(""); }} />
-            </Row>
-            <Txt variant="labelS" tone="tertiary">
-              {t("Comments stay on this device until accounts sync.")}
-            </Txt>
-          </View>
-        ) : null}
-      </BottomSheet>
+      <CommentSheet
+        visible={!!commentsFor}
+        onClose={() => setCommentsFor(null)}
+        title={commentsFor ? [commentsFor.name, commentsFor.title].filter(Boolean).join(", ") : undefined}
+        comments={commentsFor ? commentsOf(commentsFor) : []}
+        me={{ initial: me.initial, photo: me.photo }}
+        onSend={(text) => commentsFor && addComment(commentsFor.id, text)}
+        onOpenProfile={openWriter}
+      />
 
       <BottomSheet
         visible={!!more}

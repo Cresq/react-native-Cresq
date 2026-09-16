@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Image, Share, View, useWindowDimensions } from "react-native";
+import { Image, Pressable, Share, View, useWindowDimensions } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useSocial } from "@/store/social";
@@ -8,6 +8,7 @@ import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
 import { Avatar } from "@/components/ui/PhotoSlot";
+import { PhotoViewer } from "@/components/PhotoViewer";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
@@ -23,6 +24,7 @@ export default function UserProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isFollowing, toggleFollow, block } = useSocial();
   const [more, setMore] = useState<null | "menu" | "report" | "reported">(null);
+  const [zoomAvatar, setZoomAvatar] = useState(false);
   const { width } = useWindowDimensions();
   const [tab, setTab] = useState("workouts");
   const p = findPerson(id);
@@ -48,7 +50,9 @@ export default function UserProfile() {
       <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={p.handle} right={<IconButton name="moreHorizontal" onPress={() => setMore("menu")} accessibilityLabel={t("More options")} />} />
 
       <Row gap={16}>
-        <Avatar source={p.avatar} size={72} initial={p.name[0]} />
+        <Pressable accessibilityRole="button" accessibilityLabel={t("See the photo")} disabled={!p.avatar} onPress={() => setZoomAvatar(true)} style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
+          <Avatar source={p.avatar} size={72} initial={p.name[0]} />
+        </Pressable>
         <View style={{ flex: 1, gap: 4 }}>
           <Txt variant="displayL">{p.name}</Txt>
           <Txt variant="bodyS" tone="secondary">
@@ -113,6 +117,7 @@ export default function UserProfile() {
           {more === "reported" ? <Button label={t("Done")} variant="secondary" size="M" onPress={() => setMore(null)} /> : <Button label={t("Send report")} variant="danger" size="M" onPress={() => setMore("reported")} />}
         </View>
       </BottomSheet>
+      <PhotoViewer source={p.avatar} visible={zoomAvatar} onClose={() => setZoomAvatar(false)} />
     </Screen>
   );
 }

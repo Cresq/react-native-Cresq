@@ -17,6 +17,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Tabs } from "@/components/ui/Tabs";
 import { WorkoutTile } from "@/components/WorkoutTile";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { PhotoViewer } from "@/components/PhotoViewer";
 
 const TABS = ["workouts", "photos"];
 
@@ -33,6 +34,7 @@ export default function Profile() {
   const me = useMe();
   const { followers, following } = useSocial();
   const [changingPhoto, setChangingPhoto] = useState(false);
+  const [zoomAvatar, setZoomAvatar] = useState(false);
   const { width } = useWindowDimensions();
   const { tab: wanted } = useLocalSearchParams<{ tab?: string }>();
   const [tab, setTab] = useState(TABS.includes(wanted ?? "") ? wanted! : "workouts");
@@ -76,12 +78,14 @@ export default function Profile() {
       </Row>
 
       <Row gap={16}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t("Change your photo")} onPress={() => setChangingPhoto(true)} style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
-          <Avatar source={me.photo} size={72} initial={me.initial} />
-          <View style={{ position: "absolute", right: -2, bottom: -2, width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg.raised, borderWidth: 2, borderColor: colors.bg.ground }}>
+        <View>
+          <Pressable accessibilityRole="button" accessibilityLabel={me.photo ? t("See your photo") : t("Change your photo")} onPress={() => (me.photo ? setZoomAvatar(true) : setChangingPhoto(true))} style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
+            <Avatar source={me.photo} size={72} initial={me.initial} />
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("Change your photo")} hitSlop={8} onPress={() => setChangingPhoto(true)} style={({ pressed }) => ({ position: "absolute", right: -2, bottom: -2, width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg.raised, borderWidth: 2, borderColor: colors.bg.ground, opacity: pressed ? 0.7 : 1 })}>
             <Icon name="camera" size={13} color={colors.text.secondary} strokeWidth={1.9} />
-          </View>
-        </Pressable>
+          </Pressable>
+        </View>
         <View style={{ flex: 1, gap: 4 }}>
           <Txt variant="displayL">{db.profile.name}</Txt>
           <Txt variant="bodyS" tone="secondary">
@@ -151,6 +155,8 @@ export default function Profile() {
         ) : null}
 
       </View>
+
+      <PhotoViewer source={me.photo} visible={zoomAvatar} onClose={() => setZoomAvatar(false)} />
 
       <BottomSheet visible={changingPhoto} onClose={() => setChangingPhoto(false)} title={t("Your photo")} subtitle={t("It stays on this phone, like everything else in CresQ.")}>
         <SheetOption icon="camera" label={t("Take a photo")} onPress={() => void choosePhoto("camera")} />

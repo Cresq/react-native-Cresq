@@ -13,6 +13,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Chip } from "@/components/ui/Chip";
 import { Avatar, PhotoSlot } from "@/components/ui/PhotoSlot";
 import { Stat, StatDivider } from "@/components/StatCard";
+import { Card } from "@/components/ui/Card";
 import { SessionBreakdown, type BreakdownExercise } from "@/components/SessionBreakdown";
 import { useT, usePlural } from "@/i18n";
 import { PhotoViewer } from "@/components/PhotoViewer";
@@ -57,7 +58,7 @@ export default function SessionDetail() {
     return (
       <Screen>
         <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={title} subtitle={rest.join(", ")} />
-        <Row gap={12}>
+        <Pressable accessibilityRole={author ? "button" : undefined} accessibilityLabel={author ? t("Open {name}", { name: post.name }) : undefined} disabled={!author} onPress={() => author && router.push(`/user/${author.id}`)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, opacity: pressed ? 0.7 : 1 })}>
           <Avatar source={post.avatar ?? author?.avatar} size={40} initial={post.name[0]} />
           <View style={{ flex: 1, gap: 1 }}>
             <Txt variant="labelL">{post.name}</Txt>
@@ -67,23 +68,28 @@ export default function SessionDetail() {
               </Txt>
             ) : null}
           </View>
-        </Row>
-        <Row gap={12} align="stretch">
-          {post.stats.map((s, i) => (
-            <View key={i} style={{ flexDirection: "row", flex: 1 }}>
-              {i > 0 ? <StatDivider /> : null}
-              <Stat label={s.unit === "min" ? t("Duration") : s.unit === "kg" ? t("Volume") : t("Sets")} value={s.value} unit={s.unit === "sets" ? undefined : s.unit} />
-            </View>
-          ))}
-        </Row>
-        {post.record ? <Chip label={post.record} icon="trophy" tone="gold" size="S" style={{ alignSelf: "flex-start" }} /> : null}
+          {author ? <Icon name="chevronRight" size={18} color={colors.text.tertiary} /> : null}
+        </Pressable>
         {post.photo ? (
           <Pressable accessibilityRole="button" accessibilityLabel={t("See the photo")} onPress={() => setZoom(true)}>
             <PhotoSlot source={post.photo} height={320} radius={18} />
           </Pressable>
         ) : null}
         <PhotoViewer source={post.photo} visible={zoom} onClose={() => setZoom(false)} />
-        <Txt variant="displayS">{post.caption}</Txt>
+        {post.caption ? <Txt variant="bodyL">{post.caption}</Txt> : null}
+
+        <Card padding={16} gap={0}>
+          <Row gap={12} align="stretch">
+            {post.stats.map((s, i) => (
+              <View key={i} style={{ flexDirection: "row", flex: 1 }}>
+                {i > 0 ? <StatDivider /> : null}
+                <Stat label={s.unit === "min" ? t("Duration") : s.unit === "kg" ? t("Volume") : t("Sets")} value={s.value} unit={s.unit === "sets" ? undefined : s.unit} />
+              </View>
+            ))}
+          </Row>
+        </Card>
+        {post.record ? <Chip label={post.record} icon="trophy" tone="gold" size="S" style={{ alignSelf: "flex-start" }} /> : null}
+
         <SessionBreakdown exercises={exercises} />
       </Screen>
     );
@@ -91,19 +97,11 @@ export default function SessionDetail() {
 
   const s = session!;
   const stats = sessionStats(s);
-  const exercises: BreakdownExercise[] = s.exercises.map((e) => ({ exerciseId: e.exerciseId, name: e.name, note: e.note, superset: !!e.supersetGroup, sets: e.sets.filter((x) => x.done).map((x) => ({ kg: x.kg, reps: x.reps, type: x.type, done: true })) }));
+  const exercises: BreakdownExercise[] = s.exercises.map((e) => ({ exerciseId: e.exerciseId, name: e.name, note: e.note, supersetGroup: e.supersetGroup, sets: e.sets.filter((x) => x.done).map((x) => ({ kg: x.kg, reps: x.reps, type: x.type, done: true })) }));
 
   return (
     <Screen>
       <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={s.planName} subtitle={longDate(s.startedAt)} right={<IconButton name="moreHorizontal" onPress={() => setMenu("menu")} accessibilityLabel={t("Options")} />} />
-
-      <Row gap={12} align="stretch">
-        <Stat label={t("Duration")} value={String(stats.minutes)} unit="min" />
-        <StatDivider />
-        <Stat label={t("Volume")} value={fmtKg(stats.volume)} unit="kg" />
-        <StatDivider />
-        <Stat label={t("Sets")} value={String(stats.setsDone)} unit={t("of {n}", { n: stats.setsTotal })} />
-      </Row>
 
       {s.photo ? (
         <Pressable accessibilityRole="button" accessibilityLabel={t("See the photo")} onPress={() => setZoom(true)}>
@@ -111,6 +109,18 @@ export default function SessionDetail() {
         </Pressable>
       ) : null}
       <PhotoViewer source={s.photo ? { uri: s.photo } : undefined} visible={zoom} onClose={() => setZoom(false)} />
+
+      {s.caption ? <Txt variant="bodyL">{s.caption}</Txt> : null}
+
+      <Card padding={16} gap={0}>
+        <Row gap={12} align="stretch">
+          <Stat label={t("Duration")} value={String(stats.minutes)} unit="min" />
+          <StatDivider />
+          <Stat label={t("Volume")} value={fmtKg(stats.volume)} unit="kg" />
+          <StatDivider />
+          <Stat label={t("Sets")} value={String(stats.setsDone)} unit={t("of {n}", { n: stats.setsTotal })} />
+        </Row>
+      </Card>
 
       {recs.length ? (
         <Row gap={8} style={{ flexWrap: "wrap" }}>
@@ -120,24 +130,13 @@ export default function SessionDetail() {
         </Row>
       ) : null}
 
-      {s.caption ? <Txt variant="displayS">{s.caption}</Txt> : null}
-
       <SessionBreakdown exercises={exercises} />
 
-      {s.gym ? (
-        <Row gap={4}>
-          <Icon name="mapPin" size={14} color={colors.text.tertiary} strokeWidth={1.9} />
-          <Txt variant="labelM" tone="secondary">
-            {s.gym}
-          </Txt>
-        </Row>
-      ) : null}
-
-      <Row gap={8}>
+      {/* Where, and who can see it: one quiet line rather than two stray ones. */}
+      <Row gap={8} style={{ flexWrap: "wrap" }}>
         <Icon name={s.shared ? "users" : "lock"} size={13} color={colors.text.tertiary} strokeWidth={1.8} />
         <Txt variant="labelS" tone="tertiary">
-          {s.shared ? t("Shared to your feed") : t("Private")}
-          {s.sample ? `, ${t("sample session")}` : ""}
+          {[s.shared ? t("Shared to your feed") : t("Private"), s.gym, s.sample ? t("sample session") : ""].filter(Boolean).join(", ")}
         </Txt>
       </Row>
 

@@ -47,6 +47,8 @@ export const people: Person[] = [
 ];
 
 export const person = (id: string) => people.find((p) => p.id === id);
+/** Comments carry a name and not an id, so this is how one finds its way to a profile. */
+export const personByName = (name: string) => people.find((p) => p.name.toLowerCase() === name.trim().toLowerCase());
 
 /**
  * How far a mock live session has come: one set every ~3.5 minutes since it
