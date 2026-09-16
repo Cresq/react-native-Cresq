@@ -1,12 +1,13 @@
-import { useEffect, useState, type PropsWithChildren } from "react";
+import { useEffect, useRef, useState, type PropsWithChildren } from "react";
 import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
+import Animated, { runOnJS, useAnimatedReaction, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useT } from "@/i18n";
 import { project, rubberband, spring, springs } from "@/motion";
 import { useOnce } from "@/nav";
+import { dismissesKeyboard } from "@/keyboard";
 import { Txt } from "./Text";
 import { Icon, type IconName } from "./Icon";
 import { Button } from "./Button";
@@ -19,7 +20,7 @@ import { Press } from "./Press";
  * return it leaves, otherwise it settles back. Tapping the scrim closes it
  * along the same path it arrived on.
  */
-export function BottomSheet({ visible, onClose, title, subtitle, children }: PropsWithChildren<{ visible: boolean; onClose: () => void; title: string; subtitle?: string }>) {
+export function BottomSheet({ visible, onClose, onClosed, title, subtitle, children }: PropsWithChildren<{ visible: boolean; onClose: () => void; /** Fired once the sheet is off the screen. Anything that must not happen over a closing modal waits for this. */ onClosed?: () => void; title: string; subtitle?: string }>) {
   const { colors, radius } = useTheme();
   const t = useT();
   const insets = useSafeAreaInsets();
@@ -28,6 +29,27 @@ export function BottomSheet({ visible, onClose, title, subtitle, children }: Pro
   const y = useSharedValue(screenH);
   const sheetH = useSharedValue(400);
   const dragStart = useSharedValue(0);
+  const closing = useSharedValue(false);
+
+  // Off the bottom of the screen is gone, whatever the spring is still doing
+  // with its last fraction of a pixel.
+  useAnimatedReaction(
+    () => closing.value && y.value >= sheetH.value,
+    (offScreen, before) => {
+      if (offScreen && !before) {
+        closing.value = false;
+        runOnJS(setMounted)(false);
+      }
+    },
+  );
+
+  // Said once, on the way from mounted to gone. Anything that must not happen
+  // over a closing modal waits for this rather than for a guessed number of ms.
+  const was = useRef(mounted);
+  useEffect(() => {
+    if (was.current && !mounted) onClosed?.();
+    was.current = mounted;
+  }, [mounted, onClosed]);
 
   const settle = () => {
     "worklet";
@@ -35,14 +57,14 @@ export function BottomSheet({ visible, onClose, title, subtitle, children }: Pro
   };
   const leave = (velocity = 0) => {
     "worklet";
-    y.value = withSpring(sheetH.value + 40, spring(0.3, 1, velocity), (done) => {
-      if (done) runOnJS(setMounted)(false);
-    });
+    closing.value = true;
+    y.value = withSpring(sheetH.value + 40, spring(0.3, 1, velocity));
   };
 
   useEffect(() => {
     if (visible) {
       setMounted(true);
+      closing.value = false;
       y.value = sheetH.value + 40;
       requestAnimationFrame(() => {
         y.value = withSpring(0, springs.base);
@@ -75,7 +97,7 @@ export function BottomSheet({ visible, onClose, title, subtitle, children }: Pro
   if (!mounted) return null;
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      <GestureHandlerRootView style={{ flex: 1, justifyContent: "flex-end" }}>
+      <GestureHandlerRootView {...dismissesKeyboard} style={{ flex: 1, justifyContent: "flex-end" }}>
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.55)" }, scrimStyle]}>
           <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityLabel="Close" accessibilityRole="button" />
         </Animated.View>

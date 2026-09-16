@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TextInput, View, type TextInputProps } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Txt } from "./Text";
 import { Icon, type IconName } from "./Icon";
+import { keepKeyboard } from "@/keyboard";
 import { fontFamily } from "../../../constants/theme";
 
 /**
@@ -13,6 +14,11 @@ import { fontFamily } from "../../../constants/theme";
 export function Field({ label, icon, error, style, onFocus, onBlur, ...rest }: TextInputProps & { label: string; icon?: IconName; error?: string }) {
   const { colors, radius } = useTheme();
   const [focused, setFocused] = useState(false);
+  // A field that takes focus on its own arrived because somebody pressed a
+  // button, and that press must not be read as "done typing".
+  useEffect(() => {
+    if (rest.autoFocus) keepKeyboard();
+  }, [rest.autoFocus]);
   return (
     <View style={{ gap: 6 }}>
       <View

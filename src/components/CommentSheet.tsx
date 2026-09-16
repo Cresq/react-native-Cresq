@@ -7,6 +7,7 @@ import { project, rubberband, spring, springs } from "@/motion";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useT, usePlural } from "@/i18n";
 import { haptic } from "@/haptics";
+import { dismissesKeyboard, keepKeyboard } from "@/keyboard";
 import { fontFamily } from "../../constants/theme";
 import { Txt } from "./ui/Text";
 import { Icon } from "./ui/Icon";
@@ -161,7 +162,7 @@ export function CommentSheet({
 
         <Txt variant="bodyM">{c.text}</Txt>
 
-        <Pressable accessibilityRole="button" accessibilityLabel={t("Reply to {name}", { name: c.name })} onPress={() => { setReplyTo(c); input.current?.focus(); }} hitSlop={6} style={({ pressed }) => ({ alignSelf: "flex-start", paddingTop: 2, opacity: pressed ? 0.6 : 1 })}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t("Reply to {name}", { name: c.name })} onPress={() => { keepKeyboard(); setReplyTo(c); input.current?.focus(); }} hitSlop={6} style={({ pressed }) => ({ alignSelf: "flex-start", paddingTop: 2, opacity: pressed ? 0.6 : 1 })}>
           <Txt variant="labelS" tone="tertiary">
             {t("Reply")}
           </Txt>
@@ -183,7 +184,7 @@ export function CommentSheet({
 
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      <GestureHandlerRootView style={{ flex: 1, justifyContent: "flex-end" }}>
+      <GestureHandlerRootView {...dismissesKeyboard} style={{ flex: 1, justifyContent: "flex-end" }}>
         <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.55)" }, scrimStyle]}>
           <Pressable accessibilityRole="button" accessibilityLabel={t("Close")} onPress={onClose} style={{ flex: 1 }} />
         </Animated.View>

@@ -10,6 +10,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { fmtKg, fmtTime, sessionStats, useWorkout } from "@/store/workout";
 import type { ExerciseEntry, SetEntry, SetType } from "@/db/types";
 import { haptic } from "@/haptics";
+import { keepKeyboard } from "@/keyboard";
 import { useT } from "@/i18n";
 import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
@@ -58,6 +59,8 @@ export default function ActiveWorkout() {
   const [highlight, setHighlight] = useState<string | null>(null);
   const [restValue, setRestValue] = useState(90);
   const [watching, setWatching] = useState<string | null>(null);
+  /** Something to do once the sheet has left, rather than after a guessed wait. */
+  const [afterSheet, setAfterSheet] = useState<(() => void) | null>(null);
   const slots = useRef<Record<string, Slot>>({});
   const openBeforeDrag = useRef<string[] | null>(null);
 
@@ -73,7 +76,9 @@ export default function ActiveWorkout() {
   }, [open, session, current]);
   // A newly current exercise opens; nothing closes on its own.
   useEffect(() => {
-    if (current && open && !open.includes(current.id)) setOpen((o) => [...(o ?? []), current.id]);
+    if (!current || !open || open.includes(current.id)) return;
+    const group = current.supersetGroup ? session?.exercises.filter((e) => e.supersetGroup === current.supersetGroup).map((e) => e.id) : null;
+    setOpen((o) => [...(o ?? []).filter((id) => !group?.includes(id)), ...(group ?? [current.id])]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id]);
 
@@ -103,7 +108,21 @@ export default function ActiveWorkout() {
 
   const openSets = stats.setsTotal - stats.setsDone;
   const isOpen = (id: string) => (open ?? []).includes(id);
-  const toggle = (id: string) => setOpen((o) => ((o ?? []).includes(id) ? (o ?? []).filter((x) => x !== id) : [...(o ?? []), id]));
+  /** Every exercise this one alternates with, or just itself. */
+  const groupOf = (id: string) => {
+    const ex = session.exercises.find((e) => e.id === id);
+    if (!ex?.supersetGroup) return [id];
+    return session.exercises.filter((e) => e.supersetGroup === ex.supersetGroup).map((e) => e.id);
+  };
+  // A superset opens and closes whole: you alternate between its exercises, so
+  // one of a pair on its own is never what the tap meant.
+  const toggle = (id: string) =>
+    setOpen((o) => {
+      const cur = o ?? [];
+      const ids = groupOf(id);
+      const rest = cur.filter((x) => !ids.includes(x));
+      return cur.includes(id) ? rest : [...rest, ...ids];
+    });
 
   /** The workout travels in the link itself, so there is nothing to upload and nobody to sign in. */
   const invite = () => {
@@ -138,17 +157,27 @@ export default function ActiveWorkout() {
     const wasLast = !s.done && ex.sets.filter((x) => !x.done).length === 1;
     if (!wasLast) return;
     const order = session.exercises;
+    const unfinished = (id: string) => order.find((e) => e.id === id)?.sets.some((x) => !x.done);
     const from = order.findIndex((e) => e.id === ex.id);
     const next = order.slice(from + 1).find((e) => e.sets.some((x) => !x.done));
+    /**
+     * A card finishing does not get to move somebody who is working elsewhere.
+     * What is selected keeps the selection if it is still open with sets left;
+     * failing that, the last card the person opened takes it. Only when nothing
+     * else is open does the workout move on by itself and unfold what is next.
+     */
+    const stays = !!current && current.id !== ex.id && isOpen(current.id) && !!unfinished(current.id);
+    const others = (open ?? []).filter((id) => id !== ex.id && unfinished(id));
+    const goTo = stays ? current : others.length ? order.find((e) => e.id === others[others.length - 1]) : next;
+    const unfold = !stays && others.length === 0;
     setTimeout(() => {
       setOpen((o) => {
         const rest = (o ?? []).filter((x) => x !== ex.id);
-        if (!next) return rest;
-        // A superset opens whole: you alternate between its exercises, so you need them side by side.
-        const group = next.supersetGroup ? order.filter((e) => e.supersetGroup === next.supersetGroup).map((e) => e.id) : [next.id];
+        if (!unfold || !goTo) return rest;
+        const group = goTo.supersetGroup ? order.filter((e) => e.supersetGroup === goTo.supersetGroup).map((e) => e.id) : [goTo.id];
         return [...rest.filter((id) => !group.includes(id)), ...group];
       });
-      if (next) w.setCurrent(order.findIndex((e) => e.id === next.id));
+      if (goTo) w.setCurrent(order.findIndex((e) => e.id === goTo.id));
     }, 140);
   };
   // The picker lives in the same sheet as the exercise menu: the content swaps, the modal stays.
@@ -311,6 +340,7 @@ export default function ActiveWorkout() {
       <BottomSheet
         visible={sheet?.kind === "exercise" || sheet?.kind === "superset"}
         onClose={() => setSheet(null)}
+        onClosed={() => { const go = afterSheet; setAfterSheet(null); go?.(); }}
         title={sheet?.kind === "exercise" ? sheet.ex.name : sheet?.kind === "superset" ? t("Superset") : ""}
         subtitle={sheet?.kind === "exercise" ? t("Exercise {a} of {b}", { a: session.exercises.indexOf(sheet.ex) + 1, b: session.exercises.length }) : sheet?.kind === "superset" ? t("Pick the exercises to alternate with {name}. No rest between them.", { name: sheet.ex.name }) : undefined}
       >
@@ -328,7 +358,7 @@ export default function ActiveWorkout() {
         ) : null}
         {sheet?.kind === "exercise" ? (
           <>
-            <SheetOption icon="reload" label={t("Swap exercise")} sub={t("Keep the sets, change the movement")} onPress={() => { const id = sheet.ex.id; setSheet(null); setTimeout(() => router.push(`/exercises?swap=${id}`), 380); }} />
+            <SheetOption icon="reload" label={t("Swap exercise")} sub={t("Keep the sets, change the movement")} onPress={() => { const id = sheet.ex.id; setAfterSheet(() => () => router.push(`/exercises?swap=${id}`)); setSheet(null); }} />
             <SheetOption icon="link" label={sheet.ex.supersetGroup ? t("Edit superset") : t("Make a superset")} sub={t("Choose which exercises alternate")} onPress={() => openSuperset(sheet.ex)} />
             {sheet.ex.supersetGroup ? <SheetOption icon="close" label={t("Remove from superset")} sub={t("Rest between them again")} onPress={() => { w.toggleSuperset(sheet.ex.id); setSheet(null); }} /> : null}
             <SheetOption icon="trash" label={t("Remove from workout")} sub={t("Its sets leave this session")} danger onPress={() => { w.removeExercise(sheet.ex.id); setSheet(null); }} />
@@ -504,7 +534,7 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
                 style={{ fontFamily: fontFamily.italic, fontSize: 13, lineHeight: 18, color: colors.text.secondary, paddingVertical: 2, paddingTop: 8 }}
               />
             ) : (
-              <Pressable accessibilityRole="button" accessibilityLabel={ex.note ? t("Edit note") : t("Add a note")} onPress={() => setNoteEditing(true)} hitSlop={6} style={{ paddingTop: 8 }}>
+              <Pressable accessibilityRole="button" accessibilityLabel={ex.note ? t("Edit note") : t("Add a note")} onPress={() => { keepKeyboard(); setNoteEditing(true); }} hitSlop={6} style={{ paddingTop: 8 }}>
                 <Txt variant="bodyS" tone={ex.note ? "secondary" : "tertiary"} italic numberOfLines={2}>
                   {ex.note || t("Add a note")}
                 </Txt>

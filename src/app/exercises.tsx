@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pressable, View } from "react-native";
+import { FlatList, Pressable, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useNav, useOnce } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -26,7 +26,7 @@ import { useT, useTerms } from "@/i18n";
  * (?favourite=1, tap toggles the star). One list, one search field, one sheet to create.
  */
 export default function Exercises() {
-  const { colors } = useTheme();
+  const { colors, layout } = useTheme();
   const router = useNav();
   const t = useT();
   const tm = useTerms();
@@ -41,11 +41,20 @@ export default function Exercises() {
 
   const mode = planId ? "plan" : forSession ? "session" : swap ? "swap" : favourite ? "favourite" : "browse";
   const favourites = db.profile.favourites ?? DEFAULT_FAVOURITES;
+  // Sorted once, and each exercise carries the one line every search reads.
+  // Both languages are in it: somebody typing "borst" and somebody typing
+  // "chest" are after the same shelf.
+  const shelf = useMemo(
+    () =>
+      [...db.exercises]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((e) => ({ e, find: `${e.name} ${e.muscles} ${e.equipment} ${tm(e.muscles)} ${tm(e.equipment)}`.toLowerCase() })),
+    [db.exercises, tm],
+  );
   const list = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    // Searched in both languages: somebody typing "borst" and somebody typing "chest" are after the same shelf.
-    return [...db.exercises].filter((e) => !t || e.name.toLowerCase().includes(t) || e.muscles.toLowerCase().includes(t) || e.equipment.toLowerCase().includes(t) || tm(e.muscles).toLowerCase().includes(t) || tm(e.equipment).toLowerCase().includes(t)).sort((a, b) => a.name.localeCompare(b.name));
-  }, [db.exercises, q, tm]);
+    const needle = q.trim().toLowerCase();
+    return needle ? shelf.filter((r) => r.find.includes(needle)).map((r) => r.e) : shelf.map((r) => r.e);
+  }, [shelf, q]);
 
   const toggleFavourite = (id: string) =>
     update((d) => {
@@ -87,43 +96,53 @@ export default function Exercises() {
   const subtitle = mode === "favourite" ? t("{n} on Home, tap to add or remove", { n: favourites.length }) : mode === "swap" ? t("Sets and numbers stay, the movement changes") : t("{n} in your library", { n: db.exercises.length });
 
   return (
-    <Screen bottom={mode === "favourite" ? 80 : 0} footer={mode === "favourite" ? <Button label={t("Done")} variant="inverse" size="M" onPress={() => router.back()} /> : undefined}>
+    <Screen scroll={false} contentStyle={{ paddingBottom: 0, gap: 16 }} bottom={mode === "favourite" ? 80 : 0} footer={mode === "favourite" ? <Button label={t("Done")} variant="inverse" size="M" onPress={() => router.back()} /> : undefined}>
       <Header left={<IconButton name={mode === "browse" ? "chevronLeft" : "close"} onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={titles[mode]} subtitle={subtitle} />
       <Field label={t("Search")} value={q} onChangeText={setQ} placeholder={t("Name, muscle or equipment")} icon="search" autoCorrect={false} />
 
-      <View>
-        {list.map((e, i) => {
-          const fav = favourites.includes(e.id);
-          return (
-            <View key={e.id}>
-              {i > 0 ? <Divider /> : null}
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <ExerciseMedia exercise={e} size={52} round onPress={() => setWatching(e)} />
-                <Pressable accessibilityRole="button" accessibilityState={mode === "favourite" ? { selected: fav } : undefined} onPress={() => pick(e.id)} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 13, opacity: pressed ? 0.7 : 1 })}>
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Txt variant="labelL">{e.name}</Txt>
-                    <Txt variant="bodyS" tone="tertiary">
-                      {tm(e.muscles)}, {tm(e.equipment)}
-                    </Txt>
-                  </View>
-                  {mode === "favourite" ? (
-                    <Icon name="star" size={20} color={fav ? colors.pr.gold : colors.text.tertiary} fill={fav ? colors.pr.gold : undefined} strokeWidth={1.8} />
-                  ) : (
-                    <Icon name={mode === "browse" ? "chevronRight" : mode === "swap" ? "reload" : "addPlus"} size={18} color={mode === "browse" ? colors.text.tertiary : colors.text.secondary} strokeWidth={2} />
-                  )}
-                </Pressable>
-              </View>
+      <FlatList
+        data={list}
+        keyExtractor={(e) => e.id}
+        style={{ flex: 1, marginHorizontal: -layout.screenInset }}
+        contentContainerStyle={{ paddingHorizontal: layout.screenInset, paddingBottom: 24 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={12}
+        windowSize={7}
+        removeClippedSubviews
+        renderItem={({ item: e, index: i }) => (
+          <View>
+            {i > 0 ? <Divider /> : null}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <ExerciseMedia exercise={e} size={52} round onPress={() => setWatching(e)} />
+              <Pressable accessibilityRole="button" accessibilityState={mode === "favourite" ? { selected: favourites.includes(e.id) } : undefined} onPress={() => pick(e.id)} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 13, opacity: pressed ? 0.7 : 1 })}>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Txt variant="labelL">{e.name}</Txt>
+                  <Txt variant="bodyS" tone="tertiary">
+                    {tm(e.muscles)}, {tm(e.equipment)}
+                  </Txt>
+                </View>
+                {mode === "favourite" ? (
+                  <Icon name="star" size={20} color={favourites.includes(e.id) ? colors.pr.gold : colors.text.tertiary} fill={favourites.includes(e.id) ? colors.pr.gold : undefined} strokeWidth={1.8} />
+                ) : (
+                  <Icon name={mode === "browse" ? "chevronRight" : mode === "swap" ? "reload" : "addPlus"} size={18} color={mode === "browse" ? colors.text.tertiary : colors.text.secondary} strokeWidth={2} />
+                )}
+              </Pressable>
             </View>
-          );
-        })}
-        {list.length === 0 ? (
-          <Txt variant="bodyM" tone="secondary" style={{ paddingVertical: 12 }}>
-            {t("Nothing called “{q}” yet. Create it below.", { q })}
-          </Txt>
-        ) : null}
-      </View>
-
-      <Button label={t("New exercise")} variant="secondary" size="M" icon="addPlus" onPress={() => { setName(q); setCreating(true); }} />
+          </View>
+        )}
+        ListFooterComponent={
+          <View style={{ gap: 16, paddingTop: 16 }}>
+            {list.length === 0 ? (
+              <Txt variant="bodyM" tone="secondary">
+                {t("Nothing called “{q}” yet. Create it below.", { q })}
+              </Txt>
+            ) : null}
+            <Button label={t("New exercise")} variant="secondary" size="M" icon="addPlus" onPress={() => { setName(q); setCreating(true); }} />
+          </View>
+        }
+      />
 
       <BottomSheet visible={creating} onClose={() => setCreating(false)} title={t("New exercise")} subtitle={t("It goes into your library and can be used in any workout.")}>
         <View style={{ gap: 12, paddingHorizontal: 8, paddingVertical: 8 }}>

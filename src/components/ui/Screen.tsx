@@ -6,6 +6,7 @@ import { Txt } from "./Text";
 import { Icon } from "./Icon";
 import { Pressable } from "react-native";
 import { useRunningSession } from "@/store/workout";
+import { dismissesKeyboard } from "@/keyboard";
 import type { IconName } from "./Icon";
 
 /**
@@ -20,9 +21,9 @@ export function Screen({ children, tabs, bottom = 0, scroll = true, footer, styl
   const paddingBottom = (tabs ? layout.tabBarClearance + (running ? 56 : 0) : 40) + bottom;
   const content: ViewStyle = { paddingTop: insets.top + 12, paddingHorizontal: layout.screenInset, paddingBottom, gap: layout.sectionGap };
   return (
-    <View style={[{ flex: 1, backgroundColor: colors.bg.ground }, style]}>
+    <View {...dismissesKeyboard} style={[{ flex: 1, backgroundColor: colors.bg.ground }, style]}>
       {scroll ? (
-        <ScrollView contentContainerStyle={[content, contentStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[content, contentStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           {children}
         </ScrollView>
       ) : (

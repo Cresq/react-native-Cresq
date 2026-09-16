@@ -12,11 +12,17 @@ import { useRouter, type Href } from "expo-router";
  * can be reachable from two rows at once, and a fast thumb can catch both.
  */
 const WINDOW_MS = 700;
+/**
+ * Going back twice quickly is a thing people mean, so that one gets a much
+ * shorter window: long enough to swallow a tap that registered twice, short
+ * enough that a second, deliberate press is never eaten.
+ */
+const BACK_MS = 300;
 let last = { key: "", at: 0 };
 
-function once(key: string) {
+function once(key: string, window = WINDOW_MS) {
   const now = Date.now();
-  if (last.key === key && now - last.at < WINDOW_MS) return false;
+  if (last.key === key && now - last.at < window) return false;
   last = { key, at: now };
   return true;
 }
@@ -56,7 +62,7 @@ export function useNav() {
         if (once(`replace:${String(href)}`)) router.replace(href);
       },
       back: () => {
-        if (once("back")) router.back();
+        if (once("back", BACK_MS)) router.back();
       },
       canGoBack: () => router.canGoBack(),
       /** The escape hatch, for the rare case a repeat really is meant. */
