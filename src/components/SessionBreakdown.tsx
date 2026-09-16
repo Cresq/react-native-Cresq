@@ -6,9 +6,10 @@ import { Row } from "./ui/Screen";
 import { Txt } from "./ui/Text";
 import { Icon } from "./ui/Icon";
 import { Divider } from "./ui/Card";
+import { ExerciseMark } from "./ExerciseMark";
 
 export type BreakdownSet = { kg: number; reps: number; type?: SetType; done?: boolean };
-export type BreakdownExercise = { name: string; note?: string; superset?: boolean; sets: BreakdownSet[] };
+export type BreakdownExercise = { exerciseId?: string; name: string; note?: string; superset?: boolean; sets: BreakdownSet[] };
 
 /**
  * What a session contained, one line per set. The exercise name sits on
@@ -29,7 +30,8 @@ export function SessionBreakdown({ exercises }: { exercises: BreakdownExercise[]
           <View key={`${e.name}-${i}`}>
             {i > 0 ? <Divider /> : null}
             <View style={{ paddingVertical: 12, gap: 8 }}>
-              <Row gap={8}>
+              <Row gap={10} align="center">
+                <ExerciseMark exerciseId={e.exerciseId} name={e.name} size={30} />
                 <Txt variant="labelL" style={{ flex: 1 }}>
                   {e.name}
                 </Txt>

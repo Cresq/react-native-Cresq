@@ -149,7 +149,7 @@ export function newRecords(session: Session, priorSessions: Session[]) {
   return out;
 }
 
-export type Comparison = { name: string; detail: string; delta: string; tone: "ember" | "neutral" | "warning" };
+export type Comparison = { exerciseId: string; name: string; detail: string; delta: string; tone: "ember" | "neutral" | "warning" };
 
 /** Per-exercise change against the last finished session with the same plan name. */
 export function compareToLast(session: Session, sessions: Session[]): { previous: Session | null; rows: Comparison[] } {
@@ -158,17 +158,17 @@ export function compareToLast(session: Session, sessions: Session[]): { previous
     const top = bestSet(session, e.exerciseId);
     const working = e.sets.filter(isWorking);
     const detail = top ? `${working.length} × ${top.reps}${top.kg ? `, ${top.kg} kg` : ""}` : "not done";
-    if (!top) return { name: e.name, detail, delta: "skipped", tone: "neutral" };
-    if (!previous) return { name: e.name, detail, delta: "first time", tone: "neutral" };
+    if (!top) return { exerciseId: e.exerciseId, name: e.name, detail, delta: "skipped", tone: "neutral" };
+    if (!previous) return { exerciseId: e.exerciseId, name: e.name, detail, delta: "first time", tone: "neutral" };
     const prevTop = bestSet(previous, e.exerciseId);
-    if (!prevTop) return { name: e.name, detail, delta: "new", tone: "neutral" };
+    if (!prevTop) return { exerciseId: e.exerciseId, name: e.name, detail, delta: "new", tone: "neutral" };
     const dKg = top.kg - prevTop.kg;
     const dReps = top.reps - prevTop.reps;
-    if (dKg > 0) return { name: e.name, detail, delta: `+${dKg} kg`, tone: "ember" };
-    if (dKg < 0) return { name: e.name, detail, delta: `${dKg} kg`, tone: "warning" };
-    if (dReps > 0) return { name: e.name, detail, delta: `+${dReps} rep${dReps > 1 ? "s" : ""}`, tone: "ember" };
-    if (dReps < 0) return { name: e.name, detail, delta: `${dReps} rep${dReps < -1 ? "s" : ""}`, tone: "warning" };
-    return { name: e.name, detail, delta: "same", tone: "neutral" };
+    if (dKg > 0) return { exerciseId: e.exerciseId, name: e.name, detail, delta: `+${dKg} kg`, tone: "ember" };
+    if (dKg < 0) return { exerciseId: e.exerciseId, name: e.name, detail, delta: `${dKg} kg`, tone: "warning" };
+    if (dReps > 0) return { exerciseId: e.exerciseId, name: e.name, detail, delta: `+${dReps} rep${dReps > 1 ? "s" : ""}`, tone: "ember" };
+    if (dReps < 0) return { exerciseId: e.exerciseId, name: e.name, detail, delta: `${dReps} rep${dReps < -1 ? "s" : ""}`, tone: "warning" };
+    return { exerciseId: e.exerciseId, name: e.name, detail, delta: "same", tone: "neutral" };
   });
   return { previous, rows };
 }
@@ -389,7 +389,7 @@ export function sessionRows(session: Session) {
       if (!done.length) return null;
       const top = done.reduce((a, b) => (b.kg > a.kg ? b : a), done[0]);
       const reps = done.every((s) => s.reps === done[0].reps) ? String(done[0].reps) : `${Math.min(...done.map((s) => s.reps))}–${Math.max(...done.map((s) => s.reps))}`;
-      return { name: e.name, count: done.length, detail: `${done.length} × ${reps}${top.kg ? `, ${top.kg} kg` : ""}` };
+      return { exerciseId: e.exerciseId, name: e.name, count: done.length, detail: `${done.length} × ${reps}${top.kg ? `, ${top.kg} kg` : ""}` };
     })
-    .filter((r): r is { name: string; count: number; detail: string } => !!r);
+    .filter((r): r is { exerciseId: string; name: string; count: number; detail: string } => !!r);
 }

@@ -91,7 +91,7 @@ export default function SessionDetail() {
 
   const s = session!;
   const stats = sessionStats(s);
-  const exercises: BreakdownExercise[] = s.exercises.map((e) => ({ name: e.name, note: e.note, superset: !!e.supersetGroup, sets: e.sets.filter((x) => x.done).map((x) => ({ kg: x.kg, reps: x.reps, type: x.type, done: true })) }));
+  const exercises: BreakdownExercise[] = s.exercises.map((e) => ({ exerciseId: e.exerciseId, name: e.name, note: e.note, superset: !!e.supersetGroup, sets: e.sets.filter((x) => x.done).map((x) => ({ kg: x.kg, reps: x.reps, type: x.type, done: true })) }));
 
   return (
     <Screen>

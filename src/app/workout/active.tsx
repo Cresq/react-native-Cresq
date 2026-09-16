@@ -21,6 +21,8 @@ import { Pill } from "@/components/ui/Pill";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { WheelPicker } from "@/components/ui/WheelPicker";
 import { SUPERSET_INK, supersetColor } from "@/superset";
+import { ExerciseMark, findExercise } from "@/components/ExerciseMark";
+import { MoveViewer } from "@/components/MoveViewer";
 import { fontFamily } from "../../../constants/theme";
 
 const REST_CHOICES = Array.from({ length: 20 }, (_, i) => (i + 1) * 15);
@@ -51,6 +53,7 @@ export default function ActiveWorkout() {
   const [drop, setDrop] = useState<{ index: number; dragging: string } | null>(null);
   const [highlight, setHighlight] = useState<string | null>(null);
   const [restValue, setRestValue] = useState(90);
+  const [watching, setWatching] = useState<string | null>(null);
   const slots = useRef<Record<string, Slot>>({});
   const openBeforeDrag = useRef<string[] | null>(null);
 
@@ -252,6 +255,7 @@ export default function ActiveWorkout() {
                   onRest={() => openRest(ex)}
                   onRemove={() => { haptic("error"); w.removeExercise(ex.id); }}
                   onMore={() => setSheet({ kind: "exercise", ex })}
+                  onWatch={() => setWatching(ex.exerciseId)}
                   onSetType={(s, i) => setSheet({ kind: "set", ex, set: s, index: i })}
                   onChange={(s, patch) => w.updateSet(ex.id, s.id, patch)}
                   onDone={(s, i) => complete(ex, s, i)}
@@ -350,6 +354,8 @@ export default function ActiveWorkout() {
         </View>
       </BottomSheet>
 
+      <MoveViewer exercise={watching ? findExercise(watching) ?? null : null} onClose={() => setWatching(null)} />
+
       <BottomSheet visible={sheet?.kind === "rest"} onClose={() => setSheet(null)} title={t("Rest timer")} subtitle={sheet?.kind === "rest" ? t("After each set of {name}", { name: sheet.ex.name }) : undefined}>
         {sheet?.kind === "rest" ? (
           <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
@@ -385,6 +391,7 @@ type CardProps = {
   onRest: () => void;
   onRemove: () => void;
   onMore: () => void;
+  onWatch: () => void;
   onSetType: (s: SetEntry, i: number) => void;
   onChange: (s: SetEntry, patch: Partial<Pick<SetEntry, "kg" | "reps">>) => void;
   onDone: (s: SetEntry, i: number) => void;
@@ -397,7 +404,7 @@ type CardProps = {
  * note line, chevron) and, when open, the rest pill, a delete button, the
  * options button, the set table and an Add set button.
  */
-function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor, blocked, onToggle, onFocus, onDragStart, onDragMove, onDragEnd, onNote, onRest, onRemove, onMore, onSetType, onChange, onDone, onRemoveSet, onAddSet }: CardProps) {
+function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor, blocked, onToggle, onFocus, onDragStart, onDragMove, onDragEnd, onNote, onRest, onRemove, onMore, onWatch, onSetType, onChange, onDone, onRemoveSet, onAddSet }: CardProps) {
   const { colors, radius } = useTheme();
   const t = useT();
   const { drag, style } = useDrag(onDragStart, onDragMove, onDragEnd);
@@ -418,7 +425,7 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
               : undefined
         }
       >
-        <Row gap={12} align="center">
+        <Row gap={10} align="center">
           <GestureDetector gesture={drag}>
             <Animated.View accessibilityRole="button" accessibilityLabel={t("Drag to reorder")} style={{ width: 28, height: 28, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg.raised }}>
               <Icon name="dragVertical" size={16} color={colors.text.secondary} strokeWidth={2} />
@@ -437,6 +444,7 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
               </Txt>
             )}
           </View>
+          <ExerciseMark exerciseId={ex.exerciseId} name={ex.name} size={26} onPress={onWatch} />
           <View style={{ flex: 1, gap: 1 }}>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded }} accessibilityLabel={ex.name} onPress={() => { onToggle(); if (!expanded && !done) onFocus(); }} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
               <Txt variant={expanded ? "displayM" : "labelL"}>{ex.name}</Txt>

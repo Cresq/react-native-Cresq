@@ -723,4 +723,5 @@ export const nl: Record<string, string> = {
   "Watch {name}": "Bekijk {name}",
   "The muscles the movement works are marked in red.": "De spieren die de beweging aanspreekt staan in het rood.",
   "The muscles the movement works are marked in red. It loops until you close it.": "De spieren die de beweging aanspreekt staan in het rood. Hij blijft lopen tot je hem sluit.",
+  "Session on day {n}": "Sessie op dag {n}",
 };

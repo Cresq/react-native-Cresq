@@ -18,6 +18,7 @@ import { Chip } from "@/components/ui/Chip";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { fontFamily } from "../../../../constants/theme";
 import { useT, usePlural } from "@/i18n";
+import { ExerciseMark } from "@/components/ExerciseMark";
 import { SUPERSET_INK, supersetColor } from "@/superset";
 
 const typeLabel = (t: SetType, working: number) => (t === "warmup" ? "W" : t === "drop" ? "D" : t === "failure" ? "F" : String(working));
@@ -115,6 +116,7 @@ export default function PlanEditor() {
                     </Txt>
                   )}
                 </View>
+                <ExerciseMark exerciseId={e.exerciseId} name={name(e)} size={30} />
                 <Pressable accessibilityRole="button" accessibilityState={{ expanded: isOpen }} onPress={() => setOpen(isOpen ? null : i)} style={{ flex: 1, gap: 2 }}>
                   <Row gap={8}>
                     <Txt variant="labelL">{name(e)}</Txt>

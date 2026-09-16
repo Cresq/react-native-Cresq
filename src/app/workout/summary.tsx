@@ -18,6 +18,7 @@ import { Toggle } from "@/components/ui/Toggle";
 import type { SharePrefs } from "@/db/types";
 import { Stat, StatDivider } from "@/components/StatCard";
 import { PhotoSlot } from "@/components/ui/PhotoSlot";
+import { ExerciseMark } from "@/components/ExerciseMark";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { pickPhoto } from "@/photo";
 import { useT } from "@/i18n";
@@ -192,7 +193,8 @@ export default function Summary() {
             {cmp.rows.map((r, i) => (
               <View key={r.name + i}>
                 {i > 0 ? <Divider /> : null}
-                <Row style={{ paddingVertical: 12 }}>
+                <Row gap={10} align="center" style={{ paddingVertical: 12 }}>
+                  <ExerciseMark exerciseId={r.exerciseId} name={r.name} size={30} />
                   <View style={{ flex: 1, gap: 2 }}>
                     <Txt variant="labelL">{r.name}</Txt>
                     <Txt variant="bodyS" tone="tertiary">

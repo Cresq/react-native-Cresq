@@ -7,6 +7,7 @@ import { springs } from "@/motion";
 import { haptic } from "@/haptics";
 import { Card } from "./ui/Card";
 import { Txt } from "./ui/Text";
+import { ExerciseMark } from "./ExerciseMark";
 import { Icon } from "./ui/Icon";
 import { Avatar, PhotoSlot } from "./ui/PhotoSlot";
 import { Chip } from "./ui/Chip";
@@ -30,7 +31,7 @@ export type Post = {
   place?: string;
   photoHeight?: number;
   /** Shown instead of a photo: what the session contained. */
-  exercises?: { name: string; detail: string }[];
+  exercises?: { exerciseId?: string; name: string; detail: string }[];
   /** Every set, for the post's own page. */
   workout?: BreakdownExercise[];
   record?: string;
@@ -118,7 +119,10 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
             <View style={{ gap: 0 }}>
               {/* Three exercises at most. The rest is one tap away, on the post's own page. */}
               {(post.exercises ?? []).slice(0, 3).map((e, i) => (
-                <View key={i} style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12, paddingVertical: 4 }}>
+                // No tap target on the mark here: the whole post is already one, and a
+                // button inside a button is a nested <button> on web.
+                <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4 }}>
+                  <ExerciseMark exerciseId={e.exerciseId} name={e.name} size={26} />
                   <Txt variant="labelM" style={{ flex: 1 }} numberOfLines={1}>
                     {e.name}
                   </Txt>
