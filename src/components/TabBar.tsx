@@ -3,7 +3,7 @@ import { Platform, Pressable, View } from "react-native";
 import { BlurView } from "expo-blur";
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import type { ComponentProps } from "react";
 import type { Tabs } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -83,7 +83,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
 
 function RunningStrip() {
   const { colors, layout, radius, shadow } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const { session, rest, adjustRest, skipRest, lastDiscarded, undoDiscard, dismissDiscarded } = useWorkout();
   const t = useT();
   const [, tick] = useState(0);

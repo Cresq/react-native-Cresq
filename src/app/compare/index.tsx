@@ -1,5 +1,5 @@
 import { View } from "react-native";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useSocial } from "@/store/social";
@@ -19,7 +19,7 @@ import { Press } from "@/components/ui/Press";
  */
 export default function CompareList() {
   const { colors } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const { db } = useDb();
   const { following, people } = useSocial();

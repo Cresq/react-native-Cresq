@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, Share, View, type ImageSourcePropType } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { springs } from "@/motion";
 import { haptic } from "@/haptics";
@@ -51,7 +51,7 @@ export type Post = {
  */
 export function PostCard({ post, preview, onPress, onMore, onComment }: { post: Post; preview?: boolean; onPress?: () => void; onMore?: () => void; onComment?: () => void }) {
   const { colors } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const [liked, setLiked] = useState(!!post.liked);
   const [zoom, setZoom] = useState(false);
@@ -124,7 +124,7 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
             {/* Three exercises at most. The rest is one tap away, on the post's own page. */}
             {(post.exercises ?? []).slice(0, 3).map((e, i) => (
               <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4 }}>
-                <ExerciseMark exerciseId={e.exerciseId} name={e.name} size={26} onPress={() => setWatching({ exerciseId: e.exerciseId, name: e.name })} />
+                <ExerciseMark exerciseId={e.exerciseId} name={e.name} size={34} onPress={() => setWatching({ exerciseId: e.exerciseId, name: e.name })} />
                 <Pressable accessibilityRole={onPress ? "button" : undefined} accessibilityLabel={t("Open this workout")} disabled={!onPress} onPress={onPress} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 10, opacity: pressed ? 0.7 : 1 })}>
                   <Txt variant="labelM" style={{ flex: 1 }} numberOfLines={1}>
                     {e.name}

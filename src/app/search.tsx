@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { View } from "react-native";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import { useSocial } from "@/store/social";
 import { useT } from "@/i18n";
 import { Screen, Header } from "@/components/ui/Screen";
@@ -12,7 +12,7 @@ import { PersonRow } from "@/components/PersonRow";
 
 /** Find people. Empty search shows people you do not follow yet, so the page is never blank. */
 export default function Search() {
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const { people, isFollowing } = useSocial();
   const [q, setQ] = useState("");

@@ -65,7 +65,7 @@ export function SessionBreakdown({ exercises }: { exercises: BreakdownExercise[]
               return (
                 <Card key={`${e.name}-${i}`} padding={14} gap={10}>
                   <Row gap={10} align="center">
-                    <ExerciseMark exerciseId={e.exerciseId} name={e.name} size={30} onPress={() => setWatching({ exerciseId: e.exerciseId, name: e.name })} />
+                    <ExerciseMark exerciseId={e.exerciseId} name={e.name} size={38} onPress={() => setWatching({ exerciseId: e.exerciseId, name: e.name })} />
                     <View style={{ flex: 1, gap: 3 }}>
                       <Txt variant="labelL" numberOfLines={2}>
                         {e.name}

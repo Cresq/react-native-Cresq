@@ -1,5 +1,5 @@
 import { Pressable, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useWorkout } from "@/store/workout";
@@ -22,7 +22,7 @@ import { IconButton } from "@/components/ui/IconButton";
  */
 export default function Train() {
   const { colors } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const plural = usePlural();
   const { db, update } = useDb();

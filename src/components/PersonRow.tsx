@@ -1,5 +1,5 @@
 import { Pressable, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import type { Person } from "@/data/people";
 import { useSocial } from "@/store/social";
 import { useT } from "@/i18n";
@@ -10,7 +10,7 @@ import { Button } from "./ui/Button";
 
 /** One person in a list: avatar, name, handle, and a follow button that says what tapping it does. */
 export function PersonRow({ person, sub }: { person: Person; sub?: string }) {
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const { isFollowing, toggleFollow } = useSocial();
   const on = isFollowing(person.id);

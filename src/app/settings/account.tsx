@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Platform, Pressable, Share, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useAuth } from "@/store/auth";
@@ -26,7 +26,7 @@ import { longDate } from "@/db/derive";
  */
 export default function Account() {
   const { colors } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const { db, update, reset, restore } = useDb();
   const { signOut, account } = useAuth();

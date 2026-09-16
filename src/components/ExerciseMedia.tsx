@@ -77,6 +77,8 @@ export function ExerciseMedia({
   );
 
   if (!onPress || !art) return inner;
+  // No badge stuck on the corner. A round picture beside a name is understood
+  // without being labelled, and a play mark on every row is 400 orange dots.
   return (
     <Pressable
       accessibilityRole="button"
@@ -86,24 +88,6 @@ export function ExerciseMedia({
       style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
     >
       {inner}
-      {/* A small play mark, so it is clear the picture does something. */}
-      <View
-        style={{
-          position: "absolute",
-          right: -1,
-          bottom: -1,
-          width: Math.max(16, size * 0.38),
-          height: Math.max(16, size * 0.38),
-          borderRadius: Math.max(8, size * 0.19),
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: colors.accent.ember,
-          borderWidth: 1.5,
-          borderColor: colors.bg.ground,
-        }}
-      >
-        <Icon name="play" size={Math.max(9, size * 0.2)} color={colors.accent.on} fill={colors.accent.on} strokeWidth={1.4} />
-      </View>
     </Pressable>
   );
 }

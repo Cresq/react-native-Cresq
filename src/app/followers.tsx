@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { useNav } from "@/nav";
 import { useDb } from "@/db/DbProvider";
 import { useSocial } from "@/store/social";
 import { ME, followersOf, people, person as findPerson } from "@/data/people";
@@ -14,7 +15,7 @@ import { PersonRow } from "@/components/PersonRow";
 
 /** Followers and following, for you (?user=me or none) or for someone else (?user=ID). */
 export default function Followers() {
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const { db } = useDb();
   const { following: myFollowing } = useSocial();

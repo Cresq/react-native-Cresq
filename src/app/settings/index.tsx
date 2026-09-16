@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Pressable, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useAuth } from "@/store/auth";
@@ -17,7 +17,7 @@ import { BottomSheet } from "@/components/ui/BottomSheet";
 /** Settings. Small on purpose: what the app needs today, nothing speculative. */
 export default function Settings() {
   const { colors } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const plural = usePlural();
   const { db, update, reset } = useDb();

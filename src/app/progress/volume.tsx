@@ -1,6 +1,6 @@
 import { View } from "react-native";
 import { useMemo } from "react";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { fmtKg, shortDate, volumeByWeek } from "@/db/derive";
@@ -17,7 +17,7 @@ import { Divider } from "@/components/ui/Card";
  */
 export default function Volume() {
   const { colors, radius } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const { db } = useDb();
   const weeks = useMemo(() => volumeByWeek(db.sessions, 12, Date.now(), db.activeSession), [db.sessions, db.activeSession]);

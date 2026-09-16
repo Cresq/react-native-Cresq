@@ -136,7 +136,7 @@ export function CommentSheet({
         </Animated.View>
 
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} pointerEvents="box-none">
-          <Animated.View style={[{ height: sheetH, backgroundColor: colors.bg.surface, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, overflow: "hidden" }, sheetStyle]}>
+          <Animated.View pointerEvents={visible ? "auto" : "none"} style={[{ height: sheetH, backgroundColor: colors.bg.surface, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, overflow: "hidden" }, sheetStyle]}>
             {/* The grab area is the top of the sheet, so dragging never fights the list. */}
             <GestureDetector gesture={drag}>
               <View>

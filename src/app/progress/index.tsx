@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { DEFAULT_FAVOURITES } from "@/db/types";
@@ -23,7 +23,7 @@ import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
  */
 export default function Data() {
   const { colors } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const plural = usePlural();
   const { db, update } = useDb();

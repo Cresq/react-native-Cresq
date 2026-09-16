@@ -32,7 +32,7 @@ export function findExercise(exerciseId?: string, name?: string): Exercise | und
 export function ExerciseMark({
   exerciseId,
   name,
-  size = 26,
+  size = 34,
   onPress,
 }: {
   exerciseId?: string;

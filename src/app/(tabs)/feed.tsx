@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import { useDb } from "@/db/DbProvider";
 import { useMe } from "@/store/me";
 import { useNotes } from "@/store/notifications";
@@ -23,7 +23,7 @@ import { Field } from "@/components/ui/Field";
 
 /** Feed. Your own shared sessions come from the database; other people's posts are placeholders until there is a server. */
 export default function Feed() {
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const { colors } = useTheme();
   const { db, update } = useDb();

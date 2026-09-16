@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { person } from "@/data/people";
@@ -21,7 +22,7 @@ import { Avatar } from "@/components/ui/PhotoSlot";
  */
 export default function Compare() {
   const { colors } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const { db } = useDb();
   const { id } = useLocalSearchParams<{ id: string }>();

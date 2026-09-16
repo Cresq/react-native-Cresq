@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Pressable, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { groupNotes, useNotes } from "@/store/notifications";
@@ -20,7 +20,7 @@ import { useT } from "@/i18n";
  */
 export default function Notifications() {
   const { colors } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const { update } = useDb();
   const { notes, seen } = useNotes();

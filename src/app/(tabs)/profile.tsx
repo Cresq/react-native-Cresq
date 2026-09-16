@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Image, Pressable, View, useWindowDimensions } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useSocial } from "@/store/social";
@@ -28,7 +29,7 @@ const TABS = ["workouts", "photos"];
  */
 export default function Profile() {
   const { colors, layout } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const { db, update } = useDb();
   const me = useMe();

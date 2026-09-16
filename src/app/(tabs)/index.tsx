@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useMe } from "@/store/me";
@@ -49,7 +49,7 @@ const greetingKey = () => {
  */
 export default function Home() {
   const { colors } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const plural = usePlural();
   const lang = useLanguage();

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { useNav, useOnce } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useWorkout } from "@/store/workout";
@@ -26,7 +27,7 @@ import { useT } from "@/i18n";
  */
 export default function Exercises() {
   const { colors } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const { db, update } = useDb();
   const { addExercise, swapExercise } = useWorkout();
@@ -50,8 +51,12 @@ export default function Exercises() {
       return { ...d, profile: { ...d.profile, favourites: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] } };
     });
 
-  const pick = (id: string) => {
-    const ex = db.exercises.find((e) => e.id === id)!;
+  const once = useOnce();
+  // Two taps in the same breath must not put the movement in twice: a stacked
+  // screen is a nuisance, a duplicated exercise in somebody's session is wrong data.
+  const pick = once((id: string) => {
+    const ex = db.exercises.find((e) => e.id === id);
+    if (!ex) return;
     if (mode === "plan") {
       update((d) => ({ ...d, plans: d.plans.map((p) => (p.id === planId ? { ...p, exercises: [...p.exercises, { exerciseId: ex.id, sets: 3, reps: 10, kg: ex.bodyweight ? 0 : 20, restSeconds: 90 }] } : p)) }));
       router.back();
@@ -63,7 +68,7 @@ export default function Exercises() {
       router.back();
     } else if (mode === "favourite") toggleFavourite(id);
     else router.push(`/progress/${ex.id}`);
-  };
+  });
 
   const create = () => {
     const n = name.trim();
@@ -91,7 +96,7 @@ export default function Exercises() {
             <View key={e.id}>
               {i > 0 ? <Divider /> : null}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <ExerciseMedia exercise={e} size={44} round onPress={() => setWatching(e)} />
+                <ExerciseMedia exercise={e} size={52} round onPress={() => setWatching(e)} />
                 <Pressable accessibilityRole="button" accessibilityState={mode === "favourite" ? { selected: fav } : undefined} onPress={() => pick(e.id)} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 13, opacity: pressed ? 0.7 : 1 })}>
                   <View style={{ flex: 1, gap: 2 }}>
                     <Txt variant="labelL">{e.name}</Txt>

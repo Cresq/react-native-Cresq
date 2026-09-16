@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { View } from "react-native";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import { emailOk, MIN_PASSWORD, useAuth } from "@/store/auth";
 import { AuthLayout } from "@/components/AuthLayout";
 import { Txt } from "@/components/ui/Text";
@@ -17,7 +17,7 @@ import { useT } from "@/i18n";
  */
 export default function SignIn() {
   const { signIn, account } = useAuth();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

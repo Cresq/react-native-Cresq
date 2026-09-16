@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useWorkout } from "@/store/workout";
@@ -30,7 +30,7 @@ import { useT } from "@/i18n";
  */
 export default function Summary() {
   const { colors } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const { db } = useDb();
   const { session, file, setPhoto, setCaption, setShare, setGym } = useWorkout();
@@ -194,7 +194,7 @@ export default function Summary() {
               <View key={r.name + i}>
                 {i > 0 ? <Divider /> : null}
                 <Row gap={10} align="center" style={{ paddingVertical: 12 }}>
-                  <ExerciseMark exerciseId={r.exerciseId} name={r.name} size={30} />
+                  <ExerciseMark exerciseId={r.exerciseId} name={r.name} size={34} />
                   <View style={{ flex: 1, gap: 2 }}>
                     <Txt variant="labelL">{r.name}</Txt>
                     <Txt variant="bodyS" tone="tertiary">

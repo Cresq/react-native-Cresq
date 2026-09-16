@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { View } from "react-native";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { MUSCLE_GROUPS, MUSCLE_NL, MUSCLE_SHORT, fmtKg, muscleLoad } from "@/db/derive";
@@ -21,7 +21,7 @@ import { RadarChart } from "@/components/RadarChart";
  */
 export default function Muscles() {
   const { colors } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const lang = useLanguage();
   const label = (g: keyof typeof MUSCLE_NL) => (lang === "nl" ? MUSCLE_NL[g] : g);

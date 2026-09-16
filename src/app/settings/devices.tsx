@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { View } from "react-native";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { devices } from "@/data/mock";
 import { Screen, Row, Section, Header } from "@/components/ui/Screen";
@@ -16,7 +16,7 @@ import { useT } from "@/i18n";
 
 export default function Devices() {
   const { colors } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const [healthOn, setHealthOn] = useState(true);
   const [sheet, setSheet] = useState(false);

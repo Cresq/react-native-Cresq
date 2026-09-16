@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Pressable, TextInput, View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useWorkout } from "@/store/workout";
@@ -30,7 +31,7 @@ const typeLabel = (t: SetType, working: number) => (t === "warmup" ? "W" : t ===
  */
 export default function PlanEditor() {
   const { colors, radius } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const plural = usePlural();
   const { db, update } = useDb();
@@ -104,11 +105,11 @@ export default function PlanEditor() {
           return (
             <Card key={`${e.exerciseId}-${i}`} padding={isOpen ? 16 : 8} gap={0}>
               <Row gap={12} style={{ paddingVertical: isOpen ? 0 : 6, paddingHorizontal: isOpen ? 0 : 8 }}>
-                {/* A superset is told apart by colour and SS, the same as in a running session. */}
+                {/* A superset is told apart by colour and one S, the same as in a running session. */}
                 <View style={{ width: 28, height: 28, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: groupColor ? groupColor : isOpen ? colors.accent.ember : colors.bg.raised }}>
                   {groupColor ? (
-                    <Txt variant="labelS" style={{ color: SUPERSET_INK, letterSpacing: 0.3 }}>
-                      SS
+                    <Txt variant="labelM" style={{ color: SUPERSET_INK }}>
+                      S
                     </Txt>
                   ) : (
                     <Txt variant="labelM" style={{ color: isOpen ? colors.accent.on : colors.text.secondary }}>
@@ -116,14 +117,13 @@ export default function PlanEditor() {
                     </Txt>
                   )}
                 </View>
-                <ExerciseMark exerciseId={e.exerciseId} name={name(e)} size={30} />
+                <ExerciseMark exerciseId={e.exerciseId} name={name(e)} size={34} />
                 <Pressable accessibilityRole="button" accessibilityState={{ expanded: isOpen }} onPress={() => setOpen(isOpen ? null : i)} style={{ flex: 1, gap: 2 }}>
                   <Row gap={8}>
                     <Txt variant="labelL">{name(e)}</Txt>
                   </Row>
                   <Txt variant="bodyS" tone="tertiary">
-                    {t(sets.length === 1 ? "{n} set" : "{n} sets", { n: sets.length })}
-                    {e.kg ? `, ${e.kg} kg × ${e.reps}` : `, ${t("{n} reps", { n: e.reps })}`}, {t("{time} rest", { time: fmtTime(e.restSeconds) })}
+                    {plural(sets.length, "{n} set", "{n} sets")}, {t("{time} rest", { time: fmtTime(e.restSeconds) })}
                   </Txt>
                 </Pressable>
                 <Pressable accessibilityRole="button" accessibilityLabel={t("Options")} hitSlop={10} onPress={() => setSheet({ kind: "options", index: i })}>

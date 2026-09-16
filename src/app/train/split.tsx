@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Pressable, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useSplit } from "@/store/split";
 import { useDb } from "@/db/DbProvider";
@@ -22,7 +22,7 @@ import { useT, usePlural } from "@/i18n";
  */
 export default function SplitEditor() {
   const { colors } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const plural = usePlural();
   const { split, nextDay, rename, addDay, removeDay, moveDay, setNext } = useSplit();

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Image, Pressable, Share, View, useWindowDimensions } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useSocial } from "@/store/social";
 import { followersOf, person as findPerson } from "@/data/people";
@@ -19,7 +20,7 @@ import { useT } from "@/i18n";
 /** Someone else's profile: the same shape as your own, with a follow button where your settings would be. */
 export default function UserProfile() {
   const { colors, layout } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isFollowing, toggleFollow, block } = useSocial();

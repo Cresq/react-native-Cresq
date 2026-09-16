@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { useNav } from "@/nav";
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { useTheme } from "@/theme/ThemeProvider";
 import { liveProgress, person as findPerson } from "@/data/people";
@@ -27,7 +28,7 @@ const fmt = (ms: number) => {
  */
 export default function LiveSession() {
   const { colors } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isFollowing } = useSocial();

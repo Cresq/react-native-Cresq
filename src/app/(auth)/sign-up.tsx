@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Pressable, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { emailOk, MIN_PASSWORD, useAuth } from "@/store/auth";
 import { MIN_AGE } from "@/db/types";
@@ -19,7 +19,7 @@ import { Row } from "@/components/ui/Screen";
  */
 export default function SignUp() {
   const { signUp } = useAuth();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

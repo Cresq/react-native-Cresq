@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useT } from "@/i18n";
 import { project, rubberband, spring, springs } from "@/motion";
+import { useOnce } from "@/nav";
 import { Txt } from "./Text";
 import { Icon, type IconName } from "./Icon";
 import { Button } from "./Button";
@@ -84,6 +85,7 @@ export function BottomSheet({ visible, onClose, title, subtitle, children }: Pro
             onLayout={(e) => {
               sheetH.value = e.nativeEvent.layout.height;
             }}
+            pointerEvents={visible ? "auto" : "none"}
             style={[styles.sheet, { backgroundColor: colors.bg.surface, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, paddingBottom: Math.max(insets.bottom, 16) + 16 }, sheetStyle]}
           >
             <View style={[styles.handle, { backgroundColor: colors.border.strong }]} />
@@ -108,10 +110,11 @@ export function BottomSheet({ visible, onClose, title, subtitle, children }: Pro
 /** One option row. Rows share the sheet surface and are separated by spacing, not boxes. */
 export function SheetOption({ icon, label, sub, onPress, danger, selected }: { icon: IconName; label: string; sub?: string; onPress: () => void; danger?: boolean; selected?: boolean }) {
   const { colors, radius } = useTheme();
+  const once = useOnce();
   const fg = danger ? colors.status.danger : colors.text.primary;
   return (
     <Press
-      onPress={onPress}
+      onPress={once(onPress)}
       accessibilityRole="button"
       accessibilityState={{ selected: !!selected }}
       scaleTo={0.985}

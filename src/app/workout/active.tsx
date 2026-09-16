@@ -3,7 +3,7 @@ import { Pressable, TextInput, View, type LayoutChangeEvent } from "react-native
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { FadeInDown, FadeOutDown, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import { project, rubberband, springs } from "@/motion";
-import { useRouter } from "expo-router";
+import { useNav } from "@/nav";
 import Svg, { Circle } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -41,7 +41,7 @@ type Slot = { id: string; y: number; h: number };
  */
 export default function ActiveWorkout() {
   const { colors, radius, shadow } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const insets = useSafeAreaInsets();
   const t = useT();
   const w = useWorkout();
@@ -447,7 +447,7 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
               </Txt>
             )}
           </View>
-          <ExerciseMark exerciseId={ex.exerciseId} name={ex.name} size={26} onPress={onWatch} />
+          <ExerciseMark exerciseId={ex.exerciseId} name={ex.name} size={32} onPress={onWatch} />
           <View style={{ flex: 1, gap: 1 }}>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded }} accessibilityLabel={ex.name} onPress={() => { onToggle(); if (!expanded && !done) onFocus(); }} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
               <Txt variant={expanded ? "displayM" : "labelL"}>{ex.name}</Txt>

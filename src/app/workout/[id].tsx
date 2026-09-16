@@ -1,6 +1,7 @@
 import { useMemo , useState } from "react";
 import { Share, View, Pressable } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { fmtKg, longDate, newRecords, sessionStats } from "@/db/derive";
@@ -28,7 +29,7 @@ import { Button } from "@/components/ui/Button";
  */
 export default function SessionDetail() {
   const { colors } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const t = useT();
   const plural = usePlural();
   const { db, update } = useDb();

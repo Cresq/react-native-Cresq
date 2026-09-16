@@ -1,5 +1,6 @@
 import { View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { useNav } from "@/nav";
 import { legalDoc } from "@/data/legal";
 import { Screen, Header, Row } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
@@ -10,7 +11,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 /** One legal document, readable in the app without a browser. */
 export default function Legal() {
   const { colors } = useTheme();
-  const router = useRouter();
+  const router = useNav();
   const { doc: key } = useLocalSearchParams<{ doc: string }>();
   const doc = legalDoc(key);
   if (!doc) {
