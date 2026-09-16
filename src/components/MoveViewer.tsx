@@ -5,7 +5,7 @@ import { useVideoPlayer, VideoView } from "expo-video";
 import { useTheme } from "@/theme/ThemeProvider";
 import type { Exercise } from "@/db/types";
 import { move } from "@/data/moves";
-import { useT } from "@/i18n";
+import { useT, useTerms } from "@/i18n";
 import { Txt } from "./ui/Text";
 import { Icon } from "./ui/Icon";
 import { IconButton } from "./ui/IconButton";
@@ -26,6 +26,7 @@ export function MoveViewer({ exercise, onClose }: { exercise: Exercise | null; o
   const { colors, radius } = useTheme();
   const insets = useSafeAreaInsets();
   const t = useT();
+  const tm = useTerms();
   const art = move(exercise?.move);
 
   // Play is asked for at creation as well as in the effect below. Mounted fresh
@@ -56,7 +57,7 @@ export function MoveViewer({ exercise, onClose }: { exercise: Exercise | null; o
               {exercise?.name}
             </Txt>
             <Txt variant="bodyS" tone="tertiary">
-              {exercise ? `${exercise.muscles}, ${exercise.equipment}` : ""}
+              {exercise ? `${tm(exercise.muscles)}, ${tm(exercise.equipment)}` : ""}
             </Txt>
           </View>
           <IconButton name="close" onPress={onClose} accessibilityLabel={t("Close")} />

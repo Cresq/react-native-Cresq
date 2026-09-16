@@ -488,8 +488,8 @@ export const nl: Record<string, string> = {
   "Choose another workout": "Kies een andere workout",
   "Instead of {name} from your split": "In plaats van {name} uit je split",
   "Open the feed": "Open de feed",
-  "{name} trained since you last looked": "{name} heeft getraind sinds je laatst keek",
-  "{name} and {n} others trained since you last looked": "{name} en {n} anderen hebben getraind sinds je laatst keek",
+  "{name} trained since you last looked": "{name} heeft getraind sinds jij voor het laatst keek",
+  "{name} and {n} others trained since you last looked": "{name} en {n} anderen hebben getraind sinds jij voor het laatst keek",
   "Today's workout": "Workout van vandaag",
   "Your split says {name}. Pick something else for today; the split keeps its order.": "Je split zegt {name}. Kies iets anders voor vandaag; de split houdt zijn volgorde.",
   "Back to the split": "Terug naar de split",
@@ -752,4 +752,23 @@ export const nl: Record<string, string> = {
   "Reply": "Antwoorden",
   "Replying to {name}": "Antwoord aan {name}",
   "Cancel reply": "Antwoord annuleren",
+  "Not found": "Niet gevonden",
+  "That document does not exist. The ones that do are listed under Account and privacy.": "Dit document bestaat niet. De documenten die er wel zijn staan onder Account en privacy.",
+  "Updated {date}": "Bijgewerkt {date}",
+  "Draft. A lawyer is reading this, and it will be in Dutch before launch.": "Concept. Een jurist leest dit na, en vóór de launch staat het in het Nederlands.",
+  /* The sample split and plans a new account starts with. App copy, not the
+     person's own writing, so it belongs in their language from the first screen. */
+  "Quads, hamstrings, glutes": "Quadriceps, hamstrings, bilspieren",
+  "Pressing and rowing, paired": "Duwen en trekken, gekoppeld",
+  "Biceps, triceps, delts": "Biceps, triceps, deltoides",
+  "Recover. Walk, sleep, eat.": "Herstellen. Wandelen, slapen, eten.",
+  "Elbows tucked, pause at the bottom": "Ellebogen in, pauze onderin",
+
+  /* The devices screen, which now promises nothing it cannot do. */
+  "CresQ will read heart rate, energy and recovery from the devices you connect, and write your sessions back. Nothing is connected yet.": "CresQ leest straks hartslag, energie en herstel uit de apparaten die je koppelt, en schrijft je sessies terug. Er is nog niets gekoppeld.",
+  "See what Health access will ask for": "Bekijk wat Health-toegang gaat vragen",
+  "What Health access asks for": "Wat Health-toegang vraagt",
+  "This is the list you will see when connecting becomes possible. Each one powers a feature; the rest stays off. Nothing here is on yet.": "Dit is de lijst die je ziet zodra koppelen kan. Elk item voedt een functie; de rest blijft uit. Hier staat nu nog niets aan.",
+  "Heart rate, energy, sleep and weight, and your sessions written back.": "Hartslag, energie, slaap en gewicht, en je sessies die teruggeschreven worden.",
+  "Live heart rate and logging from your wrist.": "Live hartslag en loggen vanaf je pols.",
 };

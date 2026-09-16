@@ -2,7 +2,6 @@ import { Image, View, type ImageSourcePropType } from "react-native";
 import { Press } from "./ui/Press";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Txt } from "./ui/Text";
-import { Icon } from "./ui/Icon";
 
 /** "Push" → "PU", "Chest & Back" → "C&B", "Arms & Shoulders" → "A&S", "Upper body" → "UB". */
 export function abbreviate(name: string) {

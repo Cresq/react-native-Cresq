@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Screen, Row } from "./ui/Screen";
 import { Lockup } from "./Brand";
 import { Txt } from "./ui/Text";
-import { useT } from "@/i18n";
 
 /**
  * One layout for Sign in and Sign up so both screens share exact positions.
@@ -24,7 +23,6 @@ const OPTICAL_NUDGE = 3;
 
 export function AuthLayout({ title, subtitle, children, footerCopy, footerAction, onFooter }: PropsWithChildren<{ title: string; subtitle: string; footerCopy: string; footerAction: string; onFooter: () => void }>) {
   const insets = useSafeAreaInsets();
-  const t = useT();
   return (
     <Screen contentStyle={{ gap: 0, flexGrow: 1, paddingTop: insets.top + 36 }}>
       <View style={{ alignItems: "center", paddingLeft: OPTICAL_NUDGE }}>

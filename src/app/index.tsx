@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import { useRouter } from "expo-router";
@@ -16,7 +16,6 @@ export default function Splash() {
   const { db, ready } = useDb();
   const router = useRouter();
   const shownAt = useRef(Date.now());
-  const [leaving, setLeaving] = useState(false);
   const markScale = useSharedValue(0.72);
   const markOpacity = useSharedValue(0);
 
@@ -33,8 +32,6 @@ export default function Splash() {
    * simply not firing on web — the app sat on this screen for good, with no error
    * and no way out. A splash must never be able to trap somebody in it.
    */
-  const go = useRef(router);
-  go.current = router;
   const started = useRef(false);
   useEffect(() => {
     // Once, and never torn down again. Setting `leaving` used to re-run this
@@ -46,12 +43,11 @@ export default function Splash() {
     const target = !db.auth.signedIn ? "/(auth)/sign-in" : !db.profile.onboarded ? "/onboarding" : "/(tabs)";
     const wait = Math.max(0, 1100 - (Date.now() - shownAt.current));
     const start = setTimeout(() => {
-      setLeaving(true);
       markScale.value = withSequence(withTiming(1.06, { duration: 120 }), withTiming(2.4, { duration: 420, easing: Easing.in(Easing.cubic) }));
       markOpacity.value = withDelay(140, withTiming(0, { duration: 360 }));
       // Deliberately not cleared on cleanup: once the app has committed to
       // leaving, nothing gets to change its mind.
-      setTimeout(() => go.current.replace(target), 430);
+      setTimeout(() => router.replace(target), 430);
     }, wait);
     return () => clearTimeout(start);
     // eslint-disable-next-line react-hooks/exhaustive-deps

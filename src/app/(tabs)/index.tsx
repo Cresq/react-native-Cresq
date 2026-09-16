@@ -4,10 +4,11 @@ import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useMe } from "@/store/me";
+import { useNow } from "@/clock";
 import { useNotes } from "@/store/notifications";
 import { useWorkout } from "@/store/workout";
 import { useSplit } from "@/store/split";
-import { finished, fmtKg, liftTrend, locale, shortDate, startOfWeek, weekDays, weeklyVolume } from "@/db/derive";
+import { finished, fmtKg, liftTrend, locale, startOfWeek, weekDays, weeklyVolume } from "@/db/derive";
 import { estimateMinutes } from "@/db/seed";
 import { DEFAULT_FAVOURITES } from "@/db/types";
 import { useLanguage, useT, usePlural } from "@/i18n";
@@ -55,6 +56,7 @@ export default function Home() {
   const lang = useLanguage();
   const { db } = useDb();
   const me = useMe();
+  const now = useNow();
   const { unread } = useNotes();
   const { session, start } = useWorkout();
   const { split, nextDay, setOverride } = useSplit();
@@ -67,13 +69,13 @@ export default function Home() {
   const missed = useMemo(() => {
     const since = db.profile.lastFeedSeen ?? 0;
     const ageMs = (meta: string) => (/today/.test(meta) ? 2 * 3600000 : /yesterday/.test(meta) ? 26 * 3600000 : 3 * 86400000);
-    return otherPosts.filter((p) => p.userId && isFollowing(p.userId) && Date.now() - ageMs(p.meta) > since).map((p) => ({ post: p, who: person(p.userId!) }));
-  }, [db.profile.lastFeedSeen, isFollowing]);
+    return otherPosts.filter((p) => p.userId && isFollowing(p.userId) && now - ageMs(p.meta) > since).map((p) => ({ post: p, who: person(p.userId!) }));
+  }, [db.profile.lastFeedSeen, isFollowing, now]);
   const running = !!session && !session.finishedAt;
   const done = useMemo(() => finished(db.sessions), [db.sessions]);
   const week = useMemo(() => weekDays(db.sessions), [db.sessions]);
-  const volume = useMemo(() => weeklyVolume(db.sessions, Date.now(), db.activeSession), [db.sessions, db.activeSession]);
-  const thisWeek = useMemo(() => done.filter((s) => s.startedAt >= startOfWeek(Date.now())).length, [done]);
+  const volume = useMemo(() => weeklyVolume(db.sessions, now, db.activeSession), [db.sessions, db.activeSession, now]);
+  const thisWeek = useMemo(() => done.filter((s) => s.startedAt >= startOfWeek(now)).length, [done, now]);
   const goal = db.profile.daysPerWeek ?? 3;
 
   const favourites = db.profile.favourites ?? DEFAULT_FAVOURITES;

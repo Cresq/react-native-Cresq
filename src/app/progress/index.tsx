@@ -3,6 +3,7 @@ import { Pressable, ScrollView, View } from "react-native";
 import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
+import { useNow } from "@/clock";
 import { DEFAULT_FAVOURITES } from "@/db/types";
 import { finished, fmtKg, liftTrend, sessionStats, shortDate, startOfWeek, weeklyVolume } from "@/db/derive";
 import { useT, usePlural } from "@/i18n";
@@ -22,22 +23,22 @@ import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
  * answer "how much" and "for what". Home keeps only a glance at this.
  */
 export default function Data() {
-  const { colors } = useTheme();
   const router = useNav();
   const t = useT();
   const plural = usePlural();
   const { db, update } = useDb();
+  const now = useNow();
   const [managing, setManaging] = useState(false);
   const [liftId, setLiftId] = useState<string | null>(null);
 
   const done = useMemo(() => finished(db.sessions), [db.sessions]);
-  const volume = useMemo(() => weeklyVolume(db.sessions, Date.now(), db.activeSession), [db.sessions, db.activeSession]);
+  const volume = useMemo(() => weeklyVolume(db.sessions, now, db.activeSession), [db.sessions, db.activeSession, now]);
   const week = useMemo(() => {
-    const from = startOfWeek(Date.now());
+    const from = startOfWeek(now);
     const sessions = done.filter((s) => s.startedAt >= from);
     const live = db.activeSession && !db.activeSession.finishedAt && db.activeSession.startedAt >= from ? db.activeSession : null;
     return { sessions: sessions.length, sets: [...sessions, ...(live ? [live] : [])].reduce((n, s) => n + sessionStats(s).setsDone, 0) };
-  }, [done, db.activeSession]);
+  }, [done, db.activeSession, now]);
   const goal = db.profile.daysPerWeek ?? 3;
 
   const favourites = db.profile.favourites ?? DEFAULT_FAVOURITES;

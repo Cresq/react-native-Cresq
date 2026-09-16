@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
+import { useNow } from "@/clock";
 import { fmtKg, shortDate, volumeByWeek } from "@/db/derive";
 import { useT } from "@/i18n";
 import { Screen, Row, Header } from "@/components/ui/Screen";
@@ -20,7 +21,8 @@ export default function Volume() {
   const router = useNav();
   const t = useT();
   const { db } = useDb();
-  const weeks = useMemo(() => volumeByWeek(db.sessions, 12, Date.now(), db.activeSession), [db.sessions, db.activeSession]);
+  const now = useNow();
+  const weeks = useMemo(() => volumeByWeek(db.sessions, 12, now, db.activeSession), [db.sessions, db.activeSession, now]);
   const peak = Math.max(1, ...weeks.map((w) => w.volume));
   const trained = weeks.filter((w) => w.volume > 0);
   const average = trained.length ? trained.reduce((n, w) => n + w.volume, 0) / trained.length : 0;

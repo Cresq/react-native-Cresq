@@ -4,6 +4,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
+import { useNow } from "@/clock";
 import { person } from "@/data/people";
 import { DEFAULT_FAVOURITES } from "@/db/types";
 import { finished, fmtKg, liftTrend, sessionStats, startOfWeek, weeklyVolume } from "@/db/derive";
@@ -28,23 +29,24 @@ export default function Compare() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const them = person(id);
 
+  const now = useNow();
   const done = useMemo(() => finished(db.sessions), [db.sessions]);
   const mine = useMemo(() => {
-    const from = startOfWeek(Date.now());
+    const from = startOfWeek(now);
     const thisWeek = done.filter((s) => s.startedAt >= from);
     const live = db.activeSession && !db.activeSession.finishedAt && db.activeSession.startedAt >= from ? db.activeSession : null;
     const favourites = db.profile.favourites ?? DEFAULT_FAVOURITES;
     return {
       sessions: done.length,
       weekSessions: thisWeek.length + (live ? 1 : 0),
-      weekVolume: weeklyVolume(db.sessions, Date.now(), db.activeSession).current,
+      weekVolume: weeklyVolume(db.sessions, now, db.activeSession).current,
       lifts: favourites.map((exerciseId) => {
         const points = liftTrend(db.sessions, exerciseId);
         return { exerciseId, kg: points.length ? points[points.length - 1].value : 0 };
       }),
       sets: [...thisWeek, ...(live ? [live] : [])].reduce((n, s) => n + sessionStats(s).setsDone, 0),
     };
-  }, [done, db.sessions, db.activeSession, db.profile.favourites]);
+  }, [done, db.sessions, db.activeSession, db.profile.favourites, now]);
 
   if (!them || !them.compare) {
     return (

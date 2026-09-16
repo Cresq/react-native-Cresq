@@ -15,7 +15,7 @@ import { Tabs } from "@/components/ui/Tabs";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
 import { LineChart } from "@/components/LineChart";
-import { useT, usePlural } from "@/i18n";
+import { useT, usePlural, useTerms } from "@/i18n";
 import { ExerciseMedia } from "@/components/ExerciseMedia";
 import { MoveViewer } from "@/components/MoveViewer";
 
@@ -29,6 +29,7 @@ export default function LiftDetail() {
   const { colors } = useTheme();
   const router = useNav();
   const t = useT();
+  const tm = useTerms();
   const plural = usePlural();
   const { db } = useDb();
   const { lift: id } = useLocalSearchParams<{ lift: string }>();
@@ -48,7 +49,14 @@ export default function LiftDetail() {
   const current = all.length ? all[all.length - 1].value : 0;
   const first = shown.length ? shown[0].value : current;
   const delta = Math.round((current - first) * 2) / 2;
+  const bestRecords = useMemo(() => {
+    const out: { kg: number; reps: number; date: number }[] = [];
+    let best = 0;
+    for (const h of [...history].reverse()) if (h.top && h.top.kg > best) { best = h.top.kg; out.push({ kg: h.top.kg, reps: h.top.reps, date: h.date }); }
+    return out.reverse();
+  }, [history]);
 
+  // Every hook is above this line. Nothing below it may add one.
   if (!exercise) {
     return (
       <Screen>
@@ -60,16 +68,10 @@ export default function LiftDetail() {
     );
   }
   const weeks = shown.length ? Math.max(1, Math.round((shown[shown.length - 1].date - shown[0].date) / (7 * 86400000))) : 0;
-  const bestRecords = useMemo(() => {
-    const out: { kg: number; reps: number; date: number }[] = [];
-    let best = 0;
-    for (const h of [...history].reverse()) if (h.top && h.top.kg > best) { best = h.top.kg; out.push({ kg: h.top.kg, reps: h.top.reps, date: h.date }); }
-    return out.reverse();
-  }, [history]);
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={exercise.name} subtitle={`${exercise.muscles}, ${exercise.equipment}`} right={<IconButton name="share" onPress={() => Share.share({ message: `${exercise.name}: ${t("Estimated 1RM")} ${current} kg, ${delta >= 0 ? "+" : ""}${delta} kg. CresQ.` })} accessibilityLabel={t("Share")} />} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={exercise.name} subtitle={`${tm(exercise.muscles)}, ${tm(exercise.equipment)}`} right={<IconButton name="share" onPress={() => Share.share({ message: `${exercise.name}: ${t("Estimated 1RM")} ${current} kg, ${delta >= 0 ? "+" : ""}${delta} kg. CresQ.` })} accessibilityLabel={t("Share")} />} />
 
       <ExerciseMedia exercise={exercise} ratio={1936 / 1072} onPress={() => setWatching(true)} />
 

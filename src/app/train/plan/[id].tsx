@@ -11,7 +11,7 @@ import type { Plan, PlanExercise, PlannedSet, SetType } from "@/db/types";
 import { Screen, Row, Section, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
-import { Card, Divider } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";

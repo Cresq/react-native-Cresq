@@ -7,7 +7,7 @@ import { useDb } from "@/db/DbProvider";
 import { useWorkout } from "@/store/workout";
 import { uid } from "@/db/storage";
 import { DEFAULT_FAVOURITES } from "@/db/types";
-import { Screen, Row, Header } from "@/components/ui/Screen";
+import { Screen, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
 import { Divider } from "@/components/ui/Card";
@@ -18,7 +18,7 @@ import { BottomSheet } from "@/components/ui/BottomSheet";
 import { ExerciseMedia } from "@/components/ExerciseMedia";
 import { MoveViewer } from "@/components/MoveViewer";
 import type { Exercise } from "@/db/types";
-import { useT } from "@/i18n";
+import { useT, useTerms } from "@/i18n";
 
 /**
  * Exercise library. Browse (tap opens the lift), add to a workout (?plan=ID),
@@ -29,6 +29,7 @@ export default function Exercises() {
   const { colors } = useTheme();
   const router = useNav();
   const t = useT();
+  const tm = useTerms();
   const { db, update } = useDb();
   const { addExercise, swapExercise } = useWorkout();
   const { plan: planId, session: forSession, favourite, swap } = useLocalSearchParams<{ plan?: string; session?: string; favourite?: string; swap?: string }>();
@@ -42,8 +43,9 @@ export default function Exercises() {
   const favourites = db.profile.favourites ?? DEFAULT_FAVOURITES;
   const list = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return [...db.exercises].filter((e) => !t || e.name.toLowerCase().includes(t) || e.muscles.toLowerCase().includes(t) || e.equipment.toLowerCase().includes(t)).sort((a, b) => a.name.localeCompare(b.name));
-  }, [db.exercises, q]);
+    // Searched in both languages: somebody typing "borst" and somebody typing "chest" are after the same shelf.
+    return [...db.exercises].filter((e) => !t || e.name.toLowerCase().includes(t) || e.muscles.toLowerCase().includes(t) || e.equipment.toLowerCase().includes(t) || tm(e.muscles).toLowerCase().includes(t) || tm(e.equipment).toLowerCase().includes(t)).sort((a, b) => a.name.localeCompare(b.name));
+  }, [db.exercises, q, tm]);
 
   const toggleFavourite = (id: string) =>
     update((d) => {
@@ -101,7 +103,7 @@ export default function Exercises() {
                   <View style={{ flex: 1, gap: 2 }}>
                     <Txt variant="labelL">{e.name}</Txt>
                     <Txt variant="bodyS" tone="tertiary">
-                      {e.muscles}, {e.equipment}
+                      {tm(e.muscles)}, {tm(e.equipment)}
                     </Txt>
                   </View>
                   {mode === "favourite" ? (

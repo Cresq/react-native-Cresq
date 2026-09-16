@@ -5,7 +5,6 @@ import { useDb } from "@/db/DbProvider";
 import { useWorkout } from "@/store/workout";
 import { useSplit } from "@/store/split";
 import { finished, relativeDay } from "@/db/derive";
-import { estimateMinutes } from "@/db/seed";
 import { uid } from "@/db/storage";
 import { useT, usePlural } from "@/i18n";
 import { Screen, Row, Section } from "@/components/ui/Screen";

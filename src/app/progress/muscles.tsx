@@ -3,15 +3,15 @@ import { View } from "react-native";
 import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
+import { useNow } from "@/clock";
 import { MUSCLE_GROUPS, MUSCLE_NL, MUSCLE_SHORT, fmtKg, muscleLoad } from "@/db/derive";
 import { useLanguage, useT } from "@/i18n";
 import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/Icon";
-import { Divider } from "@/components/ui/Card";
+import { Card, Divider } from "@/components/ui/Card";
 import { Segmented } from "@/components/ui/Segmented";
-import { Card } from "@/components/ui/Card";
 import { RadarChart } from "@/components/RadarChart";
 
 /**
@@ -28,7 +28,8 @@ export default function Muscles() {
   const { db } = useDb();
   const [range, setRange] = useState("7");
   const days = Number(range);
-  const rows = useMemo(() => muscleLoad(db.sessions, db.exercises, days, Date.now(), db.activeSession), [db.sessions, db.exercises, days, db.activeSession]);
+  const now = useNow();
+  const rows = useMemo(() => muscleLoad(db.sessions, db.exercises, days, now, db.activeSession), [db.sessions, db.exercises, days, db.activeSession, now]);
   const peak = Math.max(1, ...rows.map((r) => r.sets));
   const total = rows.reduce((n, r) => n + r.sets, 0);
   const untouched = rows.filter((r) => r.sets === 0);

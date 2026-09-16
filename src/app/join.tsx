@@ -32,7 +32,7 @@ export default function Join() {
   const once = useOnce();
   const t = useT();
   const plural = usePlural();
-  const { db, update } = useDb();
+  const { update } = useDb();
   const { session, start } = useWorkout();
   const { w } = useLocalSearchParams<{ w?: string }>();
   const [busy, setBusy] = useState(false);

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useDb } from "@/db/DbProvider";
 import { useSplit } from "@/store/split";
+import { useNow } from "@/clock";
 import { finished, newRecords, startOfDay, startOfWeek } from "@/db/derive";
 import type { IconName } from "@/components/ui/Icon";
 
@@ -25,6 +26,7 @@ export type Note = {
 export function useNotes() {
   const { db } = useDb();
   const { nextDay } = useSplit();
+  const now = useNow();
   const seen = db.profile.lastNotificationsSeen ?? 0;
 
   const notes = useMemo(() => {
@@ -48,10 +50,10 @@ export function useNotes() {
       }
     }
     if (nextDay && !nextDay.rest) {
-      out.push({ id: "next-day", icon: "calendar", title: "{name} is up next", vars: { name: nextDay.name }, body: "Your split says this one is due.", at: startOfDay(Date.now()), href: "/(tabs)/train" });
+      out.push({ id: "next-day", icon: "calendar", title: "{name} is up next", vars: { name: nextDay.name }, body: "Your split says this one is due.", at: startOfDay(now), href: "/(tabs)/train" });
     }
     return out.sort((a, b) => b.at - a.at).slice(0, 25);
-  }, [db.sessions, nextDay]);
+  }, [db.sessions, nextDay, now]);
 
   const unread = notes.filter((n) => n.at > seen).length;
   return { notes, unread, seen };

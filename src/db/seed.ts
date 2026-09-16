@@ -1,6 +1,7 @@
 import { DB_VERSION, type Db, type Exercise, type ExerciseEntry, type Plan, type Session, type SetEntry, type SplitDay } from "./types";
 import { libraryExercises } from "@/data/exercises";
 import { uid } from "./storage";
+import { translate, type Language } from "@/i18n/translate";
 
 /** The exercise library, catalogue and artwork both, lives in its own file. */
 export { libraryExercises as seedExercises } from "@/data/exercises";
@@ -15,14 +16,26 @@ export const seedPlans: Plan[] = [
   { id: "arms-shoulders", name: "Arms & Shoulders", focus: "Biceps, triceps, delts", createdAt: 0, exercises: [px("ohp", 4, 6, 50, 120), px("lateral-raise", 4, 15, 10, 60), px("curl", 3, 10, 30, 60, undefined, "A"), px("pushdown", 3, 12, 30, 60, undefined, "A"), px("hammer-curl", 3, 12, 14, 60, undefined, "B"), px("skull-crusher", 3, 10, 30, 60, undefined, "B")] },
 ];
 
+/**
+ * The same plans, with the copy this app wrote in the reader's language.
+ * Names stay as they are: Push, Pull and Legs are what a Dutch gym calls them
+ * too. Only the sentences move.
+ */
+export const seedPlansIn = (lang: Language): Plan[] =>
+  seedPlans.map((p) => ({
+    ...p,
+    focus: translate(lang, p.focus),
+    exercises: p.exercises.map((e) => (e.note ? { ...e, note: translate(lang, e.note) } : e)),
+  }));
+
 /** Templates offered when adding a day to a split: every plan, plus a rest day. */
-export const splitTemplates = (plans: Plan[]): Omit<SplitDay, "id">[] => [
+export const splitTemplates = (plans: Plan[], t: (s: string) => string = (s) => s): Omit<SplitDay, "id">[] => [
   ...plans.map((p) => ({ name: p.name, focus: p.focus, planId: p.id, exercises: p.exercises.length, minutes: estimateMinutes(p) })),
-  { name: "Rest day", focus: "Recover. Walk, sleep, eat.", rest: true },
+  { name: t("Rest day"), focus: t("Recover. Walk, sleep, eat."), rest: true },
 ];
 
-export const seedSplitDays = (): SplitDay[] =>
-  seedPlans.map((p) => ({ id: uid(), name: p.name, focus: p.focus, planId: p.id, exercises: p.exercises.length, minutes: estimateMinutes(p) }));
+export const seedSplitDays = (plans: Plan[] = seedPlans): SplitDay[] =>
+  plans.map((p) => ({ id: uid(), name: p.name, focus: p.focus, planId: p.id, exercises: p.exercises.length, minutes: estimateMinutes(p) }));
 
 /** Rough duration from sets and rest. Enough to plan an evening. */
 export function estimateMinutes(plan: { exercises: { sets: number; restSeconds: number }[] }) {
@@ -69,9 +82,9 @@ export function seedSampleSessions(exercises: Exercise[], plans: Plan[]): Sessio
   return out.sort((a, b) => a.startedAt - b.startedAt);
 }
 
-export function createSeedDb(): Db {
+export function createSeedDb(lang: Language = "nl"): Db {
   const exercises = libraryExercises;
-  const plans = seedPlans;
+  const plans = seedPlansIn(lang);
   return {
     version: DB_VERSION,
     createdAt: Date.now(),
@@ -83,7 +96,7 @@ export function createSeedDb(): Db {
     plans,
     sessions: seedSampleSessions(exercises, plans),
     activeSession: null,
-    split: { name: "Push Pull Legs", days: seedSplitDays(), nextIndex: 0 },
+    split: { name: "Push Pull Legs", days: seedSplitDays(plans), nextIndex: 0 },
     consent: { analytics: false, ageStats: false, marketing: false },
     following: ["u2", "u3", "u4", "u5", "u6", "u7"],
     blocked: [],

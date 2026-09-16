@@ -13,7 +13,6 @@ import { Screen, Row } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
 import { Avatar } from "@/components/ui/PhotoSlot";
-import { Divider } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Tabs } from "@/components/ui/Tabs";
 import { WorkoutTile } from "@/components/WorkoutTile";

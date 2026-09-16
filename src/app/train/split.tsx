@@ -29,7 +29,7 @@ export default function SplitEditor() {
   const [renaming, setRenaming] = useState(false);
   const [nameText, setNameText] = useState(split.name);
   const { db } = useDb();
-  const splitTemplates = templatesFor(db.plans);
+  const splitTemplates = templatesFor(db.plans, t);
   const [sheet, setSheet] = useState<null | { kind: "day"; day: SplitDay } | { kind: "add" }>(null);
   const training = split.days.filter((d) => !d.rest).length;
 
@@ -123,7 +123,7 @@ export default function SplitEditor() {
 
       <BottomSheet visible={sheet?.kind === "add"} onClose={() => setSheet(null)} title={t("Add a day")} subtitle={t("Pick a workout or a rest day. You can reorder afterwards.")}>
         {splitTemplates.map((tpl) => (
-          <SheetOption key={tpl.name} icon={tpl.rest ? "sun" : "dumbbell"} label={tpl.rest ? t("Rest day") : tpl.name} sub={tpl.rest ? tpl.focus : `${tpl.focus}, ${plural(tpl.exercises ?? 0, "{n} exercise", "{n} exercises")}`} onPress={() => { addDay(tpl); setSheet(null); }} />
+          <SheetOption key={tpl.name} icon={tpl.rest ? "sun" : "dumbbell"} label={tpl.name} sub={tpl.rest ? tpl.focus : `${tpl.focus}, ${plural(tpl.exercises ?? 0, "{n} exercise", "{n} exercises")}`} onPress={() => { addDay(tpl); setSheet(null); }} />
         ))}
       </BottomSheet>
     </Screen>

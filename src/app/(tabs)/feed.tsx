@@ -101,7 +101,7 @@ export default function Feed() {
             comments: 0,
           };
         }),
-    [db.sessions, db.profile, t],
+    [db.sessions, db.profile, me.photo, t],
   );
   const visible = (filter === "following" ? [...mine, ...otherPosts.filter((p) => p.userId && isFollowing(p.userId))] : otherPosts.filter((p) => !p.userId || !isFollowing(p.userId))).filter((p) => !hidden.includes(p.id));
   const open = (p: Post) => router.push(`/workout/${p.id}`);
