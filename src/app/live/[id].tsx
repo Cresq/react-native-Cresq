@@ -33,9 +33,11 @@ export default function LiveSession() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isFollowing } = useSocial();
   const p = findPerson(id);
-  const [, tick] = useState(0);
+  // The clock is the state, not a counter: liveProgress reads the time itself,
+  // so a bare re-render leaves it cached against a session that has not changed.
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const i = setInterval(() => tick((n) => n + 1), 1000);
+    const i = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(i);
   }, []);
   const pulse = useSharedValue(1);
@@ -55,7 +57,7 @@ export default function LiveSession() {
     );
   }
   const live = p.live;
-  const prog = liveProgress(live);
+  const prog = liveProgress(live, now);
   const current = prog.exercises[prog.currentIndex];
   const volume = prog.exercises.reduce((n, e) => n + e.doneSets.reduce((m, s) => m + s.kg * s.reps, 0), 0);
 
@@ -73,13 +75,13 @@ export default function LiveSession() {
             </Txt>
           </Row>
           <Txt variant="bodyS" tone="tertiary">
-            {t("Started {time} ago", { time: fmt(Date.now() - live.startedAt) })}
+            {t("Started {time} ago", { time: fmt(now - live.startedAt) })}
           </Txt>
         </View>
       </Row>
 
       <Row gap={12} align="stretch">
-        <Stat label={t("Elapsed")} value={fmt(Date.now() - live.startedAt)} />
+        <Stat label={t("Elapsed")} value={fmt(now - live.startedAt)} />
         <StatDivider />
         <Stat label={t("Volume")} value={volume >= 1000 ? `${(volume / 1000).toFixed(1)}k` : String(volume)} unit="kg" />
         <StatDivider />

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
-import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming } from "react-native-reanimated";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
@@ -25,19 +25,37 @@ export default function Splash() {
     markScale.value = withSpring(1, spring(0.5, 0.85));
   }, [markOpacity, markScale]);
 
+  /**
+   * Leaving is on a clock, not on an animation finishing.
+   *
+   * This used to call `router.replace` from the fade's completion callback. When
+   * that callback did not arrive — a dropped frame, reduced motion, the callback
+   * simply not firing on web — the app sat on this screen for good, with no error
+   * and no way out. A splash must never be able to trap somebody in it.
+   */
+  const go = useRef(router);
+  go.current = router;
+  const started = useRef(false);
   useEffect(() => {
-    if (!ready || leaving) return;
+    // Once, and never torn down again. Setting `leaving` used to re-run this
+    // effect, and the cleanup then cancelled the very navigation the run before
+    // it had just scheduled, which is how the app came to sit on this screen
+    // with no error and no way out.
+    if (!ready || started.current) return;
+    started.current = true;
     const target = !db.auth.signedIn ? "/(auth)/sign-in" : !db.profile.onboarded ? "/onboarding" : "/(tabs)";
     const wait = Math.max(0, 1100 - (Date.now() - shownAt.current));
-    const t = setTimeout(() => {
+    const start = setTimeout(() => {
       setLeaving(true);
       markScale.value = withSequence(withTiming(1.06, { duration: 120 }), withTiming(2.4, { duration: 420, easing: Easing.in(Easing.cubic) }));
-      markOpacity.value = withDelay(140, withTiming(0, { duration: 360 }, (done) => {
-        if (done) runOnJS(router.replace)(target);
-      }));
+      markOpacity.value = withDelay(140, withTiming(0, { duration: 360 }));
+      // Deliberately not cleared on cleanup: once the app has committed to
+      // leaving, nothing gets to change its mind.
+      setTimeout(() => go.current.replace(target), 430);
     }, wait);
-    return () => clearTimeout(t);
-  }, [ready, leaving, db.auth.signedIn, db.profile.onboarded, router, markScale, markOpacity]);
+    return () => clearTimeout(start);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, db.auth.signedIn, db.profile.onboarded]);
 
   const markStyle = useAnimatedStyle(() => ({ opacity: markOpacity.value, transform: [{ scale: markScale.value }] }));
 

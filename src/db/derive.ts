@@ -41,7 +41,7 @@ export function startOfWeek(t: number) {
   return d.getTime();
 }
 
-export function sessionStats(session: Session | null) {
+export function sessionStats(session: Session | null, now = Date.now()) {
   if (!session) return { volume: 0, setsDone: 0, setsTotal: 0, minutes: 0, elapsed: "0:00" };
   let volume = 0;
   let setsDone = 0;
@@ -55,7 +55,7 @@ export function sessionStats(session: Session | null) {
       }
     }
   }
-  const ms = (session.finishedAt ?? Date.now()) - session.startedAt;
+  const ms = (session.finishedAt ?? now) - session.startedAt;
   const minutes = Math.max(1, Math.round(ms / 60000));
   const totalSec = Math.floor(ms / 1000);
   return { volume, setsDone, setsTotal, minutes, elapsed: `${Math.floor(totalSec / 60)}:${String(totalSec % 60).padStart(2, "0")}` };

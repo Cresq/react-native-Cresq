@@ -49,7 +49,7 @@ export default function ActiveWorkout() {
   const w = useWorkout();
   const { db } = useDb();
   const { session, rest } = w;
-  const [, force] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
   const [sheet, setSheet] = useState<Sheet>(null);
   const [blocked, setBlocked] = useState<{ id: string; msg: string } | null>(null);
   const [open, setOpen] = useState<string[] | null>(null);
@@ -62,7 +62,7 @@ export default function ActiveWorkout() {
   const openBeforeDrag = useRef<string[] | null>(null);
 
   useEffect(() => {
-    const i = setInterval(() => force((n) => n + 1), 1000);
+    const i = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(i);
   }, []);
 
@@ -86,7 +86,7 @@ export default function ActiveWorkout() {
     );
   }
 
-  const stats = sessionStats(session);
+  const stats = sessionStats(session, now);
   const leave = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)"));
   if (!current) {
     return (
@@ -221,7 +221,7 @@ export default function ActiveWorkout() {
           right={
             <Row gap={8}>
               <IconButton name="users" size={34} iconSize={17} onPress={invite} accessibilityLabel={t("Invite somebody to this workout")} />
-              <IconButton name="trash" size={34} iconSize={17} tone="danger" onPress={() => setSheet({ kind: "discard" })} accessibilityLabel={t("Stop and discard session")} />
+              <IconButton name="close" size={34} iconSize={18} tone="danger" onPress={() => setSheet({ kind: "discard" })} accessibilityLabel={t("Stop and discard session")} />
               <Button label={t("Finish")} variant="inverse" size="S" full={false} onPress={() => setSheet({ kind: "finish" })} />
             </Row>
           }
@@ -283,7 +283,7 @@ export default function ActiveWorkout() {
       </Screen>
 
       {rest ? (
-        <Animated.View entering={FadeInDown.springify().damping(18).stiffness(180)} exiting={FadeOutDown.duration(180)} style={{ position: "absolute", left: 16, right: 16, bottom: Math.max(insets.bottom, 16) + 8 }}>
+        <Animated.View entering={FadeInDown.duration(200)} exiting={FadeOutDown.duration(160)} style={{ position: "absolute", left: 16, right: 16, bottom: Math.max(insets.bottom, 16) + 8 }}>
           <SwipeAway onDismiss={w.skipRest}>
           <View style={[{ flexDirection: "row", alignItems: "center", gap: 12, padding: 12, paddingLeft: 16, borderRadius: radius.bar, backgroundColor: colors.bg.raised }, shadow.floating]}>
             <RestRing progress={rest.total > 0 ? rest.left / rest.total : 0} />

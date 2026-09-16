@@ -86,13 +86,16 @@ function RunningStrip() {
   const router = useNav();
   const { session, rest, adjustRest, skipRest, lastDiscarded, undoDiscard, dismissDiscarded } = useWorkout();
   const t = useT();
-  const [, tick] = useState(0);
+  // The clock itself is the state. A counter would re-render just as often,
+  // but the elapsed time would still be computed from a `session` that has not
+  // changed, and cached against it.
+  const [now, setNow] = useState(() => Date.now());
   const running = !!session && !session.finishedAt;
   const enter = useSharedValue(0);
   useEffect(() => {
     enter.value = withSpring(running ? 1 : 0, springs.base);
     if (!running) return;
-    const t = setInterval(() => tick((n) => n + 1), 1000);
+    const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, [running, enter]);
   const style = useAnimatedStyle(() => ({ opacity: enter.value, transform: [{ translateY: (1 - enter.value) * 24 }] }));
@@ -112,7 +115,7 @@ function RunningStrip() {
       </SwipeAway>
     );
   }
-  const stats = sessionStats(session);
+  const stats = sessionStats(session, now);
   const current = session.exercises[session.currentIndex];
   const resting = !!rest;
   const nextLabel = rest?.next ? (rest.next.kg ? t("Set {n}, {kg} kg × {reps}", { n: rest.next.set, kg: rest.next.kg, reps: rest.next.reps }) : t("Set {n}, {reps} reps", { n: rest.next.set, reps: rest.next.reps })) : t("Next exercise");
