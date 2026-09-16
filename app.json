@@ -48,7 +48,8 @@
           "photosPermission": "CresQ shows the photo you pick on your session. Nothing else is read.",
           "cameraPermission": "CresQ takes the photo you choose to add to your session."
         }
-      ]
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": false,

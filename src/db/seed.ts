@@ -1,73 +1,9 @@
 import { DB_VERSION, type Db, type Exercise, type ExerciseEntry, type Plan, type Session, type SetEntry, type SplitDay } from "./types";
+import { libraryExercises } from "@/data/exercises";
 import { uid } from "./storage";
 
-/** Exercise library. Enough to build the default plans; users add their own. */
-export const seedExercises: Exercise[] = [
-  { id: "bench", name: "Bench press", muscles: "Chest, triceps", equipment: "Barbell" },
-  { id: "incline-db", name: "Incline dumbbell press", muscles: "Upper chest", equipment: "Dumbbells" },
-  { id: "dips", name: "Dips", muscles: "Chest, triceps", equipment: "Bodyweight", bodyweight: true },
-  { id: "lateral-raise", name: "Lateral raise", muscles: "Side delts", equipment: "Dumbbells" },
-  { id: "ohp", name: "Overhead press", muscles: "Shoulders", equipment: "Barbell" },
-  { id: "cable-fly", name: "Cable fly", muscles: "Chest", equipment: "Cable" },
-  { id: "pushdown", name: "Triceps pushdown", muscles: "Triceps", equipment: "Cable" },
-  { id: "deadlift", name: "Deadlift", muscles: "Back, hamstrings, glutes", equipment: "Barbell" },
-  { id: "pullup", name: "Pull-up", muscles: "Lats, biceps", equipment: "Bodyweight", bodyweight: true },
-  { id: "row", name: "Barbell row", muscles: "Back", equipment: "Barbell" },
-  { id: "lat-pulldown", name: "Lat pulldown", muscles: "Lats", equipment: "Cable" },
-  { id: "face-pull", name: "Face pull", muscles: "Rear delts", equipment: "Cable" },
-  { id: "curl", name: "Barbell curl", muscles: "Biceps", equipment: "Barbell" },
-  { id: "hammer-curl", name: "Hammer curl", muscles: "Biceps, forearms", equipment: "Dumbbells" },
-  { id: "preacher-curl", name: "Preacher curl", muscles: "Biceps", equipment: "Machine" },
-  { id: "squat", name: "Squat", muscles: "Quads, glutes", equipment: "Barbell" },
-  { id: "rdl", name: "Romanian deadlift", muscles: "Hamstrings, glutes", equipment: "Barbell" },
-  { id: "leg-press", name: "Leg press", muscles: "Quads", equipment: "Machine" },
-  { id: "leg-curl", name: "Leg curl", muscles: "Hamstrings", equipment: "Machine" },
-  { id: "calf-raise", name: "Calf raise", muscles: "Calves", equipment: "Machine" },
-  { id: "chest-press", name: "Chest press machine", muscles: "Chest", equipment: "Machine" },
-  { id: "skull-crusher", name: "Skull crusher", muscles: "Triceps", equipment: "Barbell" },
-  { id: "rear-delt-fly", name: "Rear delt fly", muscles: "Rear delts", equipment: "Dumbbells" },
-  { id: "plank", name: "Plank", muscles: "Core", equipment: "Bodyweight", bodyweight: true },
-  { id: "incline-bench", name: "Incline bench press", muscles: "Upper chest", equipment: "Barbell" },
-  { id: "db-bench", name: "Dumbbell bench press", muscles: "Chest, triceps", equipment: "Dumbbells" },
-  { id: "db-fly", name: "Dumbbell fly", muscles: "Chest", equipment: "Dumbbells" },
-  { id: "pec-deck", name: "Pec deck", muscles: "Chest", equipment: "Machine" },
-  { id: "pushup", name: "Push-up", muscles: "Chest, triceps", equipment: "Bodyweight", bodyweight: true },
-  { id: "db-shoulder-press", name: "Dumbbell shoulder press", muscles: "Shoulders", equipment: "Dumbbells" },
-  { id: "arnold-press", name: "Arnold press", muscles: "Shoulders", equipment: "Dumbbells" },
-  { id: "cable-lateral-raise", name: "Cable lateral raise", muscles: "Side delts", equipment: "Cable" },
-  { id: "upright-row", name: "Upright row", muscles: "Shoulders, traps", equipment: "Barbell" },
-  { id: "shrug", name: "Shrug", muscles: "Traps", equipment: "Dumbbells" },
-  { id: "overhead-extension", name: "Overhead triceps extension", muscles: "Triceps", equipment: "Dumbbells" },
-  { id: "close-grip-bench", name: "Close-grip bench press", muscles: "Triceps, chest", equipment: "Barbell" },
-  { id: "chinup", name: "Chin-up", muscles: "Lats, biceps", equipment: "Bodyweight", bodyweight: true },
-  { id: "cable-row", name: "Seated cable row", muscles: "Back", equipment: "Cable" },
-  { id: "db-row", name: "Dumbbell row", muscles: "Back", equipment: "Dumbbells" },
-  { id: "tbar-row", name: "T-bar row", muscles: "Back", equipment: "Barbell" },
-  { id: "chest-supported-row", name: "Chest-supported row", muscles: "Back", equipment: "Machine" },
-  { id: "straight-arm-pulldown", name: "Straight-arm pulldown", muscles: "Lats", equipment: "Cable" },
-  { id: "back-extension", name: "Back extension", muscles: "Lower back, glutes", equipment: "Bodyweight", bodyweight: true },
-  { id: "ez-curl", name: "EZ-bar curl", muscles: "Biceps", equipment: "Barbell" },
-  { id: "incline-curl", name: "Incline dumbbell curl", muscles: "Biceps", equipment: "Dumbbells" },
-  { id: "cable-curl", name: "Cable curl", muscles: "Biceps", equipment: "Cable" },
-  { id: "front-squat", name: "Front squat", muscles: "Quads", equipment: "Barbell" },
-  { id: "hack-squat", name: "Hack squat", muscles: "Quads", equipment: "Machine" },
-  { id: "goblet-squat", name: "Goblet squat", muscles: "Quads, glutes", equipment: "Dumbbells" },
-  { id: "bulgarian-split-squat", name: "Bulgarian split squat", muscles: "Quads, glutes", equipment: "Dumbbells" },
-  { id: "walking-lunge", name: "Walking lunge", muscles: "Quads, glutes", equipment: "Dumbbells" },
-  { id: "leg-extension", name: "Leg extension", muscles: "Quads", equipment: "Machine" },
-  { id: "seated-leg-curl", name: "Seated leg curl", muscles: "Hamstrings", equipment: "Machine" },
-  { id: "hip-thrust", name: "Hip thrust", muscles: "Glutes", equipment: "Barbell" },
-  { id: "sumo-deadlift", name: "Sumo deadlift", muscles: "Glutes, hamstrings", equipment: "Barbell" },
-  { id: "trap-bar-deadlift", name: "Trap bar deadlift", muscles: "Quads, back, glutes", equipment: "Barbell" },
-  { id: "seated-calf-raise", name: "Seated calf raise", muscles: "Calves", equipment: "Machine" },
-  { id: "hip-abduction", name: "Hip abduction", muscles: "Glutes", equipment: "Machine" },
-  { id: "kb-swing", name: "Kettlebell swing", muscles: "Glutes, hamstrings", equipment: "Kettlebell" },
-  { id: "farmers-walk", name: "Farmer's walk", muscles: "Grip, core", equipment: "Dumbbells" },
-  { id: "hanging-leg-raise", name: "Hanging leg raise", muscles: "Core", equipment: "Bodyweight", bodyweight: true },
-  { id: "cable-crunch", name: "Cable crunch", muscles: "Core", equipment: "Cable" },
-  { id: "ab-wheel", name: "Ab wheel rollout", muscles: "Core", equipment: "Bodyweight", bodyweight: true },
-  { id: "russian-twist", name: "Russian twist", muscles: "Obliques", equipment: "Bodyweight", bodyweight: true },
-];
+/** The exercise library, catalogue and artwork both, lives in its own file. */
+export { libraryExercises as seedExercises } from "@/data/exercises";
 
 const px = (exerciseId: string, sets: number, reps: number, kg: number, restSeconds: number, note?: string, supersetGroup?: string) => ({ exerciseId, sets, reps, kg, restSeconds, note, supersetGroup });
 
@@ -134,7 +70,7 @@ export function seedSampleSessions(exercises: Exercise[], plans: Plan[]): Sessio
 }
 
 export function createSeedDb(): Db {
-  const exercises = seedExercises;
+  const exercises = libraryExercises;
   const plans = seedPlans;
   return {
     version: DB_VERSION,

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { LineChart } from "@/components/LineChart";
 import { useT, usePlural } from "@/i18n";
 import { ExerciseMedia } from "@/components/ExerciseMedia";
+import { MoveViewer } from "@/components/MoveViewer";
 
 const RANGES: Record<string, number> = { "1m": 30, "3m": 91, "6m": 182, "1y": 365, all: 100000 };
 
@@ -35,6 +36,7 @@ export default function LiftDetail() {
   const [range, setRange] = useState("3m");
   const [tab, setTab] = useState("trend");
   const [how, setHow] = useState(false);
+  const [watching, setWatching] = useState(false);
 
   const all = useMemo(() => (exercise ? liftTrend(db.sessions, exercise.id) : []), [db.sessions, exercise]);
   const since = Date.now() - RANGES[range] * 86400000;
@@ -68,7 +70,7 @@ export default function LiftDetail() {
     <Screen>
       <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={exercise.name} subtitle={`${exercise.muscles}, ${exercise.equipment}`} right={<IconButton name="share" onPress={() => Share.share({ message: `${exercise.name}: ${t("Estimated 1RM")} ${current} kg, ${delta >= 0 ? "+" : ""}${delta} kg. CresQ.` })} accessibilityLabel={t("Share")} />} />
 
-      <ExerciseMedia exercise={exercise} size={200} style={{ width: "100%" }} />
+      <ExerciseMedia exercise={exercise} ratio={1936 / 1072} onPress={() => setWatching(true)} />
 
       {all.length === 0 ? (
         <View style={{ gap: 8, paddingTop: 8 }}>
@@ -230,6 +232,7 @@ export default function LiftDetail() {
           <Button label={t("Got it")} variant="secondary" size="M" onPress={() => setHow(false)} />
         </View>
       </BottomSheet>
+      <MoveViewer exercise={watching ? exercise : null} onClose={() => setWatching(false)} />
     </Screen>
   );
 }

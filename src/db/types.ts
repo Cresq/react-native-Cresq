@@ -7,11 +7,12 @@
 export type SetType = "warmup" | "working" | "drop" | "failure";
 
 /**
- * `image` and `animation` are where the bought artwork goes: a still for lists
- * and a loop for the exercise's own page. Both are uris, both optional, and the
- * UI already reserves their place so nothing shifts when they arrive.
+ * `move` is the MoveKit slug for this exercise, and the key into the bundled
+ * artwork in `src/data/moves.ts`. A slug and not a file path, because this
+ * record is persisted to the device and written into the user's data export:
+ * a bundler's module id would be meaningless in both.
  */
-export type Exercise = { id: string; name: string; muscles: string; equipment: string; bodyweight?: boolean; image?: string; animation?: string };
+export type Exercise = { id: string; name: string; muscles: string; equipment: string; bodyweight?: boolean; move?: string };
 
 export type PlannedSet = { kg: number; reps: number; type: SetType };
 
@@ -144,4 +145,4 @@ export type Db = {
  * carried forward by `migrate`; it is never discarded, because it is somebody's
  * training history.
  */
-export const DB_VERSION = 3;
+export const DB_VERSION = 4;

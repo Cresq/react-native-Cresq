@@ -27,9 +27,16 @@ const DbContext = createContext<DbState | null>(null);
  */
 function migrate(stored: Db): Db {
   const fresh = createSeedDb();
-  // Exercises added to the library since the user's first launch join theirs; nothing of theirs is touched.
-  const have = new Set((stored.exercises ?? []).map((e) => e.id));
-  const exercises = [...(stored.exercises ?? []), ...fresh.exercises.filter((e) => !have.has(e.id))];
+  // The library is ours, so a catalogue entry is refreshed from the seed: that is
+  // how a name correction or newly bought artwork reaches somebody who installed
+  // last month. Anything the person added themselves is not in the catalogue and
+  // is left exactly as it is. Order is theirs; new movements are appended.
+  const catalogue = new Map(fresh.exercises.map((e) => [e.id, e]));
+  const had = new Set((stored.exercises ?? []).map((e) => e.id));
+  const exercises = [
+    ...(stored.exercises ?? []).map((e) => catalogue.get(e.id) ?? e),
+    ...fresh.exercises.filter((e) => !had.has(e.id)),
+  ];
   const auth = stored.auth ?? fresh.auth;
   return {
     ...fresh,

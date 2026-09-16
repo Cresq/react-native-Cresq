@@ -719,4 +719,8 @@ export const nl: Record<string, string> = {
   "Replace everything with this backup?": "Alles vervangen door deze back-up?",
   "{n} sessions in the file. Everything now on this phone is replaced, including your settings. This cannot be undone.": "{n} sessies in het bestand. Alles wat nu op deze telefoon staat wordt vervangen, inclusief je instellingen. Dit kun je niet terugdraaien.",
   "Restore this backup": "Deze back-up herstellen",
+  "No animation for this one": "Geen animatie voor deze",
+  "Watch {name}": "Bekijk {name}",
+  "The muscles the movement works are marked in red.": "De spieren die de beweging aanspreekt staan in het rood.",
+  "The muscles the movement works are marked in red. It loops until you close it.": "De spieren die de beweging aanspreekt staan in het rood. Hij blijft lopen tot je hem sluit.",
 };

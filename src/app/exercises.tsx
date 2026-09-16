@@ -15,6 +15,8 @@ import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { ExerciseMedia } from "@/components/ExerciseMedia";
+import { MoveViewer } from "@/components/MoveViewer";
+import type { Exercise } from "@/db/types";
 import { useT } from "@/i18n";
 
 /**
@@ -31,6 +33,7 @@ export default function Exercises() {
   const { plan: planId, session: forSession, favourite, swap } = useLocalSearchParams<{ plan?: string; session?: string; favourite?: string; swap?: string }>();
   const [q, setQ] = useState("");
   const [creating, setCreating] = useState(false);
+  const [watching, setWatching] = useState<Exercise | null>(null);
   const [name, setName] = useState("");
   const [muscles, setMuscles] = useState("");
 
@@ -87,20 +90,22 @@ export default function Exercises() {
           return (
             <View key={e.id}>
               {i > 0 ? <Divider /> : null}
-              <Pressable accessibilityRole="button" accessibilityState={mode === "favourite" ? { selected: fav } : undefined} onPress={() => pick(e.id)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 13, opacity: pressed ? 0.7 : 1 })}>
-                <ExerciseMedia exercise={e} size={44} />
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Txt variant="labelL">{e.name}</Txt>
-                  <Txt variant="bodyS" tone="tertiary">
-                    {e.muscles}, {e.equipment}
-                  </Txt>
-                </View>
-                {mode === "favourite" ? (
-                  <Icon name="star" size={20} color={fav ? colors.pr.gold : colors.text.tertiary} fill={fav ? colors.pr.gold : undefined} strokeWidth={1.8} />
-                ) : (
-                  <Icon name={mode === "browse" ? "chevronRight" : mode === "swap" ? "reload" : "addPlus"} size={18} color={mode === "browse" ? colors.text.tertiary : colors.text.secondary} strokeWidth={2} />
-                )}
-              </Pressable>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <ExerciseMedia exercise={e} size={44} round onPress={() => setWatching(e)} />
+                <Pressable accessibilityRole="button" accessibilityState={mode === "favourite" ? { selected: fav } : undefined} onPress={() => pick(e.id)} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 13, opacity: pressed ? 0.7 : 1 })}>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Txt variant="labelL">{e.name}</Txt>
+                    <Txt variant="bodyS" tone="tertiary">
+                      {e.muscles}, {e.equipment}
+                    </Txt>
+                  </View>
+                  {mode === "favourite" ? (
+                    <Icon name="star" size={20} color={fav ? colors.pr.gold : colors.text.tertiary} fill={fav ? colors.pr.gold : undefined} strokeWidth={1.8} />
+                  ) : (
+                    <Icon name={mode === "browse" ? "chevronRight" : mode === "swap" ? "reload" : "addPlus"} size={18} color={mode === "browse" ? colors.text.tertiary : colors.text.secondary} strokeWidth={2} />
+                  )}
+                </Pressable>
+              </View>
             </View>
           );
         })}
@@ -120,6 +125,8 @@ export default function Exercises() {
           <Button label={t("Add exercise")} onPress={create} disabled={!name.trim()} style={{ marginTop: 4 }} />
         </View>
       </BottomSheet>
+
+      <MoveViewer exercise={watching} onClose={() => setWatching(null)} />
     </Screen>
   );
 }
