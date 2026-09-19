@@ -133,5 +133,7 @@ export function createSeedDb(lang: Language = "nl"): Db {
     foods: [],
     foodLog: [],
     invites: [seedSampleInvite()],
+    burns: [],
+    weights: [],
   };
 }

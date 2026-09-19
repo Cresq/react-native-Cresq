@@ -1,4 +1,4 @@
-import type { Food, FoodEntry, Meal, NutritionTargets } from "@/db/types";
+import type { Food, FoodEntry, Meal, NutritionTargets, Burn } from "@/db/types";
 import { locale, startOfDay } from "@/db/derive";
 
 export const MEALS: Meal[] = ["breakfast", "lunch", "pre", "post", "dinner", "snack"];
@@ -37,6 +37,21 @@ export function entriesOn(log: FoodEntry[], t: number): FoodEntry[] {
   const to = from + 86_400_000;
   return log.filter((e) => e.at >= from && e.at < to).sort((a, b) => a.at - b.at);
 }
+
+/** The energy spent that falls on the day `t` is in, newest last. */
+export function burnsOn(burns: Burn[], t: number): Burn[] {
+  const from = startOfDay(t);
+  const to = from + 86_400_000;
+  return burns.filter((b) => b.at >= from && b.at < to).sort((a, b) => a.at - b.at);
+}
+
+/**
+ * A rough figure for a strength session: 4 METs, the Compendium of Physical
+ * Activities' band for resistance training with several exercises, rest
+ * included, times body weight, per minute (kcal/min = MET × 3.5 × kg / 200).
+ * An estimate the person takes or changes, never a measurement.
+ */
+export const estimateSessionBurn = (minutes: number, weightKg: number) => Math.round(((4 * 3.5 * weightKg) / 200) * minutes);
 
 export function totals(entries: FoodEntry[], foods: Food[]): Figures {
   const byId = new Map(foods.map((f) => [f.id, f]));

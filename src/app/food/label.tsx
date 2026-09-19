@@ -32,12 +32,22 @@ export default function Label() {
   const [still, setStill] = useState<string | null>(null);
   const [trouble, setTrouble] = useState<"unavailable" | "failed" | null>(null);
   const [afterSheet, setAfterSheet] = useState<(() => void) | null>(null);
+  /** The camera is taken down a frame before the screen goes: a preview still live under a modal sliding away is what looked skewed. */
+  const [gone, setGone] = useState(false);
+  const go = (fn: () => void) => {
+    setGone(true);
+    setTimeout(fn, 16);
+  };
 
-  const leave = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)/food"));
+  const leave = () => go(() => (router.canGoBack() ? router.back() : router.replace("/(tabs)/food")));
+  // From the trouble sheet the review waits for the sheet to be gone; from the button under the camera it goes straight away.
   const byHand = () => {
     setDraft({ barcode, unit: "g", source: "manual", verified: false, photoUri: still ?? undefined });
-    setAfterSheet(() => () => router.replace("/food/review?from=manual"));
-    setTrouble(null);
+    const toReview = () => go(() => router.replace("/food/review?from=manual"));
+    if (trouble) {
+      setAfterSheet(() => toReview);
+      setTrouble(null);
+    } else toReview();
   };
 
   const shoot = async () => {
@@ -85,7 +95,7 @@ export default function Label() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
-      {still ? <Image source={{ uri: still }} style={StyleSheet.absoluteFill} resizeMode="cover" /> : <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="back" />}
+      {still ? <Image source={{ uri: still }} style={StyleSheet.absoluteFill} resizeMode="cover" /> : gone ? null : <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="back" />}
 
       <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
         <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 16 }}>

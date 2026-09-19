@@ -43,10 +43,15 @@ export default function Profile() {
   }, [wanted]);
 
   const setAvatar = (uri?: string) => update((d) => ({ ...d, profile: { ...d.profile, avatar: uri } }));
-  const choosePhoto = async (from: "library" | "camera") => {
-    setChangingPhoto(false);
+  const [afterSheet, setAfterSheet] = useState<(() => void) | null>(null);
+  const takePhoto = async (from: "library" | "camera") => {
     const uri = await pickPhoto(from);
     if (uri) setAvatar(uri);
+  };
+  // The picker waits for the sheet to be gone: iOS refuses to present one over a modal still on its way out.
+  const choosePhoto = (from: "library" | "camera") => {
+    setAfterSheet(() => () => void takePhoto(from));
+    setChangingPhoto(false);
   };
 
   const done = useMemo(() => finished(db.sessions), [db.sessions]);
@@ -158,9 +163,9 @@ export default function Profile() {
 
       <PhotoViewer source={me.photo} visible={zoomAvatar} onClose={() => setZoomAvatar(false)} />
 
-      <BottomSheet visible={changingPhoto} onClose={() => setChangingPhoto(false)} title={t("Your photo")} subtitle={t("It stays on this phone, like everything else in CresQ.")}>
-        <SheetOption icon="camera" label={t("Take a photo")} onPress={() => void choosePhoto("camera")} />
-        <SheetOption icon="rows" label={t("Choose from your library")} onPress={() => void choosePhoto("library")} />
+      <BottomSheet visible={changingPhoto} onClose={() => setChangingPhoto(false)} onClosed={() => { const go = afterSheet; setAfterSheet(null); go?.(); }} title={t("Your photo")} subtitle={t("It stays on this phone, like everything else in CresQ.")}>
+        <SheetOption icon="camera" label={t("Take a photo")} onPress={() => choosePhoto("camera")} />
+        <SheetOption icon="rows" label={t("Choose from your library")} onPress={() => choosePhoto("library")} />
         {db.profile.avatar ? <SheetOption icon="trash" label={t("Remove photo")} sub={t("Your initial takes its place")} danger onPress={() => { setAvatar(undefined); setChangingPhoto(false); }} /> : null}
       </BottomSheet>
     </Screen>

@@ -12,7 +12,7 @@ import { Txt } from "./ui/Text";
 /** How far past the top counts as a pull, how long the hold has to last, and how long before it may go again. */
 const PULL = 56;
 const HOLD_MS = 1000;
-const COOLDOWN_MS = 5000;
+const COOLDOWN_MS = 3000;
 /** The pan is a pull: it only starts on a downward move, and a sideways one lets it go. */
 const START_Y = 10;
 const GIVE_X = 16;
@@ -25,7 +25,7 @@ const GIVE_X = 16;
  * top, and it has to keep going.
  *
  * One pull is one refresh. Holding on after it fired does nothing more; the
- * finger has to lift and pull again, and for five seconds after a refresh a
+ * finger has to lift and pull again, and for three seconds after a refresh a
  * new pull only says that it already did.
  *
  * Returns the gesture to wrap the scroll view in, the scroll handler that
@@ -41,7 +41,7 @@ export function useHoldToRefresh(enabled: boolean) {
   const armed = useRef(false);
   /** Fired during this touch; nothing more until the finger lifts. */
   const spent = useRef(false);
-  /** Refreshed less than five seconds ago. */
+  /** Refreshed less than three seconds ago. */
   const cooling = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cooldown = useRef<ReturnType<typeof setTimeout> | null>(null);

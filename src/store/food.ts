@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useDb } from "@/db/DbProvider";
 import { uid } from "@/db/storage";
-import type { Food, FoodEntry, Meal, NutritionTargets } from "@/db/types";
+import type { Burn, Food, FoodEntry, Meal, NutritionTargets } from "@/db/types";
 
 export type NewFood = Omit<Food, "id" | "createdAt">;
 
@@ -49,5 +49,10 @@ export function useFood() {
 
   const setTargets = useCallback((targets: NutritionTargets | undefined) => update((d) => ({ ...d, profile: { ...d.profile, targets } })), [update]);
 
-  return { foods, log, byId, targets: db.profile.targets, addFood, updateFood, remember, logFood, removeEntry, setTargets };
+  const burns = db.burns;
+  /** Stamped with now unless the caller knows better, as a finished session does. */
+  const addBurn = useCallback((b: Omit<Burn, "id" | "at"> & { at?: number }) => update((d) => ({ ...d, burns: [...d.burns, { ...b, at: b.at ?? Date.now(), id: uid() }] })), [update]);
+  const removeBurn = useCallback((id: string) => update((d) => ({ ...d, burns: d.burns.filter((b) => b.id !== id) })), [update]);
+
+  return { foods, log, byId, targets: db.profile.targets, addFood, updateFood, remember, logFood, removeEntry, setTargets, burns, addBurn, removeBurn };
 }

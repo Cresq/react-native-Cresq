@@ -26,6 +26,7 @@ export default function UserProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isFollowing, toggleFollow, block } = useSocial();
   const [more, setMore] = useState<null | "menu" | "report" | "reported">(null);
+  const [afterSheet, setAfterSheet] = useState<(() => void) | null>(null);
   const [zoomAvatar, setZoomAvatar] = useState(false);
   const { width } = useWindowDimensions();
   const [tab, setTab] = useState("workouts");
@@ -111,8 +112,8 @@ export default function UserProfile() {
         )}
       </View>
 
-      <BottomSheet visible={more === "menu"} onClose={() => setMore(null)} title={p.name}>
-        <SheetOption icon="share" label={t("Share profile")} onPress={() => { setMore(null); Share.share({ message: `${p.name} - CresQ ${p.handle}` }); }} />
+      <BottomSheet visible={more === "menu"} onClose={() => setMore(null)} onClosed={() => { const go = afterSheet; setAfterSheet(null); go?.(); }} title={p.name}>
+        <SheetOption icon="share" label={t("Share profile")} onPress={() => { setAfterSheet(() => () => void Share.share({ message: `${p.name} - CresQ ${p.handle}` })); setMore(null); }} />
         <SheetOption icon="flag" label={t("Report account")} sub={t("Spam, impersonation or abuse")} onPress={() => setMore("report")} />
         <SheetOption icon="lock" label={t("Block {name}", { name: p.name.split(" ")[0] })} sub={t("They disappear from your feed and lists")} danger onPress={() => { setMore(null); block(p.id); router.back(); }} />
       </BottomSheet>

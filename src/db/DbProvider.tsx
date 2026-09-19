@@ -58,6 +58,8 @@ function migrate(stored: Db): Db {
     foodLog: stored.foodLog ?? [],
     // Invitations arrived after this log began: the sample one comes along only where the sample sessions still are.
     invites: stored.invites ?? ((stored.sessions ?? []).some((s) => s.sample) ? [seedSampleInvite()] : []),
+    burns: stored.burns ?? [],
+    weights: stored.weights ?? [],
   };
 }
 

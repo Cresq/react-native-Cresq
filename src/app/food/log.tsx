@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
+import { useLocalSearchParams } from "expo-router";
 import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useT } from "@/i18n";
 import { useNow } from "@/clock";
 import { useFood } from "@/store/food";
 import { setDraft } from "@/nutrition/draft";
-import { MEAL_NAME, fmtKcal, mealAt, suggestions } from "@/nutrition/derive";
-import type { Food } from "@/db/types";
+import { MEALS, MEAL_NAME, fmtKcal, mealAt, suggestions } from "@/nutrition/derive";
+import type { Food, Meal } from "@/db/types";
 import { Screen, Row, Section, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { Card, Divider } from "@/components/ui/Card";
@@ -17,10 +18,11 @@ import { Icon } from "@/components/ui/Icon";
 import { FoodMark } from "@/components/FoodMark";
 
 /**
- * Logging something to eat. The field is for typing; under it, before a
- * letter is typed, is what this hour usually holds for this person, then
- * what they added most recently. The two ways to bring in a new product sit
- * at the bottom, where they are needed only when the search comes up empty.
+ * Finding something to eat by typing. The field is for the name; under it,
+ * before a letter is typed, is what this hour usually holds for this person,
+ * then what they added most recently. The camera is one tap away at the top
+ * for anyone holding a pack, and typing the figures in sits at the bottom,
+ * where it is needed only when the search comes up empty.
  */
 export default function LogFood() {
   const { colors } = useTheme();
@@ -28,7 +30,11 @@ export default function LogFood() {
   const t = useT();
   const now = useNow();
   const { foods, log } = useFood();
+  const { meal: wanted } = useLocalSearchParams<{ meal?: string }>();
   const [q, setQ] = useState("");
+  // The meal the person came from goes with them to the product, so it is preselected there.
+  const from = wanted && (MEALS as string[]).includes(wanted) ? (wanted as Meal) : null;
+  const mealQ = from ? `&meal=${from}` : "";
 
   const offered = useMemo(() => suggestions(log, foods, now), [log, foods, now]);
   const hits = useMemo(() => {
@@ -39,7 +45,7 @@ export default function LogFood() {
   const searching = q.trim() !== "";
   const meal = t(MEAL_NAME[mealAt(now)]).toLowerCase();
 
-  const open = (f: Food) => router.replace(`/food/${f.id}?log=1`);
+  const open = (f: Food) => router.replace(`/food/${f.id}?log=1${mealQ}`);
   const scan = () => router.replace("/food/scan");
   const byHand = () => {
     setDraft({ name: q.trim() || undefined, unit: "g", source: "manual", verified: false });
@@ -67,8 +73,23 @@ export default function LogFood() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="close" onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)/food"))} accessibilityLabel={t("Close")} />} title={t("Log food")} />
+      <Header left={<IconButton name="close" onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)/food"))} accessibilityLabel={t("Close")} />} title={t("Search a product")} subtitle={from ? t(MEAL_NAME[from]) : undefined} />
       <Field label={t("Search")} value={q} onChangeText={setQ} placeholder={t("Name or brand")} icon="search" autoCorrect={false} autoFocus />
+
+      <Card tone="raised" padding={14} gap={0} onPress={scan} accessibilityLabel={t("Scan a barcode")}>
+        <Row gap={12}>
+          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.fuel.soft, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="camera" size={18} color={colors.fuel.sage} strokeWidth={2} />
+          </View>
+          <View style={{ flex: 1, gap: 1 }}>
+            <Txt variant="labelL">{t("Scan a barcode")}</Txt>
+            <Txt variant="bodyS" tone="tertiary">
+              {t("Barcode, or a photo of the nutrition table")}
+            </Txt>
+          </View>
+          <Icon name="chevronRight" size={16} color={colors.text.tertiary} strokeWidth={2} />
+        </Row>
+      </Card>
 
       {searching ? (
         <Section title={hits.length ? t("In your products") : undefined}>
@@ -112,17 +133,6 @@ export default function LogFood() {
 
       <Section title={t("New product")}>
         <Card padding={16} gap={0}>
-          <Pressable accessibilityRole="button" accessibilityLabel={t("Scan a pack")} onPress={scan} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
-            <Icon name="camera" size={20} color={colors.text.secondary} strokeWidth={1.9} />
-            <View style={{ flex: 1, gap: 1 }}>
-              <Txt variant="labelL">{t("Scan a pack")}</Txt>
-              <Txt variant="bodyS" tone="tertiary">
-                {t("Barcode, or a photo of the nutrition table")}
-              </Txt>
-            </View>
-            <Icon name="chevronRight" size={16} color={colors.text.tertiary} strokeWidth={2} />
-          </Pressable>
-          <Divider />
           <Pressable accessibilityRole="button" accessibilityLabel={t("Enter by hand")} onPress={byHand} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
             <Icon name="noteEdit" size={20} color={colors.text.secondary} strokeWidth={1.9} />
             <View style={{ flex: 1, gap: 1 }}>

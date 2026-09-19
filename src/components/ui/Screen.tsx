@@ -63,27 +63,29 @@ export function Row({ children, gap = 12, align = "center", justify, style }: Pr
 }
 
 /** A titled section: title row (with optional action) and 12 pt to its content. */
-export function Section({ title, action, actionIcon, onAction, meta, children, gap = 12 }: PropsWithChildren<{ title?: string; action?: string; actionIcon?: IconName; onAction?: () => void; /** Quiet text on the right when there is no action, like a date. */ meta?: string; gap?: number }>) {
+export function Section({ title, action, actionIcon, onAction, meta, children, gap = 12 }: PropsWithChildren<{ title?: string; action?: string; actionIcon?: IconName; onAction?: () => void; /** Quiet text on the right, before the action if there is one: a date, a total. */ meta?: string; gap?: number }>) {
   const { colors } = useTheme();
   return (
     <View style={{ gap }}>
       {title ? (
         <Row justify="space-between">
           <Txt variant="displayS">{title}</Txt>
-          {meta ? (
-            <Txt variant="labelS" tone="tertiary">
-              {meta}
-            </Txt>
-          ) : null}
-          {action ? (
-            <Pressable accessibilityRole="button" onPress={onAction} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: actionIcon ? 5 : 2 }}>
-              {actionIcon ? <Icon name={actionIcon} size={15} color={colors.text.secondary} strokeWidth={2.2} /> : null}
-              <Txt variant="labelM" tone="secondary">
-                {action}
+          <Row gap={12}>
+            {meta ? (
+              <Txt variant="labelS" tone="tertiary">
+                {meta}
               </Txt>
-              {actionIcon ? null : <Icon name="chevronRight" size={14} color={colors.text.secondary} strokeWidth={2} />}
-            </Pressable>
-          ) : null}
+            ) : null}
+            {action ? (
+              <Pressable accessibilityRole="button" onPress={onAction} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: actionIcon ? 5 : 2 }}>
+                {actionIcon ? <Icon name={actionIcon} size={15} color={colors.text.secondary} strokeWidth={2.2} /> : null}
+                <Txt variant="labelM" tone="secondary">
+                  {action}
+                </Txt>
+                {actionIcon ? null : <Icon name="chevronRight" size={14} color={colors.text.secondary} strokeWidth={2} />}
+              </Pressable>
+            ) : null}
+          </Row>
         </Row>
       ) : null}
       {children}

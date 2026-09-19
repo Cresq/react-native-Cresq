@@ -203,6 +203,16 @@ export type TrainInvite = {
   sample?: boolean;
 };
 
+/**
+ * Energy spent, added to what the day may hold. The figure is the person's:
+ * a finished session offers an estimate they can take, anything else they
+ * enter themselves. `sessionId` keeps a session from being counted twice.
+ */
+export type Burn = { id: string; at: number; kcal: number; label?: string; sessionId?: string };
+
+/** Body weight on a day. One per day: weighing again corrects the figure, it does not add a second. */
+export type WeightEntry = { id: string; at: number; kg: number };
+
 export const DEFAULT_FAVOURITES = ["bench", "squat", "deadlift", "ohp"];
 export const MIN_AGE = 16;
 
@@ -227,6 +237,10 @@ export type Db = {
   foodLog: FoodEntry[];
   /** Invitations to train together, sent and received. */
   invites: TrainInvite[];
+  /** Energy spent, by day, added to the day's calories. */
+  burns: Burn[];
+  /** Body weight, one figure a day. */
+  weights: WeightEntry[];
   /**
    * Comments this device has written, by post id. Only the words and the time:
    * the name and the face are read from the profile when they are shown, so a

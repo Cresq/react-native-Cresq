@@ -47,7 +47,7 @@ function Form() {
   const years = range(year - 100, year - MIN_AGE);
 
   const [height, setHeight] = useState(f?.heightCm ?? 175);
-  const [weight, setWeight] = useState(f?.weightKg ?? 75);
+  const [weight, setWeight] = useState(Math.round(f?.weightKg ?? 75));
   const [birthYear, setBirthYear] = useState(db.profile.birthYear ?? year - 25);
   const [sex, setSex] = useState<Sex>(f?.sex ?? "x");
   const [activity, setActivity] = useState<Activity>(f?.activity ?? "moderate");

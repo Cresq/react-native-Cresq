@@ -40,8 +40,14 @@ export default function Scan() {
   const [afterSheet, setAfterSheet] = useState<(() => void) | null>(null);
   // The scanner reports the same barcode every frame it can see it; one is enough.
   const busy = useRef(false);
+  /** The camera is taken down a frame before the screen goes: a preview still live under a modal sliding away is what looked skewed. */
+  const [gone, setGone] = useState(false);
+  const go = (fn: () => void) => {
+    setGone(true);
+    setTimeout(fn, 16);
+  };
 
-  const leave = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)/food"));
+  const leave = () => go(() => (router.canGoBack() ? router.back() : router.replace("/(tabs)/food")));
 
   const onScan = async ({ data }: BarcodeScanningResult) => {
     if (busy.current || !data) return;
@@ -55,7 +61,7 @@ export default function Scan() {
       if (found) {
         const id = remember(found);
         haptic("done");
-        router.replace(`/food/${id}?log=1`);
+        go(() => router.replace(`/food/${id}?log=1`));
         return;
       }
       setStatus("notfound");
@@ -69,12 +75,12 @@ export default function Scan() {
     busy.current = false;
   };
   const toLabel = () => {
-    setAfterSheet(() => () => router.replace(`/food/label?barcode=${encodeURIComponent(code)}`));
+    setAfterSheet(() => () => go(() => router.replace(`/food/label?barcode=${encodeURIComponent(code)}`)));
     setStatus("idle");
   };
   const byHand = (withCode: boolean) => {
     setDraft({ barcode: withCode ? code : undefined, unit: "g", source: "manual", verified: false });
-    setAfterSheet(() => () => router.replace("/food/review?from=manual"));
+    setAfterSheet(() => () => go(() => router.replace("/food/review?from=manual")));
     setStatus("idle");
   };
 
@@ -104,7 +110,7 @@ export default function Scan() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
-      <CameraView style={StyleSheet.absoluteFill} facing="back" barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"] }} onBarcodeScanned={status === "idle" ? onScan : undefined} />
+      {gone ? null : <CameraView style={StyleSheet.absoluteFill} facing="back" barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"] }} onBarcodeScanned={status === "idle" ? onScan : undefined} />}
 
       <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
         <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 16 }}>

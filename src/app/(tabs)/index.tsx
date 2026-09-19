@@ -8,7 +8,7 @@ import { useNow } from "@/clock";
 import { useNotes } from "@/store/notifications";
 import { useWorkout } from "@/store/workout";
 import { useSplit } from "@/store/split";
-import { finished, fmtKg, liftTrend, locale, startOfWeek, weekDays, weeklyVolume } from "@/db/derive";
+import { finished, fmtKg, liftTrend, locale, relativeDay, startOfWeek, weekDays, weeklyVolume } from "@/db/derive";
 import { estimateMinutes } from "@/db/seed";
 import { DEFAULT_FAVOURITES } from "@/db/types";
 import { useT, usePlural } from "@/i18n";
@@ -22,10 +22,11 @@ import { Card, Divider } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Stat, StatDivider } from "@/components/StatCard";
 import { MacroBars } from "@/components/MacroBars";
-import { entriesOn, totals } from "@/nutrition/derive";
+import { burnsOn, entriesOn, totals } from "@/nutrition/derive";
 import { LineChart } from "@/components/LineChart";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { useSocial } from "@/store/social";
+import { useWeight } from "@/store/weight";
 import { otherPosts } from "@/data/mock";
 import { person } from "@/data/people";
 
@@ -76,6 +77,9 @@ export default function Home() {
   const done = useMemo(() => finished(db.sessions), [db.sessions]);
   const week = useMemo(() => weekDays(db.sessions), [db.sessions]);
   const eaten = useMemo(() => totals(entriesOn(db.foodLog, now), db.foods), [db.foodLog, db.foods, now]);
+  const burned = useMemo(() => burnsOn(db.burns, now).reduce((s, b) => s + b.kcal, 0), [db.burns, now]);
+  const weight = useWeight();
+  const weighedToday = weight.on(now);
   const volume = useMemo(() => weeklyVolume(db.sessions, now, db.activeSession), [db.sessions, db.activeSession, now]);
   const thisWeek = useMemo(() => done.filter((s) => s.startedAt >= startOfWeek(now)).length, [done, now]);
   const goal = db.profile.daysPerWeek ?? 3;
@@ -165,7 +169,7 @@ export default function Home() {
               <Row gap={16} align="stretch">
                 <Stat size="M" label={t("Eaten")} value={Math.round(eaten.kcal).toLocaleString(locale)} unit="kcal" />
                 <StatDivider />
-                <Stat size="M" label={db.profile.targets ? t("To go") : t("Target")} value={db.profile.targets ? Math.max(0, Math.round(db.profile.targets.kcal - eaten.kcal)).toLocaleString(locale) : t("none")} unit={db.profile.targets ? "kcal" : undefined} />
+                <Stat size="M" label={db.profile.targets ? t("To go") : t("Target")} value={db.profile.targets ? Math.max(0, Math.round(db.profile.targets.kcal + burned - eaten.kcal)).toLocaleString(locale) : t("none")} unit={db.profile.targets ? "kcal" : undefined} />
               </Row>
               {db.profile.targets ? <MacroBars eaten={eaten} targets={db.profile.targets} /> : null}
             </>
@@ -177,6 +181,29 @@ export default function Home() {
               </Txt>
             </View>
           )}
+        </Card>
+      </Section>
+
+      {/* Body weight: today's figure if it is in, the way to log it if it is not. */}
+      <Section title={t("Weight")} action={t("Open")} onAction={() => router.push("/weight")}>
+        <Card padding={20} gap={14}>
+          <Row gap={16}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Txt variant="labelS" tone="tertiary">
+                {weighedToday ? t("Today") : weight.latest ? t("Last logged, {when}", { when: relativeDay(weight.latest.at) }) : t("Not logged yet")}
+              </Txt>
+              <Row gap={4} align="baseline">
+                <Txt variant="numberL" tabular>
+                  {weight.latest ? weight.latest.kg.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : "–"}
+                </Txt>
+                <Txt variant="labelM" tone="secondary">
+                  kg
+                </Txt>
+              </Row>
+            </View>
+            <Button label={weighedToday ? t("Change") : t("Log today")} variant={weighedToday ? "secondary" : "sage"} size="S" full={false} onPress={() => router.push("/weight")} />
+          </Row>
+          {weight.entries.length >= 2 ? <LineChart points={weight.entries.slice(-14).map((w) => ({ value: w.kg }))} height={56} still /> : null}
         </Card>
       </Section>
 

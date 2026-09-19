@@ -37,15 +37,17 @@ export default function FoodDetail() {
   const router = useNav();
   const once = useOnce();
   const t = useT();
-  const { id } = useLocalSearchParams<{ id: string; log?: string }>();
+  const { id, meal: wantedMeal } = useLocalSearchParams<{ id: string; log?: string; meal?: string }>();
   const { byId, logFood, updateFood } = useFood();
   const { db } = useDb();
   const lastFinished = db.sessions.reduce((m, x) => Math.max(m, x.finishedAt ?? 0), 0);
   const [photoSheet, setPhotoSheet] = useState(false);
+  const [afterSheet, setAfterSheet] = useState<(() => void) | null>(null);
   const [zoom, setZoom] = useState(false);
   const food = byId.get(id);
   const [amount, setAmount] = useState(() => String(food?.serving ?? 100));
-  const [meal, setMeal] = useState<Meal>(() => mealAt(Date.now(), lastFinished));
+  // The meal the person came from, when they came from one; otherwise the clock's guess.
+  const [meal, setMeal] = useState<Meal>(() => (wantedMeal && (MEALS as string[]).includes(wantedMeal) ? (wantedMeal as Meal) : mealAt(Date.now(), lastFinished)));
 
   const leave = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)/food"));
 
@@ -69,13 +71,17 @@ export default function FoodDetail() {
     setDraft(null);
     router.push(`/food/review?from=edit&id=${food.id}`);
   };
-  const choosePhoto = async (source: "library" | "camera") => {
-    setPhotoSheet(false);
+  const takePhoto = async (source: "library" | "camera") => {
     const uri = await pickPhoto(source);
     if (uri) {
       updateFood(food.id, { photo: uri });
       haptic("done");
     }
+  };
+  // The picker waits for the sheet to be gone: iOS refuses to present one over a modal still on its way out.
+  const choosePhoto = (source: "library" | "camera") => {
+    setAfterSheet(() => () => void takePhoto(source));
+    setPhotoSheet(false);
   };
 
   const log = once(() => {
@@ -139,9 +145,9 @@ export default function FoodDetail() {
       )}
       <PhotoViewer source={food.photo ? { uri: food.photo } : undefined} visible={zoom} onClose={() => setZoom(false)} />
 
-      <BottomSheet visible={photoSheet} onClose={() => setPhotoSheet(false)} title={t("Photo of this product")}>
-        <SheetOption icon="camera" label={t("Take a photo")} onPress={() => void choosePhoto("camera")} />
-        <SheetOption icon="rows" label={t("Choose from your library")} onPress={() => void choosePhoto("library")} />
+      <BottomSheet visible={photoSheet} onClose={() => setPhotoSheet(false)} onClosed={() => { const go = afterSheet; setAfterSheet(null); go?.(); }} title={t("Photo of this product")}>
+        <SheetOption icon="camera" label={t("Take a photo")} onPress={() => choosePhoto("camera")} />
+        <SheetOption icon="rows" label={t("Choose from your library")} onPress={() => choosePhoto("library")} />
         {food.photo ? <SheetOption icon="trash" label={t("Remove photo")} danger onPress={() => { updateFood(food.id, { photo: undefined }); setPhotoSheet(false); }} /> : null}
       </BottomSheet>
 

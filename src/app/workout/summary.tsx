@@ -42,10 +42,15 @@ export default function Summary() {
   const share: SharePrefs = session?.share ?? { exercises: true, stats: true, records: true };
   const flip = (key: keyof SharePrefs) => setShare({ ...share, [key]: !share[key] });
   const [photoSheet, setPhotoSheet] = useState(false);
-  const choose = async (source: "library" | "camera") => {
-    setPhotoSheet(false);
+  const [afterPhotoSheet, setAfterPhotoSheet] = useState<(() => void) | null>(null);
+  const take = async (source: "library" | "camera") => {
     const uri = await pickPhoto(source);
     if (uri) setPhoto(uri);
+  };
+  // The picker waits for the sheet to be gone: iOS refuses to present one over a modal still on its way out.
+  const choose = (source: "library" | "camera") => {
+    setAfterPhotoSheet(() => () => void take(source));
+    setPhotoSheet(false);
   };
   const [tab, setTab] = useState("exercises");
   const stats = sessionStats(session);
@@ -187,7 +192,7 @@ export default function Summary() {
         </View>
       </BottomSheet>
 
-      <BottomSheet visible={photoSheet} onClose={() => setPhotoSheet(false)} title={t("Add a photo")} subtitle={t("It goes on this session, and on your post if you share it.")}>
+      <BottomSheet visible={photoSheet} onClose={() => setPhotoSheet(false)} onClosed={() => { const go = afterPhotoSheet; setAfterPhotoSheet(null); go?.(); }} title={t("Add a photo")} subtitle={t("It goes on this session, and on your post if you share it.")}>
         <SheetOption icon="camera" label={t("Take a photo")} onPress={() => choose("camera")} />
         <SheetOption icon="rows" label={t("Choose from library")} onPress={() => choose("library")} />
       </BottomSheet>

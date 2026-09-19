@@ -83,6 +83,7 @@ function Page({ id, at }: { id: string; at?: { index: number; count: number } })
   const plural = usePlural();
   const { db, update } = useDb();
   const [menu, setMenu] = useState<"menu" | "delete" | null>(null);
+  const [afterSheet, setAfterSheet] = useState<(() => void) | null>(null);
   const [zoom, setZoom] = useState(false);
   const [commenting, setCommenting] = useState(false);
   const me = useMe();
@@ -224,7 +225,7 @@ function Page({ id, at }: { id: string; at?: { index: number; count: number } })
       </Row>
 
       {/* One sheet that changes its face: a second modal opened while the first closes locks up iOS. */}
-      <BottomSheet visible={!!menu} onClose={() => setMenu(null)} title={menu === "delete" ? t("Delete this workout?") : s.planName} subtitle={menu === "delete" ? t("It disappears from the feed and from your log. Records from it are recalculated. This cannot be undone.") : longDate(s.startedAt)}>
+      <BottomSheet visible={!!menu} onClose={() => setMenu(null)} onClosed={() => { const go = afterSheet; setAfterSheet(null); go?.(); }} title={menu === "delete" ? t("Delete this workout?") : s.planName} subtitle={menu === "delete" ? t("It disappears from the feed and from your log. Records from it are recalculated. This cannot be undone.") : longDate(s.startedAt)}>
         {menu === "menu" ? (
           <>
             {resumable ? <SheetOption icon="play" label={t("Continue this workout")} sub={t("Back into the session, everything as you left it")} onPress={() => { setMenu(null); resume(s.id); router.replace("/workout/active"); }} /> : null}
@@ -234,7 +235,7 @@ function Page({ id, at }: { id: string; at?: { index: number; count: number } })
             ) : (
               <SheetOption icon="users" label={t("Share to feed")} sub={t("Your followers see it in their feed")} onPress={() => { setMenu(null); update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, shared: true } : x)) })); }} />
             )}
-            <SheetOption icon="share" label={t("Share")} sub={t("Send a summary to another app")} onPress={() => { setMenu(null); Share.share({ message: `${s.planName}, ${longDate(s.startedAt)}: ${plural(stats.setsDone, "{n} set", "{n} sets")}, ${fmtKg(stats.volume)} kg, ${stats.minutes} min. CresQ.` }); }} />
+            <SheetOption icon="share" label={t("Share")} sub={t("Send a summary to another app")} onPress={() => { setAfterSheet(() => () => void Share.share({ message: `${s.planName}, ${longDate(s.startedAt)}: ${plural(stats.setsDone, "{n} set", "{n} sets")}, ${fmtKg(stats.volume)} kg, ${stats.minutes} min. CresQ.` })); setMenu(null); }} />
             <SheetOption icon="trash" label={t("Delete workout")} danger onPress={() => setMenu("delete")} />
           </>
         ) : null}
