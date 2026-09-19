@@ -193,7 +193,7 @@ const useJoin = () => {
  * own it is a rounded row that stands apart from the next. Without `onPress`
  * it only shows.
  */
-export function SheetOption({ icon, leading, label, sub, right, onPress, danger, selected, check, disabled, accessibilityLabel }: { icon?: IconName; /** A face or a mark in place of the icon. */ leading?: ReactNode; label: string; sub?: string; right?: ReactNode; onPress?: () => void; danger?: boolean; /** The one that is chosen: a tick. */ selected?: boolean; /** One of several that can be chosen: a circle, filled when it is. */ check?: boolean; disabled?: boolean; accessibilityLabel?: string }) {
+export function SheetOption({ icon, leading, label, sub, right, trailing, onPress, danger, selected, check, disabled, accessibilityLabel }: { icon?: IconName; /** A face or a mark in place of the icon. */ leading?: ReactNode; label: string; sub?: string; /** Something to read at the right edge. It sits inside the row, so it must not be a button when the row is one. */ right?: ReactNode; /** A button of its own at the right edge of a row that can also be pressed, such as a bin. It stands beside the row's own press, never inside it: a press within a press is one too many. */ trailing?: ReactNode; onPress?: () => void; danger?: boolean; /** The one that is chosen: a tick. */ selected?: boolean; /** One of several that can be chosen: a circle, filled when it is. */ check?: boolean; disabled?: boolean; accessibilityLabel?: string }) {
   const { colors, radius } = useTheme();
   const once = useOnce();
   const joined = useContext(InGroup);
@@ -226,6 +226,16 @@ export function SheetOption({ icon, leading, label, sub, right, onPress, danger,
   );
   const row = { flexDirection: "row", alignItems: "center", gap: 12, minHeight: ROW_HEIGHT, paddingVertical: 10, paddingHorizontal: 16 } as const;
   if (!onPress) return <View style={[row, shape, joined ? null : { backgroundColor: colors.bg.raised, marginBottom: OPTION_GAP }]}>{face}</View>;
+  if (trailing) {
+    return (
+      <View style={[{ flexDirection: "row", alignItems: "center" }, shape, joined ? null : { backgroundColor: colors.bg.raised, marginBottom: OPTION_GAP }]}>
+        <Press onPress={once(onPress)} disabled={disabled} accessibilityRole="button" accessibilityLabel={accessibilityLabel} accessibilityState={{ selected: on, disabled: !!disabled }} scaleTo={1} wrapperStyle={{ flex: 1 }} style={({ pressed }) => [row, { paddingRight: 8, opacity: disabled ? 0.4 : pressed ? 0.7 : 1 }]}>
+          {face}
+        </Press>
+        <View style={{ paddingRight: 10 }}>{trailing}</View>
+      </View>
+    );
+  }
   return (
     <Press
       onPress={once(onPress)}

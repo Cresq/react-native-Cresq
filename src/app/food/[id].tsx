@@ -337,7 +337,7 @@ function Product({ food, toLog, wantedMeal }: { food: Food; toLog: boolean; want
                     label={m.name}
                     selected={meal === m.id}
                     onPress={() => { setMeal(m.id); haptic("select"); closeMeals(); }}
-                    right={<IconButton name="trash" size={30} iconSize={15} tone="surface" onPress={() => { if (meal === m.id) setMeal("snack"); meals.remove(m.id); haptic("tap"); }} accessibilityLabel={t("Remove {name}", { name: m.name })} />}
+                    trailing={<IconButton name="trash" size={30} iconSize={15} tone="surface" onPress={() => { if (meal === m.id) setMeal("snack"); meals.remove(m.id); haptic("tap"); }} accessibilityLabel={t("Remove {name}", { name: m.name })} />}
                   />
                 ))}
               </SheetGroup>
