@@ -13,8 +13,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { PostCard } from "@/components/PostCard";
-import { BottomSheet } from "@/components/ui/BottomSheet";
-import { Field } from "@/components/ui/Field";
+import { BottomSheet, SheetGroup, SheetTextRow } from "@/components/ui/BottomSheet";
 import { useT, usePlural } from "@/i18n";
 
 /**
@@ -151,11 +150,10 @@ export default function Posted() {
         </Row>
       </Pressable>
 
-      <BottomSheet visible={editing} onClose={() => setEditing(false)} title={t("Caption")} subtitle={t("Leave it empty and CresQ writes one from your session.")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
-          <Field label={t("Caption")} value={captionText} onChangeText={setCaptionText} placeholder={t("How did it go?")} multiline autoFocus />
-          <Button label={t("Save caption")} onPress={() => { saveCaption(captionText.trim()); setEditing(false); }} />
-        </View>
+      <BottomSheet visible={editing} onClose={() => setEditing(false)} title={t("Caption")} confirm={{ label: t("Save caption"), onPress: () => { saveCaption(captionText.trim()); setEditing(false); } }}>
+        <SheetGroup caption={t("Leave it empty and CresQ writes one from your session.")}>
+          <SheetTextRow value={captionText} onChangeText={setCaptionText} placeholder={t("How did it go?")} multiline autoFocus />
+        </SheetGroup>
       </BottomSheet>
     </Screen>
   );

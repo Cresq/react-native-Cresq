@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { View } from "react-native";
 import { useNav } from "@/nav";
 import { emailOk, MIN_PASSWORD, useAuth } from "@/store/auth";
 import { AuthLayout } from "@/components/AuthLayout";
 import { Txt } from "@/components/ui/Text";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
-import { BottomSheet } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetNote } from "@/components/ui/BottomSheet";
 import { useT } from "@/i18n";
 
 /**
@@ -43,12 +42,9 @@ export default function SignIn() {
       </Txt>
 
       <BottomSheet visible={forgot} onClose={() => setForgot(false)} title={t("Your account is on this phone")} subtitle={t("CresQ does not sync to a server yet, so there is no password to reset and nothing to email. Your log is on this device.")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
-          <Txt variant="bodyM" tone="secondary">
-            {t("Keep a copy: Settings, Account and privacy, Download my data. When sync arrives you sign in with your email and your log comes with you.")}
-          </Txt>
-          <Button label={t("Got it")} variant="secondary" onPress={() => setForgot(false)} />
-        </View>
+        <SheetGroup>
+          <SheetNote>{t("Keep a copy: Settings, Account and privacy, Download my data. When sync arrives you sign in with your email and your log comes with you.")}</SheetNote>
+        </SheetGroup>
       </BottomSheet>
     </AuthLayout>
   );

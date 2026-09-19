@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { Chip } from "@/components/ui/Chip";
 import { Icon, type IconName } from "@/components/ui/Icon";
-import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetOption } from "@/components/ui/BottomSheet";
 import { PhotoViewer } from "@/components/PhotoViewer";
 import { FoodMark } from "@/components/FoodMark";
 import { pickPhoto } from "@/photo";
@@ -285,16 +285,24 @@ function Product({ food, toLog, wantedMeal }: { food: Food; toLog: boolean; want
       <PhotoViewer source={food.photo ? { uri: food.photo } : undefined} visible={zoom} onClose={() => setZoom(false)} />
 
       <BottomSheet visible={photoSheet} onClose={() => setPhotoSheet(false)} onClosed={() => { const go = afterSheet; setAfterSheet(null); go?.(); }} title={t("Photo of this product")}>
-        {food.photo ? <SheetOption icon="search" label={t("See the photo")} onPress={() => { setAfterSheet(() => () => setZoom(true)); setPhotoSheet(false); }} /> : null}
-        <SheetOption icon="camera" label={t("Take a photo")} onPress={() => choosePhoto("camera")} />
-        <SheetOption icon="rows" label={t("Choose from your library")} onPress={() => choosePhoto("library")} />
-        {food.photo ? <SheetOption icon="trash" label={t("Remove photo")} danger onPress={() => { updateFood(food.id, { photo: undefined }); setPhotoSheet(false); }} /> : null}
+        <SheetGroup>
+          {food.photo ? <SheetOption icon="search" label={t("See the photo")} onPress={() => { setAfterSheet(() => () => setZoom(true)); setPhotoSheet(false); }} /> : null}
+          <SheetOption icon="camera" label={t("Take a photo")} onPress={() => choosePhoto("camera")} />
+          <SheetOption icon="rows" label={t("Choose from your library")} onPress={() => choosePhoto("library")} />
+        </SheetGroup>
+        {food.photo ? (
+          <SheetGroup>
+            <SheetOption icon="trash" label={t("Remove photo")} danger onPress={() => { updateFood(food.id, { photo: undefined }); setPhotoSheet(false); }} />
+          </SheetGroup>
+        ) : null}
       </BottomSheet>
 
       <BottomSheet visible={mealSheet} onClose={() => setMealSheet(false)} title={t("Meal")}>
-        {MEALS.map((m) => (
-          <SheetOption key={m} icon={MEAL_ICON[m]} label={t(MEAL_NAME[m])} selected={meal === m} onPress={() => { setMeal(m); haptic("select"); setMealSheet(false); }} />
-        ))}
+        <SheetGroup>
+          {MEALS.map((m) => (
+            <SheetOption key={m} icon={MEAL_ICON[m]} label={t(MEAL_NAME[m])} selected={meal === m} onPress={() => { setMeal(m); haptic("select"); setMealSheet(false); }} />
+          ))}
+        </SheetGroup>
       </BottomSheet>
     </Screen>
   );

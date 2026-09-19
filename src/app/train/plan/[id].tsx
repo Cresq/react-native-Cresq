@@ -16,8 +16,7 @@ import { Icon } from "@/components/ui/Icon";
 import { HeldField } from "@/components/ui/Field";
 import { NumberInput } from "@/components/ui/NumberInput";
 import { Button } from "@/components/ui/Button";
-import { Chip } from "@/components/ui/Chip";
-import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetOption } from "@/components/ui/BottomSheet";
 import { fontFamily } from "../../../../constants/theme";
 import { useT, usePlural } from "@/i18n";
 import { ExerciseMark } from "@/components/ExerciseMark";
@@ -201,17 +200,21 @@ export default function PlanEditor() {
       <BottomSheet visible={sheet?.kind === "options"} onClose={() => setSheet(null)} title={sheet?.kind === "options" ? name(plan.exercises[sheet.index]) : ""}>
         {sheet?.kind === "options" ? (
           <>
-            <SheetOption icon="dragVertical" label={t("Move up")} onPress={() => { move(sheet.index, -1); setSheet(null); }} />
-            <SheetOption icon="dragVertical" label={t("Move down")} onPress={() => { move(sheet.index, 1); setSheet(null); }} />
-            <SheetOption icon="link" label={plan.exercises[sheet.index].supersetGroup ? t("Remove from superset") : t("Superset with next")} sub={t("No rest between the two")} onPress={() => { const cur = plan.exercises[sheet.index]; const g = cur.supersetGroup ? undefined : String.fromCharCode(65 + sheet.index); patchEx(sheet.index, (e) => ({ ...e, supersetGroup: g })); if (sheet.index + 1 < plan.exercises.length) patchEx(sheet.index + 1, (e) => ({ ...e, supersetGroup: g })); setSheet(null); }} />
-            <SheetOption icon="trash" label={t("Remove from workout")} danger onPress={() => { remove(sheet.index); setSheet(null); }} />
+            <SheetGroup>
+              <SheetOption icon="dragVertical" label={t("Move up")} onPress={() => { move(sheet.index, -1); setSheet(null); }} />
+              <SheetOption icon="dragVertical" label={t("Move down")} onPress={() => { move(sheet.index, 1); setSheet(null); }} />
+              <SheetOption icon="link" label={plan.exercises[sheet.index].supersetGroup ? t("Remove from superset") : t("Superset with next")} sub={t("No rest between the two")} onPress={() => { const cur = plan.exercises[sheet.index]; const g = cur.supersetGroup ? undefined : String.fromCharCode(65 + sheet.index); patchEx(sheet.index, (e) => ({ ...e, supersetGroup: g })); if (sheet.index + 1 < plan.exercises.length) patchEx(sheet.index + 1, (e) => ({ ...e, supersetGroup: g })); setSheet(null); }} />
+            </SheetGroup>
+            <SheetGroup>
+              <SheetOption icon="trash" label={t("Remove from workout")} danger onPress={() => { remove(sheet.index); setSheet(null); }} />
+            </SheetGroup>
           </>
         ) : null}
       </BottomSheet>
 
       <BottomSheet visible={sheet?.kind === "type"} onClose={() => setSheet(null)} title={sheet?.kind === "type" ? t("Set {n}", { n: sheet.set + 1 }) : ""} subtitle={sheet?.kind === "type" ? name(plan.exercises[sheet.index]) : undefined}>
         {sheet?.kind === "type" ? (
-          <>
+          <SheetGroup>
             {(
               [
                 ["warmup", "sun", "Warm-up", "Lighter weight, not counted in volume"],
@@ -222,24 +225,24 @@ export default function PlanEditor() {
             ).map(([type, icon, label, sub]) => (
               <SheetOption key={type} icon={icon} label={t(label)} sub={t(sub)} selected={plannedSets(plan.exercises[sheet.index])[sheet.set]?.type === type} onPress={() => { const list = plannedSets(plan.exercises[sheet.index]).map((s, k) => (k === sheet.set ? { ...s, type: type as SetType } : s)); setSets(sheet.index, list); setSheet(null); }} />
             ))}
-          </>
+          </SheetGroup>
         ) : null}
       </BottomSheet>
 
       <BottomSheet visible={sheet?.kind === "rest"} onClose={() => setSheet(null)} title={t("Rest between sets")} subtitle={sheet?.kind === "rest" ? name(plan.exercises[sheet.index]) : undefined}>
         {sheet?.kind === "rest" ? (
-          <Row gap={8} style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
+          <SheetGroup>
             {[60, 90, 120, 150, 180].map((s) => (
-              <Chip key={s} label={fmtTime(s)} selected={plan.exercises[sheet.index].restSeconds === s} onPress={() => { patchEx(sheet.index, (e) => ({ ...e, restSeconds: s })); setSheet(null); }} style={{ flex: 1, justifyContent: "center" }} />
+              <SheetOption key={s} icon="timer" label={fmtTime(s)} selected={plan.exercises[sheet.index].restSeconds === s} onPress={() => { patchEx(sheet.index, (e) => ({ ...e, restSeconds: s })); setSheet(null); }} />
             ))}
-          </Row>
+          </SheetGroup>
         ) : null}
       </BottomSheet>
 
       <BottomSheet visible={sheet?.kind === "delete"} onClose={() => setSheet(null)} title={t("Delete this workout?")} subtitle={t("Sessions you already logged with it stay in your history.")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
-          <Button label={t("Delete workout")} variant="danger" size="M" onPress={deletePlan} />
-        </View>
+        <SheetGroup>
+          <SheetOption icon="trash" label={t("Delete workout")} danger onPress={deletePlan} />
+        </SheetGroup>
       </BottomSheet>
     </Screen>
   );

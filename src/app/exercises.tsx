@@ -14,7 +14,7 @@ import { Divider } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
-import { BottomSheet } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetTextRow } from "@/components/ui/BottomSheet";
 import { ExerciseMedia } from "@/components/ExerciseMedia";
 import { MoveViewer } from "@/components/MoveViewer";
 import type { Exercise } from "@/db/types";
@@ -151,12 +151,11 @@ export default function Exercises() {
         }
       />
 
-      <BottomSheet visible={creating} onClose={() => setCreating(false)} title={t("New exercise")} subtitle={t("It goes into your library and can be used in any workout.")}>
-        <View style={{ gap: 12, paddingHorizontal: 8, paddingVertical: 8 }}>
-          <Field label={t("Name")} value={name} onChangeText={setName} placeholder="Seated cable row" autoFocus />
-          <Field label={t("Muscles")} value={muscles} onChangeText={setMuscles} placeholder={t("Back, biceps")} />
-          <Button label={t("Add exercise")} onPress={create} disabled={!name.trim()} style={{ marginTop: 4 }} />
-        </View>
+      <BottomSheet visible={creating} onClose={() => setCreating(false)} title={t("New exercise")} confirm={{ label: t("Add exercise"), onPress: create, disabled: !name.trim() }}>
+        <SheetGroup caption={t("It goes into your library and can be used in any workout.")}>
+          <SheetTextRow label={t("Name")} value={name} onChangeText={setName} placeholder="Seated cable row" autoFocus />
+          <SheetTextRow label={t("Muscles")} value={muscles} onChangeText={setMuscles} placeholder={t("Back, biceps")} />
+        </SheetGroup>
       </BottomSheet>
 
       <MoveViewer exercise={watching} onClose={() => setWatching(null)} />

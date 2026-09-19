@@ -12,7 +12,7 @@ import { Card, Divider } from "@/components/ui/Card";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Segmented } from "@/components/ui/Segmented";
 import { Button } from "@/components/ui/Button";
-import { BottomSheet } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetOption } from "@/components/ui/BottomSheet";
 
 /** Settings. Small on purpose: what the app needs today, nothing speculative. */
 export default function Settings() {
@@ -119,14 +119,14 @@ export default function Settings() {
       </Txt>
 
       <BottomSheet visible={confirm === "samples"} onClose={() => setConfirm(null)} title={t("Remove sample sessions?")} subtitle={t("Your own logged sessions stay. Charts will be empty until you train.")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
-          <Button label={plural(samples, "Remove {n} session", "Remove {n} sessions")} variant="danger" size="M" onPress={() => { update((d) => ({ ...d, sessions: d.sessions.filter((s) => !s.sample), invites: d.invites.filter((i) => !i.sample) })); setConfirm(null); }} />
-        </View>
+        <SheetGroup>
+          <SheetOption icon="trash" label={plural(samples, "Remove {n} session", "Remove {n} sessions")} danger onPress={() => { update((d) => ({ ...d, sessions: d.sessions.filter((s) => !s.sample), invites: d.invites.filter((i) => !i.sample) })); setConfirm(null); }} />
+        </SheetGroup>
       </BottomSheet>
       <BottomSheet visible={confirm === "reset"} onClose={() => setConfirm(null)} title={t("Reset everything?")} subtitle={t("This cannot be undone. You will be signed out.")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
-          <Button label={t("Reset app")} variant="danger" size="M" onPress={async () => { setConfirm(null); await reset(); router.replace("/"); }} />
-        </View>
+        <SheetGroup>
+          <SheetOption icon="reload" label={t("Reset app")} danger onPress={async () => { setConfirm(null); await reset(); router.replace("/"); }} />
+        </SheetGroup>
       </BottomSheet>
     </Screen>
   );

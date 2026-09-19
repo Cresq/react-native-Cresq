@@ -15,7 +15,7 @@ import { Card, Divider } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { Stat, StatDivider } from "@/components/StatCard";
 import { LineChart } from "@/components/LineChart";
-import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetOption } from "@/components/ui/BottomSheet";
 
 /**
  * Data. Everything the log can tell you, in one place: the week in figures,
@@ -131,10 +131,16 @@ export default function Data() {
       </Section>
 
       <BottomSheet visible={managing} onClose={() => setManaging(false)} title={t("Lifts on Home")} subtitle={t("Tap one to take it off. Its sessions and records stay.")}>
-        {lifts.map((l) => (
-          <SheetOption key={l.ex.id} icon="close" label={l.ex.name} sub={l.points.length ? plural(l.points.length, "{n} session", "{n} sessions") : t("Not logged yet")} onPress={() => dropFavourite(l.ex.id)} />
-        ))}
-        <SheetOption icon="addPlus" label={t("Add a lift")} sub={t("From your exercise library")} onPress={() => { setManaging(false); router.push("/exercises?favourite=1"); }} />
+        {lifts.length ? (
+          <SheetGroup>
+            {lifts.map((l) => (
+              <SheetOption key={l.ex.id} icon="close" label={l.ex.name} sub={l.points.length ? plural(l.points.length, "{n} session", "{n} sessions") : t("Not logged yet")} onPress={() => dropFavourite(l.ex.id)} />
+            ))}
+          </SheetGroup>
+        ) : null}
+        <SheetGroup>
+          <SheetOption icon="addPlus" label={t("Add a lift")} sub={t("From your exercise library")} onPress={() => { setManaging(false); router.push("/exercises?favourite=1"); }} />
+        </SheetGroup>
       </BottomSheet>
     </Screen>
   );

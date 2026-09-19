@@ -15,10 +15,9 @@ import { useT, useLanguage, possessive } from "@/i18n";
 import { Screen, Row } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
-import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { Avatar } from "@/components/ui/PhotoSlot";
-import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetOption } from "@/components/ui/BottomSheet";
 import { PostCard, type Post } from "@/components/PostCard";
 import { CommentSheet, type Comment, type CommentActions } from "@/components/CommentSheet";
 
@@ -138,25 +137,28 @@ export default function Feed() {
         subtitle={reported ? t("The post is hidden from your feed. Reports reach us once accounts sync; until then nothing leaves this phone.") : moreView === "delete" ? t("It disappears from the feed and from your log. Records from it are recalculated. This cannot be undone.") : undefined}
       >
         {!reported && more && moreView === "delete" ? (
-          <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
-            <Button label={t("Keep it")} variant="secondary" size="M" onPress={() => setMoreView("menu")} />
-            <Button label={t("Delete workout")} variant="danger" size="M" onPress={() => { const id = more.id; closeMore(); update((d) => ({ ...d, sessions: d.sessions.filter((x) => x.id !== id) })); }} />
-          </View>
+          <SheetGroup>
+            <SheetOption icon="trash" label={t("Delete workout")} danger onPress={() => { const id = more.id; closeMore(); update((d) => ({ ...d, sessions: d.sessions.filter((x) => x.id !== id) })); }} />
+          </SheetGroup>
         ) : null}
-        {reported ? (
-          <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
-            <Button label={t("Done")} variant="secondary" size="M" onPress={closeMore} />
-          </View>
-        ) : moreView !== "menu" ? null : more?.userId ? (
+        {reported || moreView !== "menu" ? null : more?.userId ? (
           <>
-            <SheetOption icon="close" label={t("Hide this post")} sub={t("Only from your feed")} onPress={() => { setHidden((h) => [...h, more.id]); closeMore(); }} />
-            <SheetOption icon="flag" label={t("Report post")} sub={t("Spam or abuse")} danger onPress={() => { setHidden((h) => (h.includes(more.id) ? h : [...h, more.id])); setReported(true); }} />
+            <SheetGroup>
+              <SheetOption icon="close" label={t("Hide this post")} sub={t("Only from your feed")} onPress={() => { setHidden((h) => [...h, more.id]); closeMore(); }} />
+            </SheetGroup>
+            <SheetGroup>
+              <SheetOption icon="flag" label={t("Report post")} sub={t("Spam or abuse")} danger onPress={() => { setHidden((h) => (h.includes(more.id) ? h : [...h, more.id])); setReported(true); }} />
+            </SheetGroup>
           </>
         ) : more ? (
           <>
-            <SheetOption icon="sliders" label={t("Edit workout")} sub={t("Caption, sets, weights, duration, exercises")} onPress={() => { const id = more.id; closeMore(); router.push(`/workout/edit/${id}`); }} />
-            <SheetOption icon="lock" label={t("Make private")} sub={t("Removes it from the feed, keeps it in your log")} onPress={() => { const id = more.id; update((d) => ({ ...d, sessions: d.sessions.map((s) => (s.id === id ? { ...s, shared: false } : s)) })); closeMore(); }} />
-            <SheetOption icon="trash" label={t("Delete workout")} sub={t("Gone from the feed and from your log")} danger onPress={() => setMoreView("delete")} />
+            <SheetGroup>
+              <SheetOption icon="sliders" label={t("Edit workout")} sub={t("Caption, sets, weights, duration, exercises")} onPress={() => { const id = more.id; closeMore(); router.push(`/workout/edit/${id}`); }} />
+              <SheetOption icon="lock" label={t("Make private")} sub={t("Removes it from the feed, keeps it in your log")} onPress={() => { const id = more.id; update((d) => ({ ...d, sessions: d.sessions.map((s) => (s.id === id ? { ...s, shared: false } : s)) })); closeMore(); }} />
+            </SheetGroup>
+            <SheetGroup>
+              <SheetOption icon="trash" label={t("Delete workout")} sub={t("Gone from the feed and from your log")} danger onPress={() => setMoreView("delete")} />
+            </SheetGroup>
           </>
         ) : null}
       </BottomSheet>

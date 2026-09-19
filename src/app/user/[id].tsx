@@ -14,7 +14,7 @@ import { Avatar } from "@/components/ui/PhotoSlot";
 import { PhotoViewer } from "@/components/PhotoViewer";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
-import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetOption } from "@/components/ui/BottomSheet";
 import { WorkoutTile } from "@/components/WorkoutTile";
 import { Count } from "../(tabs)/profile";
 import { useT } from "@/i18n";
@@ -114,14 +114,20 @@ export default function UserProfile() {
       </View>
 
       <BottomSheet visible={more === "menu"} onClose={() => setMore(null)} onClosed={() => { const go = afterSheet; setAfterSheet(null); go?.(); }} title={p.name}>
-        <SheetOption icon="share" label={t("Share profile")} onPress={() => { setAfterSheet(() => () => void shareText(`${p.name}, CresQ ${p.handle}`)); setMore(null); }} />
-        <SheetOption icon="flag" label={t("Report account")} sub={t("Spam, impersonation or abuse")} onPress={() => setMore("report")} />
-        <SheetOption icon="lock" label={t("Block {name}", { name: p.name.split(" ")[0] })} sub={t("They disappear from your feed and lists")} danger onPress={() => { setMore(null); block(p.id); router.back(); }} />
+        <SheetGroup>
+          <SheetOption icon="share" label={t("Share profile")} onPress={() => { setAfterSheet(() => () => void shareText(`${p.name}, CresQ ${p.handle}`)); setMore(null); }} />
+          <SheetOption icon="flag" label={t("Report account")} sub={t("Spam, impersonation or abuse")} onPress={() => setMore("report")} />
+        </SheetGroup>
+        <SheetGroup>
+          <SheetOption icon="lock" label={t("Block {name}", { name: p.name.split(" ")[0] })} sub={t("They disappear from your feed and lists")} danger onPress={() => { setMore(null); block(p.id); router.back(); }} />
+        </SheetGroup>
       </BottomSheet>
       <BottomSheet visible={more === "report" || more === "reported"} onClose={() => setMore(null)} title={more === "reported" ? t("Thanks, we got it") : t("Report this account?")} subtitle={more === "reported" ? t("We look at every report within two days. You can also block the account.") : t("Tell us if this account is spam, pretends to be someone else, or posts abusive content.")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
-          {more === "reported" ? <Button label={t("Done")} variant="secondary" size="M" onPress={() => setMore(null)} /> : <Button label={t("Send report")} variant="danger" size="M" onPress={() => setMore("reported")} />}
-        </View>
+        {more === "reported" ? null : (
+          <SheetGroup>
+            <SheetOption icon="flag" label={t("Send report")} danger onPress={() => setMore("reported")} />
+          </SheetGroup>
+        )}
       </BottomSheet>
       <PhotoViewer source={p.avatar} visible={zoomAvatar} onClose={() => setZoomAvatar(false)} />
     </Screen>

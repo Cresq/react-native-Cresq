@@ -13,12 +13,10 @@ import { gymAddress, gymLabel, searchGyms } from "@/gym/places";
 import type { GymPlace } from "@/db/types";
 import { Row } from "./ui/Screen";
 import { Txt } from "./ui/Text";
-import { Card, Divider } from "./ui/Card";
+import { Card } from "./ui/Card";
 import { Chip } from "./ui/Chip";
 import { Icon } from "./ui/Icon";
-import { Field } from "./ui/Field";
-import { Button } from "./ui/Button";
-import { BottomSheet } from "./ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetNote, SheetOption, SheetTextRow } from "./ui/BottomSheet";
 
 const STRIP_HEIGHT = 40;
 /** Typing stops for this long before the search goes out: one question per word, not one per letter. */
@@ -172,7 +170,6 @@ type Found = { q: string; items: GymPlace[]; failed: boolean };
  * is a gym nobody else can be talking about.
  */
 function GymPicker({ visible, current, onClose, onPick }: { visible: boolean; current?: GymPlace; onClose: () => void; onPick: (g: GymPlace | null) => void }) {
-  const { colors } = useTheme();
   const t = useT();
   const [q, setQ] = useState("");
   const [found, setFound] = useState<Found | null>(null);
@@ -204,45 +201,27 @@ function GymPicker({ visible, current, onClose, onPick }: { visible: boolean; cu
 
   return (
     <BottomSheet visible={visible} onClose={onClose} title={t("Your gym")} subtitle={t("Search for the gym you usually train at. It is offered first after a session, and it is the one whose busyness you see.")}>
-      <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
-        <Field label={t("Name and town")} value={q} onChangeText={setQ} placeholder={t("Basic-Fit Zwolle")} icon="search" autoCorrect={false} autoCapitalize="words" autoFocus />
-        {wanted.length < MIN_LETTERS ? null : !answer ? (
-          <Txt variant="bodyS" tone="tertiary" style={{ paddingVertical: 8 }}>
-            {t("Searching")}
-          </Txt>
-        ) : answer.failed ? (
-          <Txt variant="bodyS" tone="secondary" style={{ paddingVertical: 8 }}>
-            {t("The search could not be reached. Check your connection and try again.")}
-          </Txt>
-        ) : answer.items.length === 0 ? (
-          <Txt variant="bodyS" tone="secondary" style={{ paddingVertical: 8 }}>
-            {t("No gym found. Try its name together with the town.")}
-          </Txt>
-        ) : (
-          <View>
-            {answer.items.slice(0, 5).map((g, i) => (
-              <View key={g.id}>
-                {i > 0 ? <Divider /> : null}
-                <Pressable accessibilityRole="button" accessibilityLabel={`${g.name}, ${gymAddress(g)}`} onPress={() => pick(g)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, opacity: pressed ? opacity.pressed : 1 })}>
-                  <View style={{ flex: 1, gap: 1 }}>
-                    <Txt variant="labelL" numberOfLines={1}>
-                      {g.name}
-                    </Txt>
-                    <Txt variant="bodyS" tone="tertiary" numberOfLines={1}>
-                      {gymAddress(g)}
-                    </Txt>
-                  </View>
-                  {current?.id === g.id ? <Icon name="check" size={18} color={colors.status.success} strokeWidth={2.4} /> : null}
-                </Pressable>
-              </View>
-            ))}
-          </View>
-        )}
-        <Txt variant="labelS" tone="tertiary">
-          {t("Places from OpenStreetMap")}
-        </Txt>
-        {current ? <Button label={t("No regular gym")} variant="tertiary" size="M" onPress={() => pick(null)} /> : null}
-      </View>
+      <SheetGroup caption={t("Places from OpenStreetMap")}>
+        <SheetTextRow value={q} onChangeText={setQ} placeholder={t("Basic-Fit Zwolle")} accessibilityLabel={t("Name and town")} autoCorrect={false} autoCapitalize="words" autoFocus />
+      </SheetGroup>
+      {wanted.length < MIN_LETTERS ? null : (
+        <SheetGroup>
+          {!answer ? (
+            <SheetNote>{t("Searching")}</SheetNote>
+          ) : answer.failed ? (
+            <SheetNote>{t("The search could not be reached. Check your connection and try again.")}</SheetNote>
+          ) : answer.items.length === 0 ? (
+            <SheetNote>{t("No gym found. Try its name together with the town.")}</SheetNote>
+          ) : (
+            answer.items.slice(0, 5).map((g) => <SheetOption key={g.id} icon="mapPin" label={g.name} sub={gymAddress(g)} selected={current?.id === g.id} accessibilityLabel={`${g.name}, ${gymAddress(g)}`} onPress={() => pick(g)} />)
+          )}
+        </SheetGroup>
+      )}
+      {current ? (
+        <SheetGroup>
+          <SheetOption icon="close" label={t("No regular gym")} onPress={() => pick(null)} />
+        </SheetGroup>
+      ) : null}
     </BottomSheet>
   );
 }

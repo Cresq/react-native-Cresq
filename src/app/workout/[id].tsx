@@ -19,8 +19,7 @@ import { Card } from "@/components/ui/Card";
 import { SessionBreakdown, type BreakdownExercise } from "@/components/SessionBreakdown";
 import { useT, usePlural } from "@/i18n";
 import { PhotoViewer } from "@/components/PhotoViewer";
-import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
-import { Button } from "@/components/ui/Button";
+import { BottomSheet, SheetGroup, SheetOption } from "@/components/ui/BottomSheet";
 import { PostCard } from "@/components/PostCard";
 import { CommentSheet, type Comment } from "@/components/CommentSheet";
 import { useComments } from "@/store/comments";
@@ -229,22 +228,25 @@ function Page({ id, at }: { id: string; at?: { index: number; count: number } })
       <BottomSheet visible={!!menu} onClose={() => setMenu(null)} onClosed={() => { const go = afterSheet; setAfterSheet(null); go?.(); }} title={menu === "delete" ? t("Delete this workout?") : s.planName} subtitle={menu === "delete" ? t("It disappears from the feed and from your log. Records from it are recalculated. This cannot be undone.") : longDate(s.startedAt)}>
         {menu === "menu" ? (
           <>
-            {resumable ? <SheetOption icon="play" label={t("Continue this workout")} sub={t("Back into the session, everything as you left it")} onPress={() => { setMenu(null); resume(s.id); router.replace("/workout/active"); }} /> : null}
-            <SheetOption icon="sliders" label={t("Edit workout")} sub={t("Caption, sets, weights, duration, exercises")} onPress={() => { setMenu(null); router.push(`/workout/edit/${s.id}`); }} />
-            {s.shared ? (
-              <SheetOption icon="lock" label={t("Make private")} sub={t("Removes it from the feed, keeps it in your log")} onPress={() => { setMenu(null); update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, shared: false } : x)) })); }} />
-            ) : (
-              <SheetOption icon="users" label={t("Share to feed")} sub={t("Your followers see it in their feed")} onPress={() => { setMenu(null); update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, shared: true } : x)) })); }} />
-            )}
-            <SheetOption icon="share" label={t("Share")} sub={t("Send a summary to another app")} onPress={() => { setAfterSheet(() => () => void shareText(`${s.planName}, ${longDate(s.startedAt)}: ${plural(stats.setsDone, "{n} set", "{n} sets")}, ${fmtKg(stats.volume)} kg, ${stats.minutes} min. CresQ.`)); setMenu(null); }} />
-            <SheetOption icon="trash" label={t("Delete workout")} danger onPress={() => setMenu("delete")} />
+            <SheetGroup>
+              {resumable ? <SheetOption icon="play" label={t("Continue this workout")} sub={t("Back into the session, everything as you left it")} onPress={() => { setMenu(null); resume(s.id); router.replace("/workout/active"); }} /> : null}
+              <SheetOption icon="sliders" label={t("Edit workout")} sub={t("Caption, sets, weights, duration, exercises")} onPress={() => { setMenu(null); router.push(`/workout/edit/${s.id}`); }} />
+              {s.shared ? (
+                <SheetOption icon="lock" label={t("Make private")} sub={t("Removes it from the feed, keeps it in your log")} onPress={() => { setMenu(null); update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, shared: false } : x)) })); }} />
+              ) : (
+                <SheetOption icon="users" label={t("Share to feed")} sub={t("Your followers see it in their feed")} onPress={() => { setMenu(null); update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, shared: true } : x)) })); }} />
+              )}
+              <SheetOption icon="share" label={t("Share")} sub={t("Send a summary to another app")} onPress={() => { setAfterSheet(() => () => void shareText(`${s.planName}, ${longDate(s.startedAt)}: ${plural(stats.setsDone, "{n} set", "{n} sets")}, ${fmtKg(stats.volume)} kg, ${stats.minutes} min. CresQ.`)); setMenu(null); }} />
+            </SheetGroup>
+            <SheetGroup>
+              <SheetOption icon="trash" label={t("Delete workout")} danger onPress={() => setMenu("delete")} />
+            </SheetGroup>
           </>
         ) : null}
         {menu === "delete" ? (
-          <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
-            <Button label={t("Keep it")} variant="secondary" size="M" onPress={() => setMenu("menu")} />
-            <Button label={t("Delete workout")} variant="danger" size="M" onPress={() => { const gone = s.id; setMenu(null); update((d) => ({ ...d, sessions: d.sessions.filter((x) => x.id !== gone) })); back(); }} />
-          </View>
+          <SheetGroup>
+            <SheetOption icon="trash" label={t("Delete workout")} danger onPress={() => { const gone = s.id; setMenu(null); update((d) => ({ ...d, sessions: d.sessions.filter((x) => x.id !== gone) })); back(); }} />
+          </SheetGroup>
         ) : null}
       </BottomSheet>
     </Screen>

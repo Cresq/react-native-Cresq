@@ -24,7 +24,7 @@ import { Stat, StatDivider } from "@/components/StatCard";
 import { MacroLegend, MacroRing } from "@/components/MacroRing";
 import { burnsOn, entriesOn, totals } from "@/nutrition/derive";
 import { LineChart } from "@/components/LineChart";
-import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetOption } from "@/components/ui/BottomSheet";
 import { useSocial } from "@/store/social";
 import { useWeight } from "@/store/weight";
 import { GymCard } from "@/components/GymCard";
@@ -271,10 +271,16 @@ export default function Home() {
       </Section>
 
       <BottomSheet visible={choosing} onClose={() => setChoosing(false)} title={t("Today's workout")} subtitle={t("Your split says {name}. Pick something else for today; the split keeps its order.", { name: nextDay?.rest ? t("Rest day") : (nextDay?.name ?? "") })}>
+        <SheetGroup>
         {db.plans.map((p) => (
           <SheetOption key={p.id} icon="dumbbell" label={p.name} sub={[p.focus, plural(p.exercises.length, "{n} exercise", "{n} exercises")].filter(Boolean).join(", ")} selected={plan?.id === p.id} onPress={() => { setOverride(p.id === nextDay?.planId ? undefined : p.id); setChoosing(false); }} />
         ))}
-        {override ? <SheetOption icon="reload" label={t("Back to the split")} sub={nextDay?.name} onPress={() => { setOverride(undefined); setChoosing(false); }} /> : null}
+        </SheetGroup>
+        {override ? (
+          <SheetGroup>
+            <SheetOption icon="reload" label={t("Back to the split")} sub={nextDay?.name} onPress={() => { setOverride(undefined); setChoosing(false); }} />
+          </SheetGroup>
+        ) : null}
       </BottomSheet>
     </Screen>
   );

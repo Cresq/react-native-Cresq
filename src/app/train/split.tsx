@@ -12,8 +12,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Card, Divider } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
-import { Field } from "@/components/ui/Field";
-import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetOption, SheetTextRow } from "@/components/ui/BottomSheet";
 import { useT, usePlural } from "@/i18n";
 
 /**
@@ -37,11 +36,10 @@ export default function SplitEditor() {
     <Screen bottom={90} footer={<Button label={t("Save split")} onPress={() => router.back("/(tabs)/train")} />}>
       <Header left={<IconButton name="chevronLeft" onPress={() => router.back("/(tabs)/train")} accessibilityLabel={t("Back")} />} title={t("Your split")} right={<IconButton name="noteEdit" onPress={() => { setNameText(split.name); setRenaming(true); }} accessibilityLabel={t("Rename split")} />} />
 
-      <BottomSheet visible={renaming} onClose={() => setRenaming(false)} title={t("Rename your split")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
-          <Field label={t("Name")} value={nameText} onChangeText={setNameText} placeholder="Push Pull Legs" autoFocus />
-          <Button label={t("Save name")} onPress={() => { if (nameText.trim()) rename(nameText.trim()); setRenaming(false); }} disabled={!nameText.trim()} />
-        </View>
+      <BottomSheet visible={renaming} onClose={() => setRenaming(false)} title={t("Rename your split")} confirm={{ label: t("Save name"), onPress: () => { if (nameText.trim()) rename(nameText.trim()); setRenaming(false); }, disabled: !nameText.trim() }}>
+        <SheetGroup>
+          <SheetTextRow label={t("Name")} value={nameText} onChangeText={setNameText} placeholder="Push Pull Legs" autoFocus />
+        </SheetGroup>
       </BottomSheet>
 
       <View style={{ gap: 4 }}>
@@ -112,19 +110,25 @@ export default function SplitEditor() {
       <BottomSheet visible={sheet?.kind === "day"} onClose={() => setSheet(null)} title={sheet?.kind === "day" ? sheet.day.name : ""} subtitle={sheet?.kind === "day" ? t("Day {a} of {b}", { a: split.days.findIndex((d) => d.id === sheet.day.id) + 1, b: split.days.length }) : undefined}>
         {sheet?.kind === "day" ? (
           <>
-            <SheetOption icon="circleCheck" label={t("Do this next")} sub={t("Move the pointer to this day")} onPress={() => { setNext(sheet.day.id); setSheet(null); }} />
-            <SheetOption icon="dragVertical" label={t("Move up")} onPress={() => { moveDay(sheet.day.id, -1); setSheet(null); }} />
-            <SheetOption icon="dragVertical" label={t("Move down")} onPress={() => { moveDay(sheet.day.id, 1); setSheet(null); }} />
-            <SheetOption icon="reload" label={t("Swap for another day")} sub={t("Keep the position, change the workout")} onPress={() => setSheet({ kind: "add" })} />
-            <SheetOption icon="trash" label={t("Remove from split")} danger onPress={() => { removeDay(sheet.day.id); setSheet(null); }} />
+            <SheetGroup>
+              <SheetOption icon="circleCheck" label={t("Do this next")} sub={t("Move the pointer to this day")} onPress={() => { setNext(sheet.day.id); setSheet(null); }} />
+              <SheetOption icon="dragVertical" label={t("Move up")} onPress={() => { moveDay(sheet.day.id, -1); setSheet(null); }} />
+              <SheetOption icon="dragVertical" label={t("Move down")} onPress={() => { moveDay(sheet.day.id, 1); setSheet(null); }} />
+              <SheetOption icon="reload" label={t("Swap for another day")} sub={t("Keep the position, change the workout")} onPress={() => setSheet({ kind: "add" })} />
+            </SheetGroup>
+            <SheetGroup>
+              <SheetOption icon="trash" label={t("Remove from split")} danger onPress={() => { removeDay(sheet.day.id); setSheet(null); }} />
+            </SheetGroup>
           </>
         ) : null}
       </BottomSheet>
 
       <BottomSheet visible={sheet?.kind === "add"} onClose={() => setSheet(null)} title={t("Add a day")} subtitle={t("Pick a workout or a rest day. You can reorder afterwards.")}>
-        {splitTemplates.map((tpl) => (
-          <SheetOption key={tpl.name} icon={tpl.rest ? "sun" : "dumbbell"} label={tpl.name} sub={tpl.rest ? tpl.focus : `${tpl.focus}, ${plural(tpl.exercises ?? 0, "{n} exercise", "{n} exercises")}`} onPress={() => { addDay(tpl); setSheet(null); }} />
-        ))}
+        <SheetGroup>
+          {splitTemplates.map((tpl) => (
+            <SheetOption key={tpl.name} icon={tpl.rest ? "sun" : "dumbbell"} label={tpl.name} sub={tpl.rest ? tpl.focus : `${tpl.focus}, ${plural(tpl.exercises ?? 0, "{n} exercise", "{n} exercises")}`} onPress={() => { addDay(tpl); setSheet(null); }} />
+          ))}
+        </SheetGroup>
       </BottomSheet>
     </Screen>
   );

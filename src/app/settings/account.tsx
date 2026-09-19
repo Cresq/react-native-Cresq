@@ -13,7 +13,7 @@ import { Toggle } from "@/components/ui/Toggle";
 import { Divider } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
-import { BottomSheet } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetOption } from "@/components/ui/BottomSheet";
 import { useT } from "@/i18n";
 import { pickBackupText, readBackup } from "@/backup";
 import { longDate } from "@/db/derive";
@@ -176,17 +176,20 @@ export default function Account() {
         title={restoring && "error" in restoring ? t("Could not read that file") : t("Replace everything with this backup?")}
         subtitle={restoring && "error" in restoring ? restoring.error : restoring ? t("{n} sessions in the file. Everything now on this phone is replaced, including your settings. This cannot be undone.", { n: restoring.sessions }) : undefined}
       >
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
-          {restoring && !("error" in restoring) ? <Button label={t("Restore this backup")} variant="danger" size="M" onPress={() => { const d = restoring.data; setRestoring(null); restore(d); }} /> : null}
-          <Button label={t("Cancel")} variant="secondary" size="M" onPress={() => setRestoring(null)} />
-        </View>
+        {restoring && !("error" in restoring) ? (
+          <SheetGroup>
+            <SheetOption icon="reload" label={t("Restore this backup")} danger onPress={() => { const d = restoring.data; setRestoring(null); restore(d); }} />
+          </SheetGroup>
+        ) : null}
       </BottomSheet>
 
       <BottomSheet visible={confirmDelete} onClose={() => setConfirmDelete(false)} title={t("Delete your account?")} subtitle={t("Your log, photos and settings are removed from this phone. There is nowhere else to remove them from: nothing has been sent anywhere. This cannot be undone.")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
-          <Button label={t("Download my data first")} variant="secondary" size="M" icon="share" onPress={exportData} />
-          <Button label={t("Delete account permanently")} variant="danger" size="M" onPress={deleteAccount} />
-        </View>
+        <SheetGroup>
+          <SheetOption icon="share" label={t("Download my data first")} onPress={exportData} />
+        </SheetGroup>
+        <SheetGroup>
+          <SheetOption icon="trash" label={t("Delete account permanently")} danger onPress={deleteAccount} />
+        </SheetGroup>
       </BottomSheet>
     </Screen>
   );

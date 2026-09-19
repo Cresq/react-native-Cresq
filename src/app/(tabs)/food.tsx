@@ -23,8 +23,8 @@ import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { Chip } from "@/components/ui/Chip";
 import { Icon } from "@/components/ui/Icon";
-import { Field } from "@/components/ui/Field";
-import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetInputRow, SheetOption, SheetTextRow } from "@/components/ui/BottomSheet";
+import { FoodMark } from "@/components/FoodMark";
 import { FoodWelcome } from "@/components/FoodWelcome";
 import { MacroLegend, MacroRing } from "@/components/MacroRing";
 import { MacroTargets } from "@/components/MacroTargets";
@@ -39,6 +39,8 @@ const TRACK_HEIGHT = 50;
 const TRACK_ROOM = TRACK_HEIGHT + 20;
 /** What a running session's strip adds above the tab bar. */
 const RUNNING_STRIP = 68;
+/** The product's picture in a row of the day: big enough to recognise a pack by, small enough that the row stays a row. */
+const ROW_MARK = 34;
 
 /**
  * Food, in two blocks and a bar: the day as a ring, with what was burned as a
@@ -108,6 +110,7 @@ export default function FoodTab() {
     haptic("done");
     setBurnKcal("");
     setBurnLabel("");
+    setBurnSheet(false);
   };
   const connect = async () => {
     setConnecting(true);
@@ -149,6 +152,19 @@ export default function FoodTab() {
             : t("Connect it and the workouts from your watch count by themselves.");
   const burnName = (b: Burn) => (b.source === "health" ? t(KIND_NAME[b.kind ?? "other"]) : (b.label ?? t("Burned")));
   const burnSub = (b: Burn) => (b.source === "health" ? [t(store.name), b.via].filter(Boolean).join(", ") : b.sessionId ? t("Estimate from your session") : t("Entered by you"));
+
+  // Today's sessions that nothing counts yet: not covered by a measured workout from the health store, not added already.
+  const openSessions = sessionsToday
+    .filter((s) => {
+      const end = s.finishedAt ?? s.startedAt;
+      if (burnedToday.some((b) => b.source === "health" && (b.from ?? 0) < end && (b.to ?? 0) > s.startedAt)) return false;
+      return !burnedToday.some((b) => b.sessionId === s.id);
+    })
+    .map((s) => {
+      const minutes = Math.max(1, Math.round(((s.finishedAt ?? s.startedAt) - s.startedAt) / 60_000));
+      const kg = weightKg ?? ASSUMED_KG;
+      return { s, minutes, kg, est: estimateSessionBurn(minutes, kg) };
+    });
 
   // Just clear of the floating tab bar, and of a running session's strip when there is one.
   const trackBottom = Math.max(insets.bottom - 8, 10) + layout.tabBarHeight + 10 + (running ? RUNNING_STRIP : 0);
@@ -214,14 +230,15 @@ export default function FoodTab() {
               <IconButton name="addPlus" size={34} iconSize={16} tone="sage" onPress={() => search(m)} accessibilityLabel={t("Add {meal}", { meal: name.toLowerCase() })} />
             </Row>
             {entries.length ? (
-              <Card padding={0} gap={0} style={{ paddingHorizontal: 14, paddingVertical: 2 }}>
+              <Card padding={0} gap={0} style={{ paddingHorizontal: 12, paddingVertical: 2 }}>
                 {entries.map((e, i) => {
                   const f = byId.get(e.foodId);
                   const p = f ? portion(f, e.amount) : null;
                   return (
                     <View key={e.id}>
                       {i > 0 ? <Divider /> : null}
-                      <Pressable accessibilityRole="button" accessibilityLabel={f?.name ?? t("Removed product")} onPress={() => setPicked(e)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, opacity: pressed ? opacity.pressed : 1 })}>
+                      <Pressable accessibilityRole="button" accessibilityLabel={f?.name ?? t("Removed product")} onPress={() => setPicked(e)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8, opacity: pressed ? opacity.pressed : 1 })}>
+                        <FoodMark photo={f?.photo} size={ROW_MARK} />
                         <Txt variant="labelM" numberOfLines={1} style={{ flexShrink: 1 }}>
                           {f?.name ?? t("Removed product")}
                         </Txt>
@@ -248,61 +265,46 @@ export default function FoodTab() {
         title={picked ? byId.get(picked.foodId)?.name ?? t("Removed product") : ""}
         subtitle={picked ? `${fmtG(picked.amount)} ${byId.get(picked.foodId)?.unit ?? "g"}, ${t(MEAL_NAME[picked.meal])}` : undefined}
       >
-        <View style={{ gap: 4 }}>
-          {picked && byId.get(picked.foodId) ? <SheetOption icon="leaf" label={t("Open product")} sub={t("Figures, portion, corrections")} onPress={() => { const id = picked.foodId; setAfterSheet(() => () => router.push(`/food/${id}`)); setPicked(null); }} /> : null}
+        {picked && byId.get(picked.foodId) ? (
+          <SheetGroup>
+            <SheetOption icon="leaf" label={t("Open product")} sub={t("Figures, portion, corrections")} onPress={() => { const id = picked.foodId; setAfterSheet(() => () => router.push(`/food/${id}`)); setPicked(null); }} />
+          </SheetGroup>
+        ) : null}
+        <SheetGroup>
           <SheetOption icon="trash" label={t("Remove from today")} danger onPress={() => { if (picked) removeEntry(picked.id); haptic("tap"); setPicked(null); }} />
-        </View>
+        </SheetGroup>
       </BottomSheet>
 
       {/* What was burned, all in one sheet: where it comes from, what counts today, and adding to it by hand. */}
-      <BottomSheet visible={burnSheet} onClose={() => setBurnSheet(false)} title={t("Calories burned")} subtitle={t("Added to what the day may hold.")}>
-        <View style={{ gap: 4 }}>
-          <Row gap={12} style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
-            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.fuel.soft, alignItems: "center", justifyContent: "center" }}>
-              <Icon name="heart" size={16} color={colors.fuel.sage} strokeWidth={2} />
-            </View>
-            <View style={{ flex: 1, gap: 1 }}>
-              <Txt variant="labelL">{t(store.name)}</Txt>
-              <Txt variant="bodyS" tone="tertiary">
-                {storeLine}
-              </Txt>
-            </View>
-            {!store.unavailable && !store.connected ? <Button label={t("Connect")} variant="sage" size="S" full={false} loading={connecting} onPress={connect} /> : null}
-          </Row>
+      <BottomSheet visible={burnSheet} onClose={() => setBurnSheet(false)} title={t("Calories burned")} subtitle={t("Added to what the day may hold.")} confirm={{ label: burnOk ? t("Add {n} kcal", { n: n(burnN) }) : t("Enter the calories"), onPress: saveBurn, disabled: !burnOk, accent: "sage" }}>
+        <SheetGroup>
+          <SheetInputRow label={t("Burned")} unit="kcal" value={burnKcal} onChangeText={setBurnKcal} keyboardType="number-pad" inputMode="numeric" placeholder="300" />
+          <SheetTextRow label={t("What was it?")} value={burnLabel} onChangeText={setBurnLabel} placeholder={t("Running, cycling")} autoCapitalize="sentences" />
+        </SheetGroup>
 
-          {burnedToday.map((b) => (
-            <Row key={b.id} gap={12} style={{ paddingHorizontal: 8, paddingVertical: 6 }}>
-              <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.bg.raised, alignItems: "center", justifyContent: "center" }}>
-                <Icon name={b.source === "health" || b.sessionId ? "dumbbell" : "flame"} size={15} color={colors.text.secondary} strokeWidth={2} />
-              </View>
-              <View style={{ flex: 1, gap: 1 }}>
-                <Txt variant="labelM" numberOfLines={1}>
-                  {burnName(b)}
-                </Txt>
-                <Txt variant="labelS" tone="tertiary" numberOfLines={1}>
-                  {burnSub(b)}
-                </Txt>
-              </View>
-              <Txt variant="labelM" tone="secondary" tabular>
-                +{n(b.kcal)} kcal
-              </Txt>
-              {/* What the health store reported mirrors the store; only what was entered here can be taken away here. */}
-              {b.source === "health" ? <View style={{ width: 30 }} /> : <IconButton name="trash" size={30} iconSize={15} tone="raised" onPress={() => { removeBurn(b.id); haptic("tap"); }} accessibilityLabel={t("Remove from today")} />}
-            </Row>
-          ))}
-
-          {sessionsToday.map((s) => {
-            const end = s.finishedAt ?? s.startedAt;
-            // A workout from the health store that covers this session already counts it, measured rather than estimated.
-            if (burnedToday.some((b) => b.source === "health" && (b.from ?? 0) < end && (b.to ?? 0) > s.startedAt)) return null;
-            if (burnedToday.some((b) => b.sessionId === s.id)) return null;
-            const minutes = Math.max(1, Math.round((end - s.startedAt) / 60_000));
-            const kg = weightKg ?? ASSUMED_KG;
-            const est = estimateSessionBurn(minutes, kg);
-            return (
+        {burnedToday.length || openSessions.length ? (
+          <SheetGroup title={t("Today")}>
+            {burnedToday.map((b) => (
+              <SheetOption
+                key={b.id}
+                icon={b.source === "health" || b.sessionId ? "dumbbell" : "flame"}
+                label={burnName(b)}
+                sub={burnSub(b)}
+                right={
+                  <Row gap={8}>
+                    <Txt variant="labelM" tone="secondary" tabular>
+                      +{n(b.kcal)} kcal
+                    </Txt>
+                    {/* What the health store reported mirrors the store; only what was entered here can be taken away here. */}
+                    {b.source === "health" ? null : <IconButton name="trash" size={30} iconSize={15} tone="surface" onPress={() => { removeBurn(b.id); haptic("tap"); }} accessibilityLabel={t("Remove from today")} />}
+                  </Row>
+                }
+              />
+            ))}
+            {openSessions.map(({ s, minutes, kg, est }) => (
               <SheetOption
                 key={s.id}
-                icon="dumbbell"
+                icon="addPlus"
                 label={t("Your session today, {plan}", { plan: s.planName })}
                 sub={weightKg ? t("About {n} kcal, from {min} min at {kg} kg", { n: n(est), min: minutes, kg }) : t("About {n} kcal, from {min} min at an assumed {kg} kg", { n: n(est), min: minutes, kg })}
                 onPress={() => {
@@ -310,27 +312,25 @@ export default function FoodTab() {
                   haptic("done");
                 }}
               />
-            );
-          })}
+            ))}
+          </SheetGroup>
+        ) : null}
 
-          <Row gap={10} align="flex-start" style={{ paddingHorizontal: 8, paddingTop: 8 }}>
-            <View style={{ flex: 1 }}>
-              <Field label="kcal" value={burnKcal} onChangeText={setBurnKcal} keyboardType="number-pad" inputMode="numeric" placeholder="300" />
-            </View>
-            <View style={{ flex: 1.7 }}>
-              <Field label={t("What was it?")} value={burnLabel} onChangeText={setBurnLabel} placeholder={t("Running, cycling")} autoCapitalize="sentences" />
-            </View>
-          </Row>
-          <View style={{ paddingHorizontal: 8, paddingTop: 4 }}>
-            <Button label={burnOk ? t("Add {n} kcal", { n: n(burnN) }) : t("Enter the calories")} variant="sage" size="M" disabled={!burnOk} onPress={saveBurn} />
-          </View>
-        </View>
+        <SheetGroup>
+          <SheetOption icon="heart" label={t(store.name)} sub={storeLine} right={!store.unavailable && !store.connected ? <Button label={t("Connect")} variant="sage" size="S" full={false} loading={connecting} onPress={connect} /> : undefined} />
+        </SheetGroup>
       </BottomSheet>
 
       <BottomSheet visible={editingTargets} onClose={() => setEditingTargets(false)} title={t("Daily targets")} confirm={{ label: t("Save targets"), onPress: saveTargets, disabled: !targetsReady, accent: "sage" }}>
         {editingTargets ? <MacroTargets initial={draftTargets} onChange={setDraftTargets} /> : null}
-        <SheetOption icon="reload" label={t("Answer the questions again")} sub={t("Your need is worked out afresh from your figures")} onPress={askAgain} />
-        {targets ? <SheetOption icon="trash" label={t("Clear targets")} danger onPress={() => { setTargets(undefined); setEditingTargets(false); }} /> : null}
+        <SheetGroup>
+          <SheetOption icon="reload" label={t("Answer the questions again")} sub={t("Your need is worked out afresh from your figures")} onPress={askAgain} />
+        </SheetGroup>
+        {targets ? (
+          <SheetGroup>
+            <SheetOption icon="trash" label={t("Clear targets")} danger onPress={() => { setTargets(undefined); setEditingTargets(false); }} />
+          </SheetGroup>
+        ) : null}
       </BottomSheet>
     </Screen>
 

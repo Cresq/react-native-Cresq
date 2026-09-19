@@ -16,7 +16,7 @@ import { Avatar } from "@/components/ui/PhotoSlot";
 import { Icon } from "@/components/ui/Icon";
 import { Tabs } from "@/components/ui/Tabs";
 import { WorkoutTile } from "@/components/WorkoutTile";
-import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetOption } from "@/components/ui/BottomSheet";
 import { PhotoViewer } from "@/components/PhotoViewer";
 
 const TABS = ["workouts", "photos"];
@@ -164,9 +164,15 @@ export default function Profile() {
       <PhotoViewer source={me.photo} visible={zoomAvatar} onClose={() => setZoomAvatar(false)} />
 
       <BottomSheet visible={changingPhoto} onClose={() => setChangingPhoto(false)} onClosed={() => { const go = afterSheet; setAfterSheet(null); go?.(); }} title={t("Your photo")} subtitle={t("It stays on this phone, like everything else in CresQ.")}>
-        <SheetOption icon="camera" label={t("Take a photo")} onPress={() => choosePhoto("camera")} />
-        <SheetOption icon="rows" label={t("Choose from your library")} onPress={() => choosePhoto("library")} />
-        {db.profile.avatar ? <SheetOption icon="trash" label={t("Remove photo")} sub={t("Your initial takes its place")} danger onPress={() => { setAvatar(undefined); setChangingPhoto(false); }} /> : null}
+        <SheetGroup>
+          <SheetOption icon="camera" label={t("Take a photo")} onPress={() => choosePhoto("camera")} />
+          <SheetOption icon="rows" label={t("Choose from your library")} onPress={() => choosePhoto("library")} />
+        </SheetGroup>
+        {db.profile.avatar ? (
+          <SheetGroup>
+            <SheetOption icon="trash" label={t("Remove photo")} sub={t("Your initial takes its place")} danger onPress={() => { setAvatar(undefined); setChangingPhoto(false); }} />
+          </SheetGroup>
+        ) : null}
       </BottomSheet>
     </Screen>
   );

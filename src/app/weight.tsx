@@ -15,7 +15,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Segmented } from "@/components/ui/Segmented";
 import { WheelField } from "@/components/ui/WheelField";
 import { WheelPicker } from "@/components/ui/WheelPicker";
-import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetOption } from "@/components/ui/BottomSheet";
 import { LineChart } from "@/components/LineChart";
 
 const KILOS = Array.from({ length: 221 }, (_, i) => i + 30);
@@ -194,7 +194,9 @@ export default function Weight() {
       ) : null}
 
       <BottomSheet visible={!!picked} onClose={() => setPicked(null)} title={picked ? longDate(picked.at) : ""} subtitle={picked ? `${f(picked.kg)} kg` : undefined}>
-        <SheetOption icon="trash" label={t("Remove this weigh-in")} danger onPress={() => { if (picked) remove(picked.id); haptic("tap"); setPicked(null); }} />
+        <SheetGroup>
+          <SheetOption icon="trash" label={t("Remove this weigh-in")} danger onPress={() => { if (picked) remove(picked.id); haptic("tap"); setPicked(null); }} />
+        </SheetGroup>
       </BottomSheet>
     </Screen>
   );

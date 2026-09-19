@@ -14,7 +14,7 @@ import { Screen, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
-import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetOption } from "@/components/ui/BottomSheet";
 import { Viewfinder, CameraTop } from "@/components/Viewfinder";
 
 type Status = "idle" | "looking" | "notfound" | "offline";
@@ -139,11 +139,11 @@ export default function Scan() {
         title={status === "offline" ? t("No connection") : t("Not in the database yet")}
         subtitle={status === "offline" ? t("The barcode could not be looked up right now. You can still read the table or type the figures in.") : t("{code} is not known yet. Teach CresQ this product once and every scan after that is instant.", { code })}
       >
-        <View style={{ gap: 4 }}>
+        <SheetGroup>
           {status === "offline" ? <SheetOption icon="reload" label={t("Try again")} sub={t("Scan the barcode once more")} onPress={again} /> : null}
           <SheetOption icon="camera" label={t("Photograph the nutrition table")} sub={t("CresQ reads the figures, you check them")} onPress={toLabel} />
           <SheetOption icon="noteEdit" label={t("Type the figures in")} sub={t("From the back of the pack")} onPress={() => byHand(true)} />
-        </View>
+        </SheetGroup>
       </BottomSheet>
       <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, height: 0, backgroundColor: colors.bg.ground }} />
     </View>

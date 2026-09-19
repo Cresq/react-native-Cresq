@@ -13,7 +13,7 @@ import { Screen, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
-import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetOption } from "@/components/ui/BottomSheet";
 import { Viewfinder, CameraTop, Shutter } from "@/components/Viewfinder";
 
 /**
@@ -126,10 +126,10 @@ export default function Label() {
         title={trouble === "unavailable" ? t("Reading is not switched on in this build") : t("The table could not be read")}
         subtitle={trouble === "unavailable" ? t("This copy of CresQ has nowhere to send the photo. The figures can be typed in from the pack in a minute.") : t("Bad light, a curved pack or no signal. Try once more, or type the figures in.")}
       >
-        <View style={{ gap: 4 }}>
+        <SheetGroup>
           {trouble === "failed" ? <SheetOption icon="reload" label={t("Try again")} sub={t("Flat, close, in the light")} onPress={retry} /> : null}
           <SheetOption icon="noteEdit" label={t("Type the figures in")} sub={t("From the back of the pack")} onPress={byHand} />
-        </View>
+        </SheetGroup>
       </BottomSheet>
     </View>
   );

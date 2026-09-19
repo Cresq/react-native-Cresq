@@ -13,13 +13,13 @@ import { Icon } from "@/components/ui/Icon";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
-import { Field, HeldField } from "@/components/ui/Field";
+import { HeldField } from "@/components/ui/Field";
 import { Toggle } from "@/components/ui/Toggle";
 import type { SharePrefs } from "@/db/types";
 import { Stat, StatDivider } from "@/components/StatCard";
 import { PhotoSlot } from "@/components/ui/PhotoSlot";
 import { ExerciseMark } from "@/components/ExerciseMark";
-import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetInputRow, SheetOption, SheetTextRow } from "@/components/ui/BottomSheet";
 import { pickPhoto } from "@/photo";
 import { gymLabel } from "@/gym/places";
 import { useT } from "@/i18n";
@@ -127,11 +127,10 @@ export default function Summary() {
       </Pressable>
       </View>
 
-      <BottomSheet visible={durationSheet} onClose={() => setDurationSheet(false)} title={t("Duration")} subtitle={t("How long the session really took. Everything else stays as it is.")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
-          <Field label={t("Duration (min)")} value={minutesText} onChangeText={setMinutesText} keyboardType="number-pad" inputMode="numeric" placeholder="60" autoFocus selectTextOnFocus />
-          <Button label={t("Save duration")} disabled={!(Number(minutesText) > 0)} onPress={() => { setDuration(Number(minutesText)); setDurationSheet(false); }} />
-        </View>
+      <BottomSheet visible={durationSheet} onClose={() => setDurationSheet(false)} title={t("Duration")} confirm={{ label: t("Save duration"), onPress: () => { setDuration(Number(minutesText)); setDurationSheet(false); }, disabled: !(Number(minutesText) > 0) }}>
+        <SheetGroup caption={t("How long the session really took. Everything else stays as it is.")}>
+          <SheetInputRow label={t("Duration")} unit="min" value={minutesText} onChangeText={setMinutesText} keyboardType="number-pad" inputMode="numeric" placeholder="60" autoFocus />
+        </SheetGroup>
       </BottomSheet>
 
       <Section title={t("Your post")} gap={12}>
@@ -174,28 +173,24 @@ export default function Summary() {
         </View>
       </Section>
 
-      <BottomSheet visible={gymSheet} onClose={() => setGymSheet(false)} title={t("Where did you train?")} subtitle={t("It shows with a pin on your post. Your gyms are remembered for next time.")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
-          <Field label={t("Gym")} value={gymText} onChangeText={setGymText} placeholder={t("Name of the gym")} autoFocus />
-          {gyms.length ? (
-            <View style={{ gap: 8 }}>
-              <Txt variant="labelS" tone="tertiary">
-                {t("Places you train")}
-              </Txt>
-              <Row gap={8} style={{ flexWrap: "wrap" }}>
-                {gyms.map((g) => (
-                  <Chip key={g} label={g} selected={gymText === g} onPress={() => setGymText(g)} />
-                ))}
-              </Row>
-            </View>
-          ) : null}
-          <Button label={gymText.trim() ? t("Save") : t("Leave it out")} onPress={() => { setGym(gymText); setGymSheet(false); }} />
-        </View>
+      <BottomSheet visible={gymSheet} onClose={() => setGymSheet(false)} title={t("Where did you train?")} confirm={{ label: gymText.trim() ? t("Save") : t("Leave it out"), onPress: () => { setGym(gymText); setGymSheet(false); } }}>
+        <SheetGroup caption={t("It shows with a pin on your post. Your gyms are remembered for next time.")}>
+          <SheetTextRow value={gymText} onChangeText={setGymText} placeholder={t("Name of the gym")} autoFocus />
+        </SheetGroup>
+        {gyms.length ? (
+          <SheetGroup title={t("Places you train")}>
+            {gyms.map((g) => (
+              <SheetOption key={g} icon="mapPin" label={g} selected={gymText === g} onPress={() => setGymText(g)} />
+            ))}
+          </SheetGroup>
+        ) : null}
       </BottomSheet>
 
       <BottomSheet visible={photoSheet} onClose={() => setPhotoSheet(false)} onClosed={() => { const go = afterPhotoSheet; setAfterPhotoSheet(null); go?.(); }} title={t("Add a photo")} subtitle={t("It goes on this session, and on your post if you share it.")}>
-        <SheetOption icon="camera" label={t("Take a photo")} onPress={() => choose("camera")} />
-        <SheetOption icon="rows" label={t("Choose from library")} onPress={() => choose("library")} />
+        <SheetGroup>
+          <SheetOption icon="camera" label={t("Take a photo")} onPress={() => choose("camera")} />
+          <SheetOption icon="rows" label={t("Choose from library")} onPress={() => choose("library")} />
+        </SheetGroup>
       </BottomSheet>
 
       <View style={{ gap: 4 }}>

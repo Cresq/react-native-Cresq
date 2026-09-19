@@ -19,11 +19,11 @@ export function PhotoSlot({ source, width, height, radius = 16, style, children 
  * A face, or the letter it starts with. Nobody arrives with a photo, and a
  * row of identical grey silhouettes tells you nothing about who is who.
  */
-export function Avatar({ source, size = 38, initial }: { source?: ImageSourcePropType; size?: number; initial?: string }) {
+export function Avatar({ source, size = 38, initial, ground }: { source?: ImageSourcePropType; size?: number; initial?: string; /** What the circle is filled with when there is no photo. It defaults to the raised colour, which disappears on a raised block: there the caller names another. */ ground?: string }) {
   const { colors } = useTheme();
   const letter = initial?.trim().charAt(0).toUpperCase();
   return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, overflow: "hidden", backgroundColor: colors.bg.raised, alignItems: "center", justifyContent: "center" }}>
+    <View style={{ width: size, height: size, borderRadius: size / 2, overflow: "hidden", backgroundColor: ground ?? colors.bg.raised, alignItems: "center", justifyContent: "center" }}>
       {source ? (
         <Image source={source} style={{ width: size, height: size }} resizeMode="cover" />
       ) : letter ? (

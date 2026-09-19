@@ -28,7 +28,7 @@ import { Button } from "@/components/ui/Button";
 import { Pill } from "@/components/ui/Pill";
 import { SwipeAway } from "@/components/ui/SwipeAway";
 import { AnimatedListItem } from "@/components/ui/AnimatedListItem";
-import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetNote, SheetOption } from "@/components/ui/BottomSheet";
 import { WheelPicker } from "@/components/ui/WheelPicker";
 import { SUPERSET_INK, supersetColor } from "@/superset";
 import { inviteFromSession, inviteLink } from "@/invite";
@@ -466,39 +466,41 @@ export default function ActiveWorkout() {
         onClosed={() => { const go = afterSheet; setAfterSheet(null); go?.(); }}
         title={sheet?.kind === "exercise" ? sheet.ex.name : sheet?.kind === "superset" ? t("Superset") : ""}
         subtitle={sheet?.kind === "exercise" ? t("Exercise {a} of {b}", { a: session.exercises.indexOf(sheet.ex) + 1, b: session.exercises.length }) : sheet?.kind === "superset" ? t("Pick the exercises to alternate with {name}. No rest between them.", { name: sheet.ex.name }) : undefined}
+        confirm={sheet?.kind === "superset" ? { label: pick.length ? t("Save superset") : sheet.ex.supersetGroup ? t("Remove superset") : t("Pick at least one"), disabled: !pick.length && !sheet.ex.supersetGroup, onPress: () => { feel(pick.length ? "supersetLinked" : "supersetUnlinked"); w.groupExercises([sheet.ex.id, ...pick]); setSheet(null); } } : undefined}
       >
         {sheet?.kind === "superset" ? (
-          <View style={{ gap: 4 }}>
+          <SheetGroup>
             {session.exercises.filter((e) => e.id !== sheet.ex.id).map((e) => {
               const on = pick.includes(e.id);
               const elsewhere = e.supersetGroup && e.supersetGroup !== sheet.ex.supersetGroup && !on;
-              return <SheetOption key={e.id} icon={on ? "circleCheck" : "addPlus"} label={e.name} sub={elsewhere ? t("In another superset, tap to move it here") : undefined} selected={on} onPress={() => setPick((p) => (p.includes(e.id) ? p.filter((x) => x !== e.id) : [...p, e.id]))} />;
+              return <SheetOption key={e.id} icon="dumbbell" label={e.name} sub={elsewhere ? t("In another superset, tap to move it here") : undefined} check={on} onPress={() => setPick((p) => (p.includes(e.id) ? p.filter((x) => x !== e.id) : [...p, e.id]))} />;
             })}
-            <View style={{ paddingHorizontal: 8, paddingTop: 8 }}>
-              <Button label={pick.length ? t("Save superset") : sheet.ex.supersetGroup ? t("Remove superset") : t("Pick at least one")} disabled={!pick.length && !sheet.ex.supersetGroup} onPress={() => { feel(pick.length ? "supersetLinked" : "supersetUnlinked"); w.groupExercises([sheet.ex.id, ...pick]); setSheet(null); }} />
-            </View>
-          </View>
+          </SheetGroup>
         ) : null}
         {sheet?.kind === "exercise" ? (
           <>
-            <SheetOption icon="reload" label={t("Swap exercise")} sub={t("Keep the sets, change the movement")} onPress={() => { const id = sheet.ex.id; setAfterSheet(() => () => router.push(`/exercises?swap=${id}`)); setSheet(null); }} />
-            <SheetOption icon="link" label={sheet.ex.supersetGroup ? t("Edit superset") : t("Make a superset")} sub={t("Choose which exercises alternate")} onPress={() => openSuperset(sheet.ex)} />
-            {sheet.ex.supersetGroup ? <SheetOption icon="close" label={t("Remove from superset")} sub={t("Rest between them again")} onPress={() => { feel("supersetUnlinked"); w.toggleSuperset(sheet.ex.id); setSheet(null); }} /> : null}
-            <SheetOption icon="trash" label={t("Remove from workout")} sub={t("Its sets leave this session")} danger onPress={() => { w.removeExercise(sheet.ex.id); setSheet(null); }} />
+            <SheetGroup>
+              <SheetOption icon="reload" label={t("Swap exercise")} sub={t("Keep the sets, change the movement")} onPress={() => { const id = sheet.ex.id; setAfterSheet(() => () => router.push(`/exercises?swap=${id}`)); setSheet(null); }} />
+              <SheetOption icon="link" label={sheet.ex.supersetGroup ? t("Edit superset") : t("Make a superset")} sub={t("Choose which exercises alternate")} onPress={() => openSuperset(sheet.ex)} />
+              {sheet.ex.supersetGroup ? <SheetOption icon="close" label={t("Remove from superset")} sub={t("Rest between them again")} onPress={() => { feel("supersetUnlinked"); w.toggleSuperset(sheet.ex.id); setSheet(null); }} /> : null}
+            </SheetGroup>
+            <SheetGroup>
+              <SheetOption icon="trash" label={t("Remove from workout")} sub={t("Its sets leave this session")} danger onPress={() => { w.removeExercise(sheet.ex.id); setSheet(null); }} />
+            </SheetGroup>
           </>
         ) : null}
       </BottomSheet>
 
       <BottomSheet visible={sheet?.kind === "discard"} onClose={() => setSheet(null)} title={t("Stop this workout?")} subtitle={t("Nothing from this session is saved. You can undo for a few seconds afterwards.")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
-          <Button label={t("No, keep going")} variant="secondary" size="M" onPress={() => setSheet(null)} />
-          <Button label={t("Yes, stop this workout")} variant="danger" size="M" onPress={stop} />
-        </View>
+        <SheetGroup>
+          <SheetOption icon="trash" label={t("Yes, stop this workout")} danger onPress={stop} />
+        </SheetGroup>
       </BottomSheet>
 
       <BottomSheet visible={sheet?.kind === "set"} onClose={() => setSheet(null)} title={sheet?.kind === "set" ? t("Set {n}", { n: sheet.index + 1 }) : ""} subtitle={sheet?.kind === "set" ? `${sheet.ex.name}, ${sheet.set.kg} kg × ${sheet.set.reps}` : undefined}>
         {sheet?.kind === "set" ? (
           <>
+            <SheetGroup>
             {(
               [
                 ["warmup", "sun", "Warm-up", "Lighter weight, not counted in volume"],
@@ -509,16 +511,18 @@ export default function ActiveWorkout() {
             ).map(([type, icon, label, sub]) => (
               <SheetOption key={type} icon={icon} label={t(label)} sub={t(sub)} selected={sheet.set.type === type} onPress={() => { w.setSetType(sheet.ex.id, sheet.set.id, type as SetType); setSheet(null); }} />
             ))}
-            <SheetOption icon="trash" label={t("Remove set")} sub={t("Removes only this set")} danger onPress={() => { w.removeSet(sheet.ex.id, sheet.set.id); setSheet(null); }} />
+            </SheetGroup>
+            <SheetGroup>
+              <SheetOption icon="trash" label={t("Remove set")} sub={t("Removes only this set")} danger onPress={() => { w.removeSet(sheet.ex.id, sheet.set.id); setSheet(null); }} />
+            </SheetGroup>
           </>
         ) : null}
       </BottomSheet>
 
       <BottomSheet visible={sheet?.kind === "finish"} onClose={() => setSheet(null)} title={t("Finish this session?")} subtitle={openSets > 0 ? t("{a} of {b} sets done, {c} still open. Open sets are not counted.", { a: stats.setsDone, b: stats.setsTotal, c: openSets }) : t("All {n} sets done in {time}.", { n: stats.setsTotal, time: stats.elapsed })}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
-          <Button label={t("Finish session")} onPress={() => { setSheet(null); feel("workoutFinished"); finish(); }} />
-          <Button label={t("Keep training")} variant="secondary" size="M" onPress={() => setSheet(null)} />
-        </View>
+        <SheetGroup>
+          <SheetOption icon="circleCheck" label={t("Finish session")} onPress={() => { setSheet(null); feel("workoutFinished"); finish(); }} />
+        </SheetGroup>
       </BottomSheet>
 
       <BottomSheet
@@ -527,48 +531,22 @@ export default function ActiveWorkout() {
         onClosed={() => { const go = afterSheet; setAfterSheet(null); go?.(); }}
         title={t("Train together")}
         subtitle={t("They get {plan} with the same exercises and sets. The weights are their own.", { plan: session.planName })}
+        confirm={{ label: picked.length ? plural(picked.length, "Invite {n} person", "Invite {n} people") : t("Pick who to invite"), disabled: !picked.length, onPress: sendInvites }}
       >
-        <View style={{ gap: 4 }}>
+        <SheetGroup>
           {followed.map((p) => {
             const done = invited.includes(p.id);
             const on = picked.includes(p.id);
-            return (
-              <Pressable
-                key={p.id}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on, disabled: done }}
-                accessibilityLabel={p.name}
-                disabled={done}
-                onPress={() => setPicked((x) => (x.includes(p.id) ? x.filter((y) => y !== p.id) : [...x, p.id]))}
-                style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingHorizontal: 8, borderRadius: radius.input, backgroundColor: on ? colors.accent.soft : "transparent", opacity: pressed ? 0.7 : done ? 0.55 : 1 })}
-              >
-                <Avatar source={p.avatar} size={40} initial={p.name[0]} />
-                <View style={{ flex: 1, gap: 1 }}>
-                  <Txt variant="labelL">{p.name}</Txt>
-                  <Txt variant="bodyS" tone="tertiary">
-                    {done ? t("Invited") : p.handle}
-                  </Txt>
-                </View>
-                {done ? (
-                  <Icon name="check" size={18} color={colors.status.success} strokeWidth={2.4} />
-                ) : (
-                  <View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: on ? colors.accent.ember : colors.border.strong, backgroundColor: on ? colors.accent.ember : "transparent", alignItems: "center", justifyContent: "center" }}>
-                    {on ? <Icon name="check" size={14} color={colors.accent.on} strokeWidth={2.6} /> : null}
-                  </View>
-                )}
-              </Pressable>
-            );
+            const face = <Avatar source={p.avatar} size={36} initial={p.name[0]} ground={colors.bg.surface} />;
+            // Somebody already invited is shown, not offered again.
+            if (done) return <SheetOption key={p.id} leading={face} label={p.name} sub={t("Invited")} right={<Icon name="check" size={18} color={colors.status.success} strokeWidth={2.4} />} />;
+            return <SheetOption key={p.id} leading={face} label={p.name} sub={p.handle} check={on} accessibilityLabel={p.name} onPress={() => setPicked((x) => (x.includes(p.id) ? x.filter((y) => y !== p.id) : [...x, p.id]))} />;
           })}
-          {followed.length === 0 ? (
-            <Txt variant="bodyM" tone="secondary" style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
-              {t("You are not following anyone yet. People you follow show up here.")}
-            </Txt>
-          ) : null}
-          <View style={{ paddingHorizontal: 8, paddingTop: 8 }}>
-            <Button label={picked.length ? plural(picked.length, "Invite {n} person", "Invite {n} people") : t("Pick who to invite")} disabled={!picked.length} onPress={sendInvites} />
-          </View>
+          {followed.length === 0 ? <SheetNote>{t("You are not following anyone yet. People you follow show up here.")}</SheetNote> : null}
+        </SheetGroup>
+        <SheetGroup>
           <SheetOption icon="share" label={t("Share a link instead")} sub={t("For somebody who is not on CresQ yet")} onPress={() => { setAfterSheet(() => shareLink); setSheet(null); }} />
-        </View>
+        </SheetGroup>
       </BottomSheet>
 
       <MoveViewer exercise={watching ? findExercise(watching) ?? null : null} onClose={() => setWatching(null)} />

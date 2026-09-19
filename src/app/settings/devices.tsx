@@ -11,7 +11,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Divider } from "@/components/ui/Card";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
-import { BottomSheet } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetOption } from "@/components/ui/BottomSheet";
 import { useT } from "@/i18n";
 
 export default function Devices() {
@@ -66,31 +66,15 @@ export default function Devices() {
       </View>
 
       <BottomSheet visible={!!coming} onClose={() => setComing(null)} title={t("Connect {name}", { name: coming ?? "" })} subtitle={t("Connecting other apps needs the CresQ build for iPhone and Android, which is on its way. Expo Go cannot talk to other apps yet.")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
-          <Button label={t("Got it")} variant="secondary" size="M" onPress={() => setComing(null)} />
-        </View>
       </BottomSheet>
       <BottomSheet visible={!!viaHealth} onClose={() => setViaHealth(null)} title={t("{name}, through Apple Health", { name: viaHealth ?? "" })} subtitle={t("In the Garmin Connect app, connect Apple Health and allow workouts and active energy. Then connect Apple Health here. From then on a workout recorded on your Garmin counts in CresQ by itself.")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
-          <Button label={t("Got it")} variant="secondary" size="M" onPress={() => setViaHealth(null)} />
-        </View>
       </BottomSheet>
       <BottomSheet visible={sheet} onClose={() => setSheet(false)} title={t("What Health access asks for")} subtitle={t("Today CresQ asks for two things: your workouts and the active energy in them. The rest of this list comes with the features that need it, and stays off until then.")}>
-        {devices.permissions.map((p, i) => (
-          <View key={p.key}>
-            {i > 0 ? <Divider inset={50} /> : null}
-            <Row gap={12} style={{ paddingVertical: 12, paddingHorizontal: 8 }}>
-              <Icon name={p.icon} size={20} color={colors.text.secondary} strokeWidth={1.8} />
-              <View style={{ flex: 1, gap: 1 }}>
-                <Txt variant="labelL">{t(p.name)}</Txt>
-                <Txt variant="bodyS" tone="tertiary">
-                  {t(p.sub)}
-                </Txt>
-              </View>
-            </Row>
-          </View>
-        ))}
-        <Button label={t("Close")} variant="secondary" onPress={() => setSheet(false)} style={{ marginTop: 12 }} />
+        <SheetGroup>
+          {devices.permissions.map((p) => (
+            <SheetOption key={p.key} icon={p.icon} label={t(p.name)} sub={t(p.sub)} />
+          ))}
+        </SheetGroup>
       </BottomSheet>
     </Screen>
   );

@@ -66,7 +66,7 @@ export function MacroTargets({ initial, onChange, autoFocus }: { initial: Nutrit
   return (
     <View>
       <SheetGroup>
-        <SheetInputRow label={t("Energy")} unit="kcal" value={kcal} onChangeText={onKcal} placeholder="2400" keyboardType="number-pad" inputMode="numeric" autoFocus={autoFocus} last />
+        <SheetInputRow label={t("Energy")} unit="kcal" value={kcal} onChangeText={onKcal} placeholder="2400" keyboardType="number-pad" inputMode="numeric" autoFocus={autoFocus} />
       </SheetGroup>
       <SheetGroup
         caption={
@@ -77,7 +77,7 @@ export function MacroTargets({ initial, onChange, autoFocus }: { initial: Nutrit
       >
         <SheetInputRow label={t("Protein")} unit="g" dot={colors.macro.protein} value={protein} onChangeText={(v) => onMacro("p", v)} placeholder="160" keyboardType="number-pad" inputMode="numeric" />
         <SheetInputRow label={t("Carbohydrates")} unit="g" dot={colors.macro.carbs} value={carbs} onChangeText={(v) => onMacro("c", v)} placeholder="260" keyboardType="number-pad" inputMode="numeric" />
-        <SheetInputRow label={t("Fat")} unit="g" dot={colors.macro.fat} value={fat} onChangeText={(v) => onMacro("f", v)} placeholder="80" keyboardType="number-pad" inputMode="numeric" last />
+        <SheetInputRow label={t("Fat")} unit="g" dot={colors.macro.fat} value={fat} onChangeText={(v) => onMacro("f", v)} placeholder="80" keyboardType="number-pad" inputMode="numeric" />
       </SheetGroup>
     </View>
   );

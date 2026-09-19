@@ -14,8 +14,7 @@ import { Card, Divider } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Segmented } from "@/components/ui/Segmented";
 import { Tabs } from "@/components/ui/Tabs";
-import { BottomSheet } from "@/components/ui/BottomSheet";
-import { Button } from "@/components/ui/Button";
+import { BottomSheet, SheetGroup, SheetNote } from "@/components/ui/BottomSheet";
 import { LineChart } from "@/components/LineChart";
 import { useT, usePlural, useTerms } from "@/i18n";
 import { ExerciseMedia } from "@/components/ExerciseMedia";
@@ -222,21 +221,10 @@ export default function LiftDetail() {
       )}
 
       <BottomSheet visible={how} onClose={() => setHow(false)} title={t("How this is calculated")} subtitle={t("Two simple formulas, nothing hidden.")}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
-          <View style={{ gap: 4 }}>
-            <Txt variant="labelL">{t("Estimated one-rep max")}</Txt>
-            <Txt variant="bodyM" tone="secondary">
-              {t("Your best working set of the session, weight × (1 + reps ÷ 30). This is the Epley formula. A set of 100 kg × 5 counts as about 117 kg.")}
-            </Txt>
-          </View>
-          <View style={{ gap: 4 }}>
-            <Txt variant="labelL">{t("Forecast")}</Txt>
-            <Txt variant="bodyM" tone="secondary">
-              {t("A straight line through your last six sessions. The next record is the next 5 kg step above your current estimate; the weeks are how long the line takes to get there at the same pace. It is a projection, not a promise.")}
-            </Txt>
-          </View>
-          <Button label={t("Got it")} variant="secondary" size="M" onPress={() => setHow(false)} />
-        </View>
+        <SheetGroup>
+          <SheetNote title={t("Estimated one-rep max")}>{t("Your best working set of the session, weight × (1 + reps ÷ 30). This is the Epley formula. A set of 100 kg × 5 counts as about 117 kg.")}</SheetNote>
+          <SheetNote title={t("Forecast")}>{t("A straight line through your last six sessions. The next record is the next 5 kg step above your current estimate; the weeks are how long the line takes to get there at the same pace. It is a projection, not a promise.")}</SheetNote>
+        </SheetGroup>
       </BottomSheet>
       <MoveViewer exercise={watching ? exercise : null} onClose={() => setWatching(false)} />
     </Screen>
