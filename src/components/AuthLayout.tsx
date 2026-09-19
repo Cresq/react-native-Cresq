@@ -1,0 +1,53 @@
+import type { PropsWithChildren } from "react";
+import { Pressable, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Screen, Row } from "./ui/Screen";
+import { Lockup } from "./Brand";
+import { Txt } from "./ui/Text";
+
+/**
+ * One layout for Sign in and Sign up so both screens share exact positions.
+ *
+ * Apple and Google sign-in are not here yet. A button that says "Continue with
+ * Apple" and quietly signs you in as yourself is a lie to the user and a
+ * rejection at review; both come back the day the backend can actually verify
+ * the token.
+ *
+ * Lockup centering: the lockup is placed in a full-width row with its box centred
+ * on the screen axis, not on the form column. The artwork has the round mark on
+ * the left and the lighter wordmark on the right, so its visual centre sits a
+ * little left of its box centre; a 3 pt nudge to the right corrects that.
+ */
+const LOCKUP_WIDTH = 140;
+const OPTICAL_NUDGE = 3;
+
+export function AuthLayout({ title, subtitle, children, footerCopy, footerAction, onFooter }: PropsWithChildren<{ title: string; subtitle: string; footerCopy: string; footerAction: string; onFooter: () => void }>) {
+  const insets = useSafeAreaInsets();
+  return (
+    <Screen contentStyle={{ gap: 0, flexGrow: 1, paddingTop: insets.top + 36 }}>
+      <View style={{ alignItems: "center", paddingLeft: OPTICAL_NUDGE }}>
+        <Lockup width={LOCKUP_WIDTH} />
+      </View>
+
+      <View style={{ gap: 8, paddingTop: 48 }}>
+        <Txt variant="displayL">{title}</Txt>
+        <Txt variant="bodyM" tone="secondary">
+          {subtitle}
+        </Txt>
+      </View>
+
+      <View style={{ gap: 12, paddingTop: 28 }}>{children}</View>
+
+      <View style={{ flex: 1 }} />
+      <Row justify="center" gap={8} style={{ paddingTop: 24 }}>
+        <Txt variant="bodyS" tone="tertiary">
+          {footerCopy}
+        </Txt>
+        <Pressable accessibilityRole="button" onPress={onFooter} hitSlop={8}>
+          <Txt variant="labelM">{footerAction}</Txt>
+        </Pressable>
+      </Row>
+    </Screen>
+  );
+}
+

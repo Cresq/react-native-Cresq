@@ -31,6 +31,7 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
 # typescript
@@ -41,3 +42,13 @@ example
 # generated native folders
 /ios
 /android
+
+# WebStorm
+.idea/
+
+# Bought exercise artwork (MoveKit, licence MK-LIC-3F7N9-T4VFP-Z3WWS).
+# Kept out of git while this repository is public: the licence covers shipping
+# these clips inside the app, not handing the raw files to anyone who clones it.
+# Make the repository private and delete these two lines to commit them; the app
+# will not build without the files, so keep a copy either way.
+assets/moves/

@@ -1,0 +1,135 @@
+import { useState } from "react";
+import { Image, Pressable, View, useWindowDimensions } from "react-native";
+import { useLocalSearchParams } from "expo-router";
+import { useNav } from "@/nav";
+import { shareText } from "@/share";
+import { useTheme } from "@/theme/ThemeProvider";
+import { useSocial } from "@/store/social";
+import { otherPosts } from "@/data/mock";
+import { followersOf, person as findPerson } from "@/data/people";
+import { Screen, Row, Header } from "@/components/ui/Screen";
+import { Txt } from "@/components/ui/Text";
+import { IconButton } from "@/components/ui/IconButton";
+import { Avatar } from "@/components/ui/PhotoSlot";
+import { PhotoViewer } from "@/components/PhotoViewer";
+import { Button } from "@/components/ui/Button";
+import { Tabs } from "@/components/ui/Tabs";
+import { BottomSheet, SheetGroup, SheetOption } from "@/components/ui/BottomSheet";
+import { WorkoutTile } from "@/components/WorkoutTile";
+import { Count } from "../(tabs)/profile";
+import { useT } from "@/i18n";
+
+/** Someone else's profile: the same shape as your own, with a follow button where your settings would be. */
+export default function UserProfile() {
+  const { colors, layout } = useTheme();
+  const router = useNav();
+  const t = useT();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { isFollowing, toggleFollow, block } = useSocial();
+  const [more, setMore] = useState<null | "menu" | "report" | "reported">(null);
+  const [afterSheet, setAfterSheet] = useState<(() => void) | null>(null);
+  const [zoomAvatar, setZoomAvatar] = useState(false);
+  const { width } = useWindowDimensions();
+  const [tab, setTab] = useState("workouts");
+  const p = findPerson(id);
+
+  if (!p) {
+    return (
+      <Screen>
+        <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Profile")} />
+        <Txt variant="bodyM" tone="secondary">
+          {t("This account does not exist or is private.")}
+        </Txt>
+      </Screen>
+    );
+  }
+  const on = isFollowing(p.id);
+  const followers = followersOf(p.id);
+  const withPhoto = p.recent.filter((r) => r.photo);
+  const gap = 6;
+  const tile = Math.floor((Math.min(width, 520) - layout.screenInset * 2 - gap * 2) / 3);
+
+  return (
+    <Screen>
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={p.handle} right={<IconButton name="moreHorizontal" onPress={() => setMore("menu")} accessibilityLabel={t("More options")} />} />
+
+      <Row gap={16}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t("See the photo")} disabled={!p.avatar} onPress={() => setZoomAvatar(true)} style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
+          <Avatar source={p.avatar} size={72} initial={p.name[0]} />
+        </Pressable>
+        <View style={{ flex: 1, gap: 4 }}>
+          <Txt variant="displayL">{p.name}</Txt>
+          <Txt variant="bodyS" tone="secondary">
+            {p.city}, {t("since {year}", { year: p.since })}
+          </Txt>
+          {p.bio ? (
+            <Txt variant="bodyS" tone="secondary">
+              {p.bio}
+            </Txt>
+          ) : null}
+        </View>
+      </Row>
+
+      <Row gap={0} align="stretch">
+        <Count label={t("Workouts")} value={p.recent.length} />
+        <Count label={t("Followers")} value={followers.length} onPress={() => router.push(`/followers?user=${p.id}&tab=followers`)} />
+        <Count label={t("Following")} value={p.following.length} onPress={() => router.push(`/followers?user=${p.id}&tab=following`)} />
+      </Row>
+
+      {p.compare ? (
+        <Button label={t("Compare")} variant="secondary" size="M" icon="chartLine" onPress={() => router.push(`/compare/${p.id}`)} />
+      ) : null}
+      <Button label={on ? t("Following") : t("Follow")} variant={on ? "secondary" : "primary"} size="M" icon={on ? "check" : "addPlus"} onPress={() => toggleFollow(p.id)} accessibilityLabel={on ? t("Unfollow {name}", { name: p.name }) : t("Follow {name}", { name: p.name })} />
+
+      <View style={{ gap: 12 }}>
+        <Tabs
+          value={tab}
+          onChange={setTab}
+          tabs={[
+            { key: "workouts", label: t("Workouts") },
+            { key: "photos", label: t("Photos"), count: withPhoto.length },
+          ]}
+        />
+        {tab === "workouts" ? (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
+            {p.recent.map((r, i) => {
+              // A tile opens the post it stands for, among this person's other posts; a tile with no post behind it (placeholder data) stays a picture.
+              const post = otherPosts.find((x) => x.userId === p.id && x.title === r.name);
+              return <WorkoutTile key={i} name={r.name} date={r.date} photo={r.photo} records={r.records} size={tile} onPress={post ? () => router.push(`/workout/${post.id}?of=${p.id}`) : undefined} />;
+            })}
+          </View>
+        ) : withPhoto.length === 0 ? (
+          <Txt variant="bodyM" tone="secondary" style={{ paddingTop: 4 }}>
+            {t("No photos yet.")}
+          </Txt>
+        ) : (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
+            {withPhoto.map((r, i) => (
+              <View key={i} accessibilityLabel={`${r.name}, ${r.date}`} style={{ width: tile, height: tile, borderRadius: 14, overflow: "hidden", backgroundColor: colors.bg.surface }}>
+                <Image source={r.photo} style={{ width: tile, height: tile }} resizeMode="cover" />
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      <BottomSheet visible={more === "menu"} onClose={() => setMore(null)} onClosed={() => { const go = afterSheet; setAfterSheet(null); go?.(); }} title={p.name}>
+        <SheetGroup>
+          <SheetOption icon="share" label={t("Share profile")} onPress={() => { setAfterSheet(() => () => void shareText(`${p.name}, CresQ ${p.handle}`)); setMore(null); }} />
+          <SheetOption icon="flag" label={t("Report account")} sub={t("Spam, impersonation or abuse")} onPress={() => setMore("report")} />
+        </SheetGroup>
+        <SheetGroup>
+          <SheetOption icon="lock" label={t("Block {name}", { name: p.name.split(" ")[0] })} sub={t("They disappear from your feed and lists")} danger onPress={() => { setMore(null); block(p.id); router.back(); }} />
+        </SheetGroup>
+      </BottomSheet>
+      <BottomSheet visible={more === "report" || more === "reported"} onClose={() => setMore(null)} title={more === "reported" ? t("Thanks, we got it") : t("Report this account?")} subtitle={more === "reported" ? t("We look at every report within two days. You can also block the account.") : t("Tell us if this account is spam, pretends to be someone else, or posts abusive content.")}>
+        {more === "reported" ? null : (
+          <SheetGroup>
+            <SheetOption icon="flag" label={t("Send report")} danger onPress={() => setMore("reported")} />
+          </SheetGroup>
+        )}
+      </BottomSheet>
+      <PhotoViewer source={p.avatar} visible={zoomAvatar} onClose={() => setZoomAvatar(false)} />
+    </Screen>
+  );
+}
