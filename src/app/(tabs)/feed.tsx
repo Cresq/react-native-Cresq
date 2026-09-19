@@ -70,7 +70,7 @@ export default function Feed() {
     <Screen tabs>
       <View style={{ gap: 16 }}>
         <Row gap={12}>
-          <Txt variant="displayXL" style={{ flex: 1 }}>
+          <Txt variant="pageTitle" style={{ flex: 1 }}>
             {t("Feed")}
           </Txt>
           <IconButton name="search" onPress={() => router.push("/search")} accessibilityLabel={t("Find people")} />

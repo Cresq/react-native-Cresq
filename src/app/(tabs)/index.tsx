@@ -38,7 +38,7 @@ import { person } from "@/data/people";
  */
 const greetingSize = (line: string, screenWidth: number) => {
   const room = screenWidth - 32 - 44 - 12 - 44 - 12;
-  const size = Math.max(20, Math.min(34, Math.floor(room / (line.length * 0.58))));
+  const size = Math.max(20, Math.min(28, Math.floor(room / (line.length * 0.58))));
   return { fontSize: size, lineHeight: Math.round(size * 1.18) };
 };
 
@@ -109,7 +109,7 @@ export default function Home() {
           <Txt variant="labelS" tone="tertiary">
             {new Date().toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" })}
           </Txt>
-          <Txt variant="displayXL" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={greetingSize(`${t(greetingKey())}, ${db.profile.first}`, screenWidth)}>
+          <Txt variant="pageTitle" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={greetingSize(`${t(greetingKey())}, ${db.profile.first}`, screenWidth)}>
             {t(greetingKey())}, {db.profile.first}
           </Txt>
         </View>

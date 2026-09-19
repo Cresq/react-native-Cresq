@@ -98,6 +98,8 @@ const t = (fontFamilyName: string, fontSize: number, lineHeight: number, letterS
 /** Mirrors the Figma text styles one to one. */
 export const type = {
   displayXL: t(fontFamily.displayHeavy, 34, 40, -0.9),
+  /** The name of a tab at the top of its page. A step under displayXL: at 34 it read as shouting next to everything under it. Not in Figma yet. */
+  pageTitle: t(fontFamily.displayHeavy, 28, 34, -0.75),
   displayL: t(fontFamily.displayBold, 26, 31, -0.6),
   displayM: t(fontFamily.displaySemi, 20, 25, -0.4),
   displayS: t(fontFamily.displaySemi, 17, 22, -0.25),

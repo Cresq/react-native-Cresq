@@ -1116,8 +1116,6 @@ export const nl: Record<string, string> = {
 
   /* A gym that exists, burned energy as a chip, and meals with their share of the day. */
   "+{n} kcal burned": "+{n} kcal verbrand",
-  "Add burned calories": "Verbrande calorieën toevoegen",
-  "{n} kcal, {p}% of your target": "{n} kcal, {p}% van je doel",
   "Added to what the day may hold.": "Komt bovenop wat je vandaag mag eten.",
   "About {n} kcal, from {min} min at an assumed {kg} kg": "Ongeveer {n} kcal, op basis van {min} min en een aangenomen {kg} kg",
   "Running, cycling": "Hardlopen, fietsen",
@@ -1134,7 +1132,6 @@ export const nl: Record<string, string> = {
 
   /* Sheets with a header, tracking from a bar, and a weigh-in for a day that was missed. */
   "Your need is worked out afresh from your figures": "Je behoefte wordt opnieuw berekend uit je gegevens",
-  "Track": "Tracken",
   "An earlier day": "Een eerdere dag",
   "Fill in a day you missed": "Vul een gemiste dag in",
   "Weight on an earlier day": "Gewicht op een eerdere dag",
@@ -1142,4 +1139,24 @@ export const nl: Record<string, string> = {
 
   /* What leaves the app through the share sheet. */
   "{name}: {caption}, {stats}, on CresQ": "{name}: {caption}, {stats}, op CresQ",
+
+  /* Food by the day: turning days, planning ahead, the calendar, and what a day has reached. */
+  "Tomorrow": "Morgen",
+  "Planned": "Gepland",
+  "kcal planned": "kcal gepland",
+  "Go to a day": "Ga naar een dag",
+  "Add food": "Voeding toevoegen",
+  "Back to today": "Naar vandaag",
+  "Calories on target": "Calorieën gehaald",
+  "Calories and all three macros on target": "Calorieën en alle drie de macro's gehaald",
+  "reached": "gehaald",
+  "{n} kcal, {p}%": "{n} kcal, {p}%",
+  "Previous month": "Vorige maand",
+  "Next month": "Volgende maand",
+  "A dot is a day with food in it, a tick a day that ended on target, a ring a day that is planned.": "Een stip is een dag waarop iets is ingevuld, een vinkje een dag die op doel eindigde, een ringetje een dag die gepland is.",
+  "Remove from this day": "Van deze dag halen",
+  "Add burned kcal": "Verbrande kcal toevoegen",
+  "Your session, {plan}": "Je sessie, {plan}",
+  "Plan {amount} {unit} for {meal}, {day}": "{amount} {unit} inplannen voor {meal}, {day}",
+  "Add {amount} {unit} to {meal}, {day}": "{amount} {unit} toevoegen aan {meal}, {day}",
 };

@@ -45,7 +45,7 @@ export default function Train() {
   return (
     <Screen tabs>
       <Row gap={12}>
-        <Txt variant="displayXL" style={{ flex: 1 }}>
+        <Txt variant="pageTitle" style={{ flex: 1 }}>
           {t("Workout")}
         </Txt>
         <IconButton name="search" onPress={() => router.push("/exercises")} accessibilityLabel={t("Exercise library")} />

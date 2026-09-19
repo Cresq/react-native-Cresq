@@ -76,7 +76,7 @@ export default function Profile() {
   return (
     <Screen tabs>
       <Row gap={12}>
-        <Txt variant="displayXL" style={{ flex: 1 }}>
+        <Txt variant="pageTitle" style={{ flex: 1 }}>
           {t("Profile")}
         </Txt>
         <IconButton name="settings" onPress={() => router.push("/settings")} accessibilityLabel={t("Settings")} />

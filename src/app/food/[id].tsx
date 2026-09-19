@@ -11,6 +11,8 @@ import { useFood } from "@/store/food";
 import { useDb } from "@/db/DbProvider";
 import { setDraft } from "@/nutrition/draft";
 import { MEALS, MEAL_NAME, fmtG, fmtKcal, mealAt, portion } from "@/nutrition/derive";
+import { loggingAt } from "@/nutrition/day";
+import { useLoggingDay } from "@/nutrition/useLoggingDay";
 import type { Food, Meal } from "@/db/types";
 import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
@@ -79,6 +81,7 @@ function Product({ food, toLog, wantedMeal }: { food: Food; toLog: boolean; want
   const t = useT();
   const { logFood, updateFood } = useFood();
   const { db } = useDb();
+  const onDay = useLoggingDay();
   const lastFinished = db.sessions.reduce((m, x) => Math.max(m, x.finishedAt ?? 0), 0);
   const [photoSheet, setPhotoSheet] = useState(false);
   const [mealSheet, setMealSheet] = useState(false);
@@ -120,10 +123,14 @@ function Product({ food, toLog, wantedMeal }: { food: Food; toLog: boolean; want
 
   const log = once(() => {
     if (!grams) return;
-    logFood(food.id, grams, meal);
+    logFood(food.id, grams, meal, loggingAt());
     haptic("done");
     leave();
   });
+
+  // Today needs no saying. Another day is named on the button, and a day still to come is planned rather than added.
+  const said = { amount: fmtG(grams), unit, meal: t(MEAL_NAME[meal]).toLowerCase(), day: onDay.name ?? "" };
+  const addLabel = !grams ? t("Enter an amount") : !onDay.name ? t("Add {amount} {unit} to {meal}", said) : onDay.ahead ? t("Plan {amount} {unit} for {meal}, {day}", said) : t("Add {amount} {unit} to {meal}, {day}", said);
 
   const rows: [string, string, boolean?][] = [
     [t("Energy"), `${fmtKcal(food.kcal)} kcal`],
@@ -142,7 +149,7 @@ function Product({ food, toLog, wantedMeal }: { food: Food; toLog: boolean; want
   ];
 
   return (
-    <Screen bottom={90} contentStyle={{ gap: 16 }} footer={<Button label={grams ? t("Add {amount} {unit} to {meal}", { amount: fmtG(grams), unit, meal: t(MEAL_NAME[meal]).toLowerCase() }) : t("Enter an amount")} variant="sage" disabled={!grams} onPress={log} />}>
+    <Screen bottom={90} contentStyle={{ gap: 16 }} footer={<Button label={addLabel} variant="sage" disabled={!grams} onPress={log} />}>
       <Header left={<IconButton name="chevronLeft" onPress={leave} accessibilityLabel={t("Back")} />} />
 
       {/* What it is. The thumbnail is the photo, and the way to add or change it. */}

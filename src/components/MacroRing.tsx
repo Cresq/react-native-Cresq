@@ -1,11 +1,16 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { View } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import Svg, { Circle } from "react-native-svg";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useT } from "@/i18n";
+import { timings } from "@/motion";
+import { useTween } from "@/tween";
 import { fmtG } from "@/nutrition/derive";
+import { macroReached } from "@/nutrition/day";
 import type { NutritionTargets } from "@/db/types";
 import { Txt } from "./ui/Text";
+import { Icon } from "./ui/Icon";
 
 type Eaten = { kcal: number; protein: number; carbs: number; fat: number };
 
@@ -19,10 +24,13 @@ const GAP = 2;
  * the ring is what is left of the day. Without a target there is no whole to
  * be part of, so the ring is simply how the eaten energy divides.
  *
+ * When the figures change the arcs travel to their new lengths: something
+ * added is seen to fill the ring, which is the point of adding it.
+ *
  * The three colours are chart colours, picked and checked as a set for both
  * themes (apart under red-green colour blindness, and clear of the card they
  * sit on). Colour is never the only carrier: the order is fixed, the arcs are
- * gapped, and `MacroLegend` names each one with its figure.
+ * gapped, and the legend or the bars name each one with its figure.
  */
 export function MacroRing({ size, stroke = 10, eaten, budget, track, trackOpacity = 1, children }: { size: number; stroke?: number; eaten: Eaten; /** Target plus burned; absent when no target is set. */ budget?: number; /** The colour of the empty ring; the raised tone unless the card says otherwise. */ track?: string; trackOpacity?: number; children?: ReactNode }) {
   const { colors } = useTheme();
@@ -30,10 +38,12 @@ export function MacroRing({ size, stroke = 10, eaten, budget, track, trackOpacit
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const mid = size / 2;
-  const energy = [eaten.protein * 4, eaten.carbs * 4, eaten.fat * 9];
-  const macroKcal = energy[0] + energy[1] + energy[2];
+  // What is drawn is on its way to what is true; the label below always says what is true.
+  const [protein, carbs, fat, kcal, whole] = useTween([eaten.protein * 4, eaten.carbs * 4, eaten.fat * 9, eaten.kcal, budget ?? 0]);
+  const energy = [protein, carbs, fat];
+  const macroKcal = protein + carbs + fat;
   // How much of the ring is filled: eaten against the budget, or all of it when there is no budget to hold it against.
-  const filled = macroKcal <= 0 ? 0 : budget && budget > 0 ? Math.min(1, eaten.kcal / Math.max(budget, 1)) : 1;
+  const filled = macroKcal <= 0 ? 0 : budget && whole > 0 ? Math.min(1, kcal / Math.max(whole, 1)) : 1;
   const hues = [colors.macro.protein, colors.macro.carbs, colors.macro.fat];
   const arcs: { from: number; length: number; hue: string }[] = [];
   let at = 0;
@@ -83,6 +93,61 @@ export function MacroLegend({ eaten, targets, short }: { eaten: Eaten; targets?:
           </Txt>
         </View>
       ))}
+    </View>
+  );
+}
+
+/**
+ * The three macros as bars that fill: the name, grams eaten against the
+ * target, and under them a bar in the macro's colour, which is the same colour
+ * its arc has in the ring. A small tick beside the name says the macro is
+ * reached. Without targets there is nothing to fill towards, so a bar shows
+ * that macro's share of what was eaten.
+ */
+export function MacroBars({ eaten, targets }: { eaten: Eaten; targets?: NutritionTargets }) {
+  const { colors } = useTheme();
+  const t = useT();
+  const energy = eaten.protein * 4 + eaten.carbs * 4 + eaten.fat * 9;
+  const rows: { kind: "protein" | "carbs" | "fat"; hue: string; name: string; value: number; target?: number; share: number }[] = [
+    { kind: "protein", hue: colors.macro.protein, name: t("Protein"), value: eaten.protein, target: targets?.protein, share: energy ? (eaten.protein * 4) / energy : 0 },
+    { kind: "carbs", hue: colors.macro.carbs, name: t("Carbohydrates"), value: eaten.carbs, target: targets?.carbs, share: energy ? (eaten.carbs * 4) / energy : 0 },
+    { kind: "fat", hue: colors.macro.fat, name: t("Fat"), value: eaten.fat, target: targets?.fat, share: energy ? (eaten.fat * 9) / energy : 0 },
+  ];
+  return (
+    <View style={{ gap: 9 }}>
+      {rows.map((m) => {
+        const reached = macroReached(m.kind, m.value, m.target);
+        return (
+          <View key={m.kind} style={{ gap: 4 }} accessible accessibilityLabel={`${m.name}, ${m.target ? `${fmtG(m.value)} / ${Math.round(m.target)} g` : `${fmtG(m.value)} g`}${reached ? `, ${t("reached")}` : ""}`}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <Txt variant="labelS" tone="secondary" numberOfLines={1}>
+                {m.name}
+              </Txt>
+              {reached ? <Icon name="circleCheck" size={12} color={m.hue} strokeWidth={2.2} /> : null}
+              <View style={{ flex: 1 }} />
+              <Txt variant="labelS" tone="primary" tabular>
+                {m.target ? `${fmtG(m.value)} / ${Math.round(m.target)} g` : `${fmtG(m.value)} g`}
+              </Txt>
+            </View>
+            <Bar hue={m.hue} fraction={m.target ? Math.min(1, m.value / m.target) : m.share} />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+/** One bar. The track is the macro's own colour, faint, so the bar reads as that macro even when it is empty. */
+function Bar({ hue, fraction }: { hue: string; fraction: number }) {
+  const filled = useSharedValue(fraction);
+  useEffect(() => {
+    filled.set(withTiming(fraction, timings.slow));
+  }, [fraction, filled]);
+  const fill = useAnimatedStyle(() => ({ width: `${Math.max(0, Math.min(1, filled.get())) * 100}%` }));
+  return (
+    <View style={{ height: 5, borderRadius: 3, overflow: "hidden" }}>
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: hue, opacity: 0.2 }} />
+      <Animated.View style={[{ height: 5, borderRadius: 3, backgroundColor: hue }, fill]} />
     </View>
   );
 }

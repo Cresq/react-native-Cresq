@@ -5,6 +5,7 @@ import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useT } from "@/i18n";
 import { useNow } from "@/clock";
+import { useLoggingDay } from "@/nutrition/useLoggingDay";
 import { useFood } from "@/store/food";
 import { setDraft } from "@/nutrition/draft";
 import { MEALS, MEAL_NAME, fmtKcal, mealAt, suggestions } from "@/nutrition/derive";
@@ -35,6 +36,7 @@ export default function LogFood() {
   // The meal the person came from goes with them to the product, so it is preselected there.
   const from = wanted && (MEALS as string[]).includes(wanted) ? (wanted as Meal) : null;
   const mealQ = from ? `&meal=${from}` : "";
+  const onDay = useLoggingDay();
 
   const offered = useMemo(() => suggestions(log, foods, now), [log, foods, now]);
   const hits = useMemo(() => {
@@ -73,7 +75,7 @@ export default function LogFood() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="close" onPress={() => router.back("/(tabs)/food")} accessibilityLabel={t("Close")} />} title={t("Search a product")} subtitle={from ? t(MEAL_NAME[from]) : undefined} />
+      <Header left={<IconButton name="close" onPress={() => router.back("/(tabs)/food")} accessibilityLabel={t("Close")} />} title={t("Search a product")} subtitle={[from ? t(MEAL_NAME[from]) : null, onDay.name].filter(Boolean).join(", ") || undefined} />
       <Field label={t("Search")} value={q} onChangeText={setQ} placeholder={t("Name or brand")} icon="search" autoCorrect={false} autoFocus />
 
       <Card tone="raised" padding={14} gap={0} onPress={scan} accessibilityLabel={t("Scan a barcode")}>

@@ -83,6 +83,13 @@ export const gesture = {
   /** Sideways swipe of a row: start, and the vertical slip that cancels it. */
   swipeStart: 12,
   swipeCross: 10,
+  /** Sideways swipe of a whole page, to the next or the previous day: later to start than a row, so scrolling never turns a page, and how far it has to go to count. */
+  pageStart: 24,
+  pageCross: 14,
+  pageCommit: 64,
+  /** How much of the finger's travel the page follows while it is being turned, and how far from its place the next one comes in. */
+  pageFollow: 0.25,
+  pageEnter: 32,
   /** How far a row opens to show what is behind it. */
   reveal: 72,
   /** A strip pushed this far, or projected to land this far, leaves. */
