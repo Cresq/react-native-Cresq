@@ -749,7 +749,7 @@ export const nl: Record<string, string> = {
   "Not found": "Niet gevonden",
   "That document does not exist. The ones that do are listed under Account and privacy.": "Dit document bestaat niet. De documenten die er wel zijn staan onder Account en privacy.",
   "Updated {date}": "Bijgewerkt {date}",
-  "Draft. A lawyer is reading this, and it will be in Dutch before launch.": "Concept. Een jurist leest dit na, en vóór de launch staat het in het Nederlands.",
+  "Draft. A lawyer still has to read this before launch.": "Concept. Een jurist moet dit nog nalezen voor de lancering.",
   /* The sample split and plans a new account starts with. App copy, not the
      person's own writing, so it belongs in their language from the first screen. */
   "Quads, hamstrings, glutes": "Quadriceps, hamstrings, bilspieren",

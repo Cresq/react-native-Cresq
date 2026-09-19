@@ -7,15 +7,16 @@ import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/Icon";
 import { useTheme } from "@/theme/ThemeProvider";
-import { useT } from "@/i18n";
+import { useT, useLanguage } from "@/i18n";
 
 /** One legal document, readable in the app without a browser. */
 export default function Legal() {
   const { colors } = useTheme();
   const router = useNav();
   const t = useT();
+  const lang = useLanguage();
   const { doc: key } = useLocalSearchParams<{ doc: string }>();
-  const doc = legalDoc(key);
+  const doc = legalDoc(key, lang);
   if (!doc) {
     return (
       <Screen>
@@ -33,7 +34,7 @@ export default function Legal() {
         <Row gap={8} align="flex-start">
           <Icon name="info" size={16} color={colors.status.warning} strokeWidth={2} />
           <Txt variant="bodyS" tone="secondary" style={{ flex: 1 }}>
-            {t("Draft. A lawyer is reading this, and it will be in Dutch before launch.")}
+            {t("Draft. A lawyer still has to read this before launch.")}
           </Txt>
         </Row>
       ) : null}

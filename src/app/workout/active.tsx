@@ -6,6 +6,7 @@ import { delay, distance, gesture, layouts, opacity, pressScale, project, rubber
 import { useNav } from "@/nav";
 import { shareText } from "@/share";
 import { useHeld } from "@/typing";
+import { useSteady } from "@/steady";
 import Svg, { Circle } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -100,6 +101,7 @@ export default function ActiveWorkout() {
       done: (ex, s, i) => handlersRef.current?.done(ex, s, i),
       removeSet: (ex, s) => handlersRef.current?.removeSet(ex, s),
       addSet: (ex) => handlersRef.current?.addSet(ex),
+      measure: (ex, e) => handlersRef.current?.measure(ex, e),
     }),
     [],
   );
@@ -358,6 +360,7 @@ export default function ActiveWorkout() {
     done: (ex, s, i) => complete(ex, s, i),
     removeSet: (ex, s) => { feel("removeSet"); w.removeSet(ex.id, s.id); },
     addSet: (ex) => { feel("addSet"); w.addSet(ex.id); },
+    measure: (ex, e) => measure(ex.id)(e),
   };
 
   return (
@@ -400,29 +403,21 @@ export default function ActiveWorkout() {
             const groupStart = ex.supersetGroup && (index === 0 || session.exercises[index - 1].supersetGroup !== ex.supersetGroup);
             const groupColor = supersetColor(ex.supersetGroup);
             return (
-              <AnimatedListItem key={ex.id} onLayout={measure(ex.id)} style={{ gap: 8 }}>
-                {lineAbove ? <DropLine /> : null}
-                {groupStart && groupColor ? (
-                  <Animated.View entering={layouts.enter} exiting={layouts.exit} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 4, paddingTop: 4 }}>
-                    <Icon name="link" size={13} color={groupColor} strokeWidth={2} />
-                    <Txt variant="labelS" style={{ color: groupColor }}>
-                      {t("Superset, alternate, no rest between")}
-                    </Txt>
-                  </Animated.View>
-                ) : null}
-                <SteadyExerciseCard
-                  ex={ex}
-                  index={index}
-                  isCurrent={ex.id === current.id}
-                  expanded={isOpen(ex.id)}
-                  highlighted={highlight === ex.id}
-                  groupColor={groupColor}
-                  blocked={blocked && ex.sets.some((s) => s.id === blocked.id) ? blocked : null}
-                  priorBest={priorBest.get(ex.exerciseId) ?? 0}
-                  actions={actions}
-                />
-                {lineBelow ? <DropLine /> : null}
-              </AnimatedListItem>
+              <ExerciseSlot
+                key={ex.id}
+                ex={ex}
+                index={index}
+                isCurrent={ex.id === current.id}
+                expanded={isOpen(ex.id)}
+                highlighted={highlight === ex.id}
+                groupColor={groupColor}
+                groupStart={!!groupStart}
+                lineAbove={!!lineAbove}
+                lineBelow={!!lineBelow}
+                blocked={blocked && ex.sets.some((s) => s.id === blocked.id) ? blocked : null}
+                priorBest={priorBest.get(ex.exerciseId) ?? 0}
+                actions={actions}
+              />
             );
           })}
           <AnimatedListItem still>
@@ -655,6 +650,7 @@ type CardActions = {
   done: (ex: ExerciseEntry, s: SetEntry, i: number) => void;
   removeSet: (ex: ExerciseEntry, s: SetEntry) => void;
   addSet: (ex: ExerciseEntry) => void;
+  measure: (ex: ExerciseEntry, e: LayoutChangeEvent) => void;
 };
 
 type CardProps = {
@@ -687,35 +683,60 @@ type CardProps = {
 type CardData = Pick<CardProps, "ex" | "index" | "isCurrent" | "expanded" | "highlighted" | "groupColor" | "blocked" | "priorBest">;
 
 /**
- * The card, redrawn only when what it shows has changed. A keystroke in one
- * set used to redraw all six exercises, because the handlers made for each of
- * them in the list were new on every render; on a phone that is a stutter
- * under the thumb. Here the card is compared on its data alone, and what it
- * can do arrives as one object that stays the same.
+ * One place in the list: the line that shows where a dragged card will land,
+ * the superset's heading, and the card. It is redrawn only when what it shows
+ * has changed. A keystroke or a tick in one set used to redraw all six
+ * exercises, because the handlers made for each of them in the list were new
+ * on every render; on a phone that is a stutter under the thumb. Here a slot
+ * is compared on its data alone, and what it can do arrives as one object that
+ * stays the same, so the five exercises nobody touched do nothing at all.
  */
-const SteadyExerciseCard = memo(function SteadyExerciseCard({ actions, ...data }: CardData & { actions: CardActions }) {
-  const { ex, index } = data;
+const ExerciseSlot = memo(function ExerciseSlot({ actions, groupStart, lineAbove, lineBelow, ...data }: CardData & { actions: CardActions; groupStart: boolean; lineAbove: boolean; lineBelow: boolean }) {
+  const t = useT();
+  const { ex, groupColor } = data;
   return (
-    <ExerciseCard
-      {...data}
-      onToggle={() => actions.toggle(ex)}
-      onFocus={() => actions.focus(index)}
-      onDragStart={actions.dragStart}
-      onDragMove={(dy) => actions.dragMove(ex, dy)}
-      onDragEnd={(dy) => actions.dragEnd(ex, dy)}
-      onNote={(text) => actions.note(ex, text)}
-      onRest={() => actions.rest(ex)}
-      onRemove={() => actions.remove(ex)}
-      onMore={() => actions.more(ex)}
-      onWatch={() => actions.watch(ex)}
-      onSetType={(s, i) => actions.setType(ex, s, i)}
-      onChange={(s, patch) => actions.change(ex, s, patch)}
-      onDone={(s, i) => actions.done(ex, s, i)}
-      onRemoveSet={(s) => actions.removeSet(ex, s)}
-      onAddSet={() => actions.addSet(ex)}
-    />
+    <AnimatedListItem onLayout={(e) => actions.measure(ex, e)} style={{ gap: 8 }}>
+      {lineAbove ? <DropLine /> : null}
+      {groupStart && groupColor ? (
+        <Animated.View entering={layouts.enter} exiting={layouts.exit} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 4, paddingTop: 4 }}>
+          <Icon name="link" size={13} color={groupColor} strokeWidth={2} />
+          <Txt variant="labelS" style={{ color: groupColor }}>
+            {t("Superset, alternate, no rest between")}
+          </Txt>
+        </Animated.View>
+      ) : null}
+      <SteadyExerciseCard actions={actions} {...data} />
+      {lineBelow ? <DropLine /> : null}
+    </AnimatedListItem>
   );
 });
+
+/**
+ * The card with its handlers made from the steady object. They are steady in
+ * their turn, so when one set changes the card redraws its table and leaves
+ * its heading, its handle and its buttons as they are.
+ */
+function SteadyExerciseCard({ actions, ...data }: CardData & { actions: CardActions }) {
+  const { ex, index } = data;
+  const on = useSteady({
+    toggle: () => actions.toggle(ex),
+    focus: () => actions.focus(index),
+    dragStart: () => actions.dragStart(),
+    dragMove: (dy: number) => actions.dragMove(ex, dy),
+    dragEnd: (dy: number) => actions.dragEnd(ex, dy),
+    note: (text: string) => actions.note(ex, text),
+    rest: () => actions.rest(ex),
+    remove: () => actions.remove(ex),
+    more: () => actions.more(ex),
+    watch: () => actions.watch(ex),
+    setType: (s: SetEntry, i: number) => actions.setType(ex, s, i),
+    change: (s: SetEntry, patch: Partial<Pick<SetEntry, "kg" | "reps">>) => actions.change(ex, s, patch),
+    done: (s: SetEntry, i: number) => actions.done(ex, s, i),
+    removeSet: (s: SetEntry) => actions.removeSet(ex, s),
+    addSet: () => actions.addSet(ex),
+  });
+  return <ExerciseCard {...data} onToggle={on.toggle} onFocus={on.focus} onDragStart={on.dragStart} onDragMove={on.dragMove} onDragEnd={on.dragEnd} onNote={on.note} onRest={on.rest} onRemove={on.remove} onMore={on.more} onWatch={on.watch} onSetType={on.setType} onChange={on.change} onDone={on.done} onRemoveSet={on.removeSet} onAddSet={on.addSet} />;
+}
 
 /**
  * One exercise: a header row that is always there (handle, position, name,
@@ -726,6 +747,13 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
   const { colors, radius } = useTheme();
   const t = useT();
   const { drag, style } = useDrag(onDragStart, onDragMove, onDragEnd);
+  // What a set row can ask, as one object that stays the same, so a row whose set did not change is not redrawn when its neighbour is ticked.
+  const rowActions = useSteady({
+    type: (s: SetEntry, i: number) => onSetType(s, i),
+    change: (s: SetEntry, patch: Partial<Pick<SetEntry, "kg" | "reps">>) => onChange(s, patch),
+    done: (s: SetEntry, i: number) => onDone(s, i),
+    remove: (s: SetEntry) => onRemoveSet(s),
+  });
   const [noteEditing, setNoteEditing] = useState(false);
   // The note is typed into the card and handed to the session when the typing pauses or the box is left.
   const [noteDraft, setNoteDraft] = useState<string | null>(null);
@@ -879,7 +907,7 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
                   const current = isCurrent && !s.done && ex.sets.findIndex((x) => !x.done) === i;
                   return (
                     <AnimatedListItem key={s.id}>
-                      <SetRow set={s} label={rows[i].label} isCurrent={current} record={rows[i].record} error={blocked?.id === s.id ? blocked.msg : undefined} onType={() => onSetType(s, i)} onChange={(patch) => onChange(s, patch)} onDone={() => onDone(s, i)} onRemove={() => onRemoveSet(s)} />
+                      <SteadySetRow set={s} index={i} label={rows[i].label} isCurrent={current} record={rows[i].record} error={blocked?.id === s.id ? blocked.msg : undefined} actions={rowActions} />
                     </AnimatedListItem>
                   );
                 })}
@@ -973,6 +1001,19 @@ function Strip({ label, value, count, format, unit }: { label: string; value?: s
  * interpolated colours, because opacity is the cheapest thing a phone can
  * animate and there can be thirty of these on the screen.
  */
+type RowActions = { type: (s: SetEntry, i: number) => void; change: (s: SetEntry, patch: Partial<Pick<SetEntry, "kg" | "reps">>) => void; done: (s: SetEntry, i: number) => void; remove: (s: SetEntry) => void };
+
+/** A set row compared on what it shows. On a tick two rows change, the one ticked and the one that becomes current; the rest of the table stays as it is. */
+const SteadySetRow = memo(function SteadySetRow({ set, index, actions, ...shown }: { set: SetEntry; index: number; label: string; isCurrent: boolean; record: boolean; error?: string; actions: RowActions }) {
+  const on = useSteady({
+    type: () => actions.type(set, index),
+    change: (patch: Partial<Pick<SetEntry, "kg" | "reps">>) => actions.change(set, patch),
+    done: () => actions.done(set, index),
+    remove: () => actions.remove(set),
+  });
+  return <SetRow set={set} {...shown} onType={on.type} onChange={on.change} onDone={on.done} onRemove={on.remove} />;
+});
+
 function SetRow({ set, label, isCurrent, record, error, onType, onChange, onDone, onRemove }: { set: SetEntry; label: string; isCurrent: boolean; /** A done set heavier than anything before it. */ record: boolean; error?: string; onType: () => void; onChange: (p: Partial<Pick<SetEntry, "kg" | "reps">>) => void; onDone: () => void; onRemove: () => void }) {
   const { colors, radius } = useTheme();
   const t = useT();

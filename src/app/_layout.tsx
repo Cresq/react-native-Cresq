@@ -97,11 +97,18 @@ function Themed() {
   );
 }
 
-/** Kept apart so the stack's own background can read the theme's ground. */
+/**
+ * Kept apart so the stack's own background can read the theme's ground.
+ *
+ * `freezeOnBlur`: a screen two or more levels down the stack stops redrawing
+ * until it is on top again. The one directly under the top stays live, so a
+ * swipe back always uncovers a current screen, and the navigator keeps modals
+ * on iOS out of it by itself.
+ */
 function Routes() {
   const { colors } = useTheme();
   return (
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg.ground }, animation: "slide_from_right", animationDuration: 320, gestureEnabled: true, fullScreenGestureEnabled: true }}>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg.ground }, animation: "slide_from_right", animationDuration: 320, gestureEnabled: true, fullScreenGestureEnabled: true, freezeOnBlur: true }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="onboarding" options={{ animation: "slide_from_right" }} />

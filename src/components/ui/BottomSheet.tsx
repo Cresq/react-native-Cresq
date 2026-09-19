@@ -46,12 +46,34 @@ const ROW_HEIGHT = 52;
  * There is no Cancel at the bottom; the cross, the scrim, a swipe and the back
  * button all close it.
  */
-export function BottomSheet({ visible, onClose, onClosed, title, subtitle, confirm, children }: PropsWithChildren<{ visible: boolean; onClose: () => void; /** Fired once the sheet is off the screen. Anything that must not happen over a closing modal waits for this. */ onClosed?: () => void; title: string; subtitle?: string; confirm?: SheetConfirm }>) {
+type SheetProps = PropsWithChildren<{ visible: boolean; onClose: () => void; /** Fired once the sheet is off the screen. Anything that must not happen over a closing modal waits for this. */ onClosed?: () => void; title: string; subtitle?: string; confirm?: SheetConfirm }>;
+
+export function BottomSheet(props: SheetProps) {
+  const { visible, onClosed } = props;
+  // A screen holds many sheets and shows one at most. One that is not showing
+  // is this state and this effect and nothing else: the shared values, the
+  // gesture and the animated styles belong to the body, which exists from the
+  // moment the sheet is asked for until it has left the screen.
+  const [alive, setAlive] = useState(visible);
+
+  // Said once, on the way from there to gone, after the modal has left the
+  // tree. Anything that must not happen over a closing modal waits for this
+  // rather than for a guessed number of ms.
+  const was = useRef(alive);
+  useEffect(() => {
+    if (was.current && !alive) onClosed?.();
+    was.current = alive;
+  }, [alive, onClosed]);
+
+  if (!visible && !alive) return null;
+  return <SheetBody {...props} onAlive={setAlive} />;
+}
+
+function SheetBody({ visible, onClose, onAlive, title, subtitle, confirm, children }: SheetProps & { onAlive: (alive: boolean) => void }) {
   const { colors, radius } = useTheme();
   const t = useT();
   const insets = useSafeAreaInsets();
   const { height: screenH } = useWindowDimensions();
-  const [mounted, setMounted] = useState(visible);
   const y = useSharedValue(screenH);
   const sheetH = useSharedValue(400);
   const dragStart = useSharedValue(0);
@@ -64,18 +86,10 @@ export function BottomSheet({ visible, onClose, onClosed, title, subtitle, confi
     (offScreen, before) => {
       if (offScreen && !before) {
         closing.value = false;
-        runOnJS(setMounted)(false);
+        runOnJS(onAlive)(false);
       }
     },
   );
-
-  // Said once, on the way from mounted to gone. Anything that must not happen
-  // over a closing modal waits for this rather than for a guessed number of ms.
-  const was = useRef(mounted);
-  useEffect(() => {
-    if (was.current && !mounted) onClosed?.();
-    was.current = mounted;
-  }, [mounted, onClosed]);
 
   const settle = () => {
     "worklet";
@@ -89,13 +103,13 @@ export function BottomSheet({ visible, onClose, onClosed, title, subtitle, confi
 
   useEffect(() => {
     if (visible) {
-      setMounted(true);
+      onAlive(true);
       closing.value = false;
       y.value = sheetH.value + 40;
       requestAnimationFrame(() => {
         y.value = withSpring(0, springs.base);
       });
-    } else if (mounted) {
+    } else {
       leave();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -122,7 +136,6 @@ export function BottomSheet({ visible, onClose, onClosed, title, subtitle, confi
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
   const scrimStyle = useAnimatedStyle(() => ({ opacity: 1 - Math.min(1, Math.max(0, y.value / Math.max(1, sheetH.value))) }));
 
-  if (!mounted) return null;
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <GestureHandlerRootView {...dismissesKeyboard} style={{ flex: 1, justifyContent: "flex-end" }}>
