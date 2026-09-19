@@ -1,5 +1,5 @@
 import * as Linking from "expo-linking";
-import type { ExerciseEntry, Plan, Session } from "@/db/types";
+import type { ExerciseEntry, InviteWorkout, Plan, Session } from "@/db/types";
 
 /**
  * Inviting somebody to the workout you are doing.
@@ -14,15 +14,7 @@ import type { ExerciseEntry, Plan, Session } from "@/db/types";
  * shared; the weights are each person's own, and their app fills those in from
  * their own history the moment they start.
  */
-export type Invite = {
-  v: 1;
-  /** Who sent it, for the screen that receives it. */
-  from: string;
-  /** The workout's name. */
-  name: string;
-  focus?: string;
-  ex: { i: string; n: string; s: number; r: number; k: number; t: number; g?: string }[];
-};
+export type Invite = InviteWorkout;
 
 /** URL-safe base64 without the padding, which some messaging apps eat. */
 function toBase64(input: string) {
@@ -54,8 +46,11 @@ export function inviteFromSession(session: Session, from: string): Invite {
       ...(e.supersetGroup ? { g: e.supersetGroup } : {}),
     };
   });
-  return { v: 1, from, name: session.planName, ex };
+  return { v: 1, from, at: Date.now(), name: session.planName, ex };
 }
+
+/** The id an invitation from a link gets, the same each time the same link is opened. */
+export const linkInviteId = (invite: Invite) => `link-${invite.at}-${invite.from}-${invite.name}`.replace(/\s+/g, "-").toLowerCase();
 
 export const encodeInvite = (invite: Invite) => toBase64(JSON.stringify(invite));
 
@@ -64,7 +59,8 @@ export function decodeInvite(code: string | undefined): Invite | null {
   try {
     const parsed = JSON.parse(fromBase64(code)) as Invite;
     if (parsed?.v !== 1 || !Array.isArray(parsed.ex) || !parsed.ex.length || typeof parsed.name !== "string") return null;
-    return parsed;
+    // A link made before invitations were kept has no time on it; it counts from when it was opened.
+    return { ...parsed, at: typeof parsed.at === "number" ? parsed.at : Date.now() };
   } catch {
     return null;
   }

@@ -15,7 +15,7 @@ import { Txt } from "@/components/ui/Text";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
-import { Viewfinder, CameraClose } from "@/components/Viewfinder";
+import { Viewfinder, CameraTop } from "@/components/Viewfinder";
 
 type Status = "idle" | "looking" | "notfound" | "offline";
 
@@ -108,10 +108,10 @@ export default function Scan() {
 
       <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
         <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 16 }}>
-          <CameraClose onPress={leave} label={t("Close")} />
+          <CameraTop onClose={leave} closeLabel={t("Close")} title={t("Scan a pack")} />
         </View>
 
-        <Viewfinder width={280} height={170} caption={t("Point at the barcode")} />
+        <Viewfinder width={280} height={170} caption={t("Point at the barcode")} lift={56} />
 
         <View style={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 20, gap: 12 }}>
           {status === "looking" ? (

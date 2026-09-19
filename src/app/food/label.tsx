@@ -14,7 +14,7 @@ import { Txt } from "@/components/ui/Text";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
-import { Viewfinder, CameraClose, Shutter } from "@/components/Viewfinder";
+import { Viewfinder, CameraTop, Shutter } from "@/components/Viewfinder";
 
 /**
  * Photograph the nutrition table. The photo is shrunk to something a phone
@@ -89,7 +89,7 @@ export default function Label() {
 
       <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
         <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 16 }}>
-          <CameraClose onPress={leave} label={t("Close")} />
+          <CameraTop onClose={leave} closeLabel={t("Close")} title={t("Read the table")} />
         </View>
 
         {still ? (
@@ -100,7 +100,7 @@ export default function Label() {
             </Txt>
           </View>
         ) : (
-          <Viewfinder width={300} height={230} caption={t("Fill the frame with the nutrition table, flat and in the light")} />
+          <Viewfinder width={300} height={230} caption={t("Fill the frame with the nutrition table, flat and in the light")} lift={32} />
         )}
 
         <View style={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 20, gap: 16 }}>

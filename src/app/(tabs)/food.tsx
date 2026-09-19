@@ -124,7 +124,7 @@ export default function FoodTab() {
         MEALS.filter((m) => byMeal[m].length).map((m) => {
           const mealSum = totals(byMeal[m], foods);
           return (
-            <Section key={m} title={t(MEAL_NAME[m])} meta={`${n(mealSum.kcal)} kcal`} gap={0}>
+            <Section key={m} title={t(MEAL_NAME[m])} meta={`${n(mealSum.kcal)} kcal`}>
               <Card padding={16} gap={0}>
                 {byMeal[m].map((e, i) => {
                   const f = byId.get(e.foodId);
@@ -156,7 +156,7 @@ export default function FoodTab() {
       )}
 
       {recent.length ? (
-        <Section title={t("Your products")} gap={0}>
+        <Section title={t("Your products")}>
           <Card padding={16} gap={0}>
             {recent.map((f, i) => (
               <View key={f.id}>

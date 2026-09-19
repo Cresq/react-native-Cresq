@@ -98,7 +98,7 @@ export default function LiftDetail() {
             </Row>
             <Row gap={8}>
               <Icon name="trendingUp" size={13} color={delta >= 0 ? colors.accent.ember : colors.status.warning} strokeWidth={2.2} />
-              <Txt variant="labelM" tone={delta >= 0 ? "ember" : "warning"}>
+              <Txt variant="labelM" tone={delta >= 0 ? "ember" : "danger"}>
                 {delta >= 0 ? "+" : ""}
                 {delta} kg
               </Txt>

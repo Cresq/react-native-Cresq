@@ -1,6 +1,6 @@
 import { useRef, type PropsWithChildren, type RefObject } from "react";
 import { useScrollToTop } from "expo-router";
-import { ScrollView, View, type StyleProp, type ViewStyle } from "react-native";
+import { ScrollView, View, type NativeScrollEvent, type NativeSyntheticEvent, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Txt } from "./Text";
@@ -17,16 +17,17 @@ import type { IconName } from "./Icon";
  * Sections are 24 pt apart; content inside a section is 12 pt apart (use <Section>).
  * `tabs` adds clearance for the floating tab bar; `footer` pins an action area.
  */
-export function Screen({ children, tabs, bottom = 0, scroll = true, footer, style, contentStyle }: PropsWithChildren<{ tabs?: boolean; bottom?: number; scroll?: boolean; footer?: React.ReactNode; style?: StyleProp<ViewStyle>; contentStyle?: StyleProp<ViewStyle> }>) {
+export function Screen({ children, tabs, bottom = 0, scroll = true, footer, style, contentStyle, scrollRef, onScroll }: PropsWithChildren<{ tabs?: boolean; bottom?: number; scroll?: boolean; footer?: React.ReactNode; style?: StyleProp<ViewStyle>; contentStyle?: StyleProp<ViewStyle>; /** The list itself, for a screen that has to scroll it. */ scrollRef?: RefObject<ScrollView | null>; onScroll?: (e: NativeSyntheticEvent<NativeScrollEvent>) => void }>) {
   const { colors, layout } = useTheme();
   const insets = useSafeAreaInsets();
   const running = useRunningSession();
   const paddingBottom = (tabs ? layout.tabBarClearance + (running ? 56 : 0) : 40) + bottom;
   const content: ViewStyle = { paddingTop: insets.top + 12, paddingHorizontal: layout.screenInset, paddingBottom, gap: layout.sectionGap };
-  const scroller = useRef<ScrollView>(null);
+  const own = useRef<ScrollView>(null);
+  const scroller = scrollRef ?? own;
   const pull = useHoldToRefresh(!!tabs && scroll);
   const list = scroll ? (
-    <ScrollView ref={scroller} contentContainerStyle={[content, contentStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" onScroll={pull.onScroll} scrollEventThrottle={16}>
+    <ScrollView ref={scroller} contentContainerStyle={[content, contentStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" onScroll={(e) => { pull.onScroll(e); onScroll?.(e); }} scrollEventThrottle={16}>
       {tabs ? <BackToTopOnTabPress target={scroller} /> : null}
       {children}
     </ScrollView>

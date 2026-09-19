@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Pressable, Share, TextInput, View, type LayoutChangeEvent } from "react-native";
+import { Pressable, ScrollView, Share, TextInput, View, useWindowDimensions, type LayoutChangeEvent } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, { FadeInDown, FadeOutDown, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown, FadeOut, FadeOutDown, LinearTransition, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import { project, rubberband, springs } from "@/motion";
 import { useNav } from "@/nav";
 import Svg, { Circle } from "react-native-svg";
@@ -11,11 +11,14 @@ import { fmtKg, fmtTime, sessionStats, useWorkout } from "@/store/workout";
 import type { ExerciseEntry, SetEntry, SetType } from "@/db/types";
 import { haptic } from "@/haptics";
 import { keepKeyboard } from "@/keyboard";
-import { useT } from "@/i18n";
+import { useT, usePlural } from "@/i18n";
+import { useSocial } from "@/store/social";
+import { useInvites } from "@/store/invites";
 import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
 import { Card } from "@/components/ui/Card";
+import { Avatar } from "@/components/ui/PhotoSlot";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { Pill } from "@/components/ui/Pill";
@@ -33,8 +36,11 @@ const REST_CHOICES = Array.from({ length: 20 }, (_, i) => (i + 1) * 15);
 
 const setLabel = (s: SetEntry, workingIndex: number) => (s.type === "warmup" ? "W" : s.type === "drop" ? "D" : s.type === "failure" ? "F" : String(workingIndex));
 
-type Sheet = null | { kind: "finish" } | { kind: "discard" } | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry } | { kind: "superset"; ex: ExerciseEntry };
+type Sheet = null | { kind: "finish" } | { kind: "discard" } | { kind: "invite" } | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry } | { kind: "superset"; ex: ExerciseEntry };
 type Slot = { id: string; y: number; h: number };
+
+/** How the cards make room for each other when one folds or unfolds: the base spring, settled without a bounce. */
+const reflow = LinearTransition.springify().stiffness(322).damping(36);
 
 /**
  * Active workout. Every exercise is a card you open or close; open cards stay
@@ -63,6 +69,14 @@ export default function ActiveWorkout() {
   const [afterSheet, setAfterSheet] = useState<(() => void) | null>(null);
   const slots = useRef<Record<string, Slot>>({});
   const openBeforeDrag = useRef<string[] | null>(null);
+  const plural = usePlural();
+  const { following, person: findPerson } = useSocial();
+  const { send, invitedTo } = useInvites();
+  const [picked, setPicked] = useState<string[]>([]);
+  const { height: viewportH } = useWindowDimensions();
+  const scroller = useRef<ScrollView>(null);
+  const scrollY = useRef(0);
+  const listTop = useRef(0);
 
   useEffect(() => {
     const i = setInterval(() => setNow(Date.now()), 1000);
@@ -124,11 +138,34 @@ export default function ActiveWorkout() {
       return cur.includes(id) ? rest : [...rest, ...ids];
     });
 
-  /** The workout travels in the link itself, so there is nothing to upload and nobody to sign in. */
-  const invite = () => {
-    if (!session) return;
-    const payload = inviteFromSession(session, db.profile.first || db.profile.name || t("A friend"));
-    Share.share({ message: t("{name} is doing {plan} on CresQ. Do it with them: {link}", { name: db.profile.first || db.profile.name, plan: session.planName, link: inviteLink(payload) }) });
+  const myName = db.profile.first || db.profile.name || t("A friend");
+  /** For somebody not on CresQ: the workout travels in the link itself, so there is nothing to upload and nobody to sign in. */
+  const shareLink = () => {
+    const payload = inviteFromSession(session, myName);
+    Share.share({ message: t("{name} is doing {plan} on CresQ. Do it with them: {link}", { name: myName, plan: session.planName, link: inviteLink(payload) }) });
+  };
+  const invited = invitedTo(session.id);
+  const followed = following.map((id) => findPerson(id)).filter((p): p is NonNullable<typeof p> => !!p);
+  const sendInvites = () => {
+    if (!picked.length) return;
+    send(session, picked, myName);
+    haptic("done");
+    setPicked([]);
+    setSheet(null);
+  };
+  /**
+   * Bring the card the workout moved on to into view, unless it is already
+   * there. Called once the fold has been laid out, so the measured slots are
+   * the new ones; the cards are still sliding, and the scroll joins them.
+   */
+  const reveal = (id: string) => {
+    const slot = slots.current[id];
+    if (!slot) return;
+    const top = listTop.current + slot.y;
+    const seenTop = scrollY.current + insets.top + 12;
+    const seenBottom = scrollY.current + viewportH - 140;
+    if (top >= seenTop && top + slot.h <= seenBottom) return;
+    scroller.current?.scrollTo({ y: Math.max(0, top - insets.top - 12), animated: true });
   };
 
   const finish = () => {
@@ -162,7 +199,10 @@ export default function ActiveWorkout() {
       const group = order.filter((e) => e.supersetGroup === ex.supersetGroup);
       const at = group.findIndex((e) => e.id === ex.id);
       const partner = [...group.slice(at + 1), ...group.slice(0, at)].find((e) => e.sets.some((x) => !x.done));
-      if (partner) setTimeout(() => w.setCurrent(order.findIndex((e) => e.id === partner.id)), 120);
+      if (partner) {
+        setTimeout(() => w.setCurrent(order.findIndex((e) => e.id === partner.id)), 120);
+        setTimeout(() => reveal(partner.id), 220);
+      }
       return;
     }
     if (!wasLast) return;
@@ -187,6 +227,7 @@ export default function ActiveWorkout() {
         return [...rest.filter((id) => !group.includes(id)), ...group];
       });
       if (goTo) w.setCurrent(order.findIndex((e) => e.id === goTo.id));
+      if (unfold && goTo) setTimeout(() => reveal(goTo.id), 120);
     }, 140);
   };
   // The picker lives in the same sheet as the exercise menu: the content swaps, the modal stays.
@@ -251,14 +292,23 @@ export default function ActiveWorkout() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg.ground }}>
-      <Screen bottom={rest ? 110 : 20} contentStyle={{ gap: 20 }}>
+      <Screen bottom={rest ? 110 : 20} contentStyle={{ gap: 20 }} scrollRef={scroller} onScroll={(e) => { scrollY.current = e.nativeEvent.contentOffset.y; }}>
         <Header
           left={<IconButton name="chevronDown" onPress={leave} accessibilityLabel={t("Minimise")} />}
           title={session.planName}
           subtitle={t("Exercise {a} of {b}", { a: session.currentIndex + 1, b: session.exercises.length })}
           right={
             <Row gap={8}>
-              <IconButton name="users" size={34} iconSize={17} onPress={invite} accessibilityLabel={t("Invite somebody to this workout")} />
+              <View>
+                <IconButton name="users" size={34} iconSize={17} onPress={() => { setPicked([]); setSheet({ kind: "invite" }); }} accessibilityLabel={t("Invite somebody to this workout")} />
+                {invited.length ? (
+                  <View pointerEvents="none" style={{ position: "absolute", top: -3, right: -3, minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 4, backgroundColor: colors.accent.ember, alignItems: "center", justifyContent: "center" }}>
+                    <Txt variant="labelS" style={{ color: colors.accent.on, fontSize: 10, lineHeight: 12 }}>
+                      {invited.length}
+                    </Txt>
+                  </View>
+                ) : null}
+              </View>
               <IconButton name="close" size={34} iconSize={18} tone="danger" onPress={() => setSheet({ kind: "discard" })} accessibilityLabel={t("Stop and discard session")} />
               <Button label={t("Finish")} variant="inverse" size="S" full={false} onPress={() => setSheet({ kind: "finish" })} />
             </Row>
@@ -271,14 +321,14 @@ export default function ActiveWorkout() {
           <Strip label={t("Sets")} count={stats.setsDone} format={(n) => String(Math.round(n))} unit={t("of {n}", { n: stats.setsTotal })} />
         </Row>
 
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: 8 }} onLayout={(e) => { listTop.current = e.nativeEvent.layout.y; }}>
           {session.exercises.map((ex, index) => {
             const lineAbove = drop && drop.index === index && dragFrom > index;
             const lineBelow = drop && drop.index === index && dragFrom !== -1 && dragFrom < index;
             const groupStart = ex.supersetGroup && (index === 0 || session.exercises[index - 1].supersetGroup !== ex.supersetGroup);
             const groupColor = supersetColor(ex.supersetGroup);
             return (
-              <Animated.View key={ex.id} onLayout={measure(ex.id)} style={{ gap: 8 }}>
+              <Animated.View key={ex.id} layout={reflow} onLayout={measure(ex.id)} style={{ gap: 8 }}>
                 {lineAbove ? <DropLine /> : null}
                 {groupStart && groupColor ? (
                   <Row gap={8} style={{ paddingHorizontal: 4, paddingTop: 4 }}>
@@ -407,6 +457,56 @@ export default function ActiveWorkout() {
         </View>
       </BottomSheet>
 
+      <BottomSheet
+        visible={sheet?.kind === "invite"}
+        onClose={() => setSheet(null)}
+        onClosed={() => { const go = afterSheet; setAfterSheet(null); go?.(); }}
+        title={t("Train together")}
+        subtitle={t("They get {plan} with the same exercises and sets. The weights are their own.", { plan: session.planName })}
+      >
+        <View style={{ gap: 4 }}>
+          {followed.map((p) => {
+            const done = invited.includes(p.id);
+            const on = picked.includes(p.id);
+            return (
+              <Pressable
+                key={p.id}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on, disabled: done }}
+                accessibilityLabel={p.name}
+                disabled={done}
+                onPress={() => setPicked((x) => (x.includes(p.id) ? x.filter((y) => y !== p.id) : [...x, p.id]))}
+                style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingHorizontal: 8, borderRadius: radius.input, backgroundColor: on ? colors.accent.soft : "transparent", opacity: pressed ? 0.7 : done ? 0.55 : 1 })}
+              >
+                <Avatar source={p.avatar} size={40} initial={p.name[0]} />
+                <View style={{ flex: 1, gap: 1 }}>
+                  <Txt variant="labelL">{p.name}</Txt>
+                  <Txt variant="bodyS" tone="tertiary">
+                    {done ? t("Invited") : p.handle}
+                  </Txt>
+                </View>
+                {done ? (
+                  <Icon name="check" size={18} color={colors.status.success} strokeWidth={2.4} />
+                ) : (
+                  <View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: on ? colors.accent.ember : colors.border.strong, backgroundColor: on ? colors.accent.ember : "transparent", alignItems: "center", justifyContent: "center" }}>
+                    {on ? <Icon name="check" size={14} color={colors.accent.on} strokeWidth={2.6} /> : null}
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
+          {followed.length === 0 ? (
+            <Txt variant="bodyM" tone="secondary" style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
+              {t("You are not following anyone yet. People you follow show up here.")}
+            </Txt>
+          ) : null}
+          <View style={{ paddingHorizontal: 8, paddingTop: 8 }}>
+            <Button label={picked.length ? plural(picked.length, "Invite {n} person", "Invite {n} people") : t("Pick who to invite")} disabled={!picked.length} onPress={sendInvites} />
+          </View>
+          <SheetOption icon="share" label={t("Share a link instead")} sub={t("For somebody who is not on CresQ yet")} onPress={() => { setAfterSheet(() => shareLink); setSheet(null); }} />
+        </View>
+      </BottomSheet>
+
       <MoveViewer exercise={watching ? findExercise(watching) ?? null : null} onClose={() => setWatching(null)} />
 
       <BottomSheet visible={sheet?.kind === "rest"} onClose={() => setSheet(null)} title={t("Rest timer")} subtitle={sheet?.kind === "rest" ? t("After each set of {name}", { name: sheet.ex.name }) : undefined}>
@@ -464,20 +564,22 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
   const [noteEditing, setNoteEditing] = useState(false);
   const done = ex.sets.length > 0 && ex.sets.every((s) => s.done);
   const doneCount = ex.sets.filter((s) => s.done).length;
+  // The ring that marks the current card fades in and out instead of switching, and is drawn over
+  // the card rather than as its border, so the numbers inside never shift by the border's width.
+  const lit = useSharedValue(isCurrent ? 1 : 0);
+  const hi = useSharedValue(highlighted ? 1 : 0);
+  useEffect(() => {
+    lit.value = withTiming(isCurrent ? 1 : 0, { duration: 240 });
+  }, [isCurrent, lit]);
+  useEffect(() => {
+    hi.value = withTiming(highlighted ? 1 : 0, { duration: 200 });
+  }, [highlighted, hi]);
+  const ring = useAnimatedStyle(() => ({ opacity: Math.max(lit.value, hi.value) }));
   let working = 0;
   return (
     <Animated.View style={style}>
-      <Card
-        padding={expanded ? 16 : 10}
-        gap={8}
-        style={
-          highlighted
-            ? { borderWidth: 1.5, borderColor: colors.accent.ember, borderTopWidth: 1.5, borderTopColor: colors.accent.ember, backgroundColor: colors.accent.soft }
-            : isCurrent
-              ? { borderWidth: 1.5, borderColor: colors.accent.ember, borderTopWidth: 1.5, borderTopColor: colors.accent.ember }
-              : undefined
-        }
-      >
+      <Card padding={expanded ? 16 : 10} gap={8} style={highlighted ? { backgroundColor: colors.accent.soft } : undefined}>
+        <Animated.View pointerEvents="none" style={[{ position: "absolute", top: -1, left: 0, right: 0, bottom: 0, borderRadius: radius.card, borderWidth: 1.5, borderColor: colors.accent.ember }, ring]} />
         <Row gap={10} align="center">
           <GestureDetector gesture={drag}>
             <Animated.View accessibilityRole="button" accessibilityLabel={t("Drag to reorder")} style={{ width: 28, height: 28, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg.raised }}>
@@ -515,7 +617,7 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
         </Row>
 
         {expanded ? (
-          <View style={{ gap: 8 }}>
+          <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(140)} style={{ gap: 8 }}>
             <Row gap={8} style={{ paddingTop: 8 }}>
               <Pressable accessibilityRole="button" accessibilityLabel={t("Rest timer")} onPress={onRest} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 12, paddingRight: 8, height: 34, borderRadius: radius.pill, backgroundColor: colors.bg.raised }}>
                 <Icon name="timer" size={14} color={colors.text.secondary} strokeWidth={1.9} />
@@ -576,7 +678,7 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
             </View>
 
             <Button label={t("Add set")} variant="secondary" size="S" icon="addPlus" onPress={onAddSet} style={{ marginTop: 8 }} />
-          </View>
+          </Animated.View>
         ) : null}
       </Card>
     </Animated.View>

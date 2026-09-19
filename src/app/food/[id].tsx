@@ -145,7 +145,7 @@ export default function FoodDetail() {
         {food.photo ? <SheetOption icon="trash" label={t("Remove photo")} danger onPress={() => { updateFood(food.id, { photo: undefined }); setPhotoSheet(false); }} /> : null}
       </BottomSheet>
 
-      <Section title={unit === "g" ? t("Per 100 g") : t("Per 100 ml")} gap={0}>
+      <Section title={unit === "g" ? t("Per 100 g") : t("Per 100 ml")}>
         <Card padding={16} gap={0}>
           {rows.map(([label, value, sub], i) => (
             <View key={label}>

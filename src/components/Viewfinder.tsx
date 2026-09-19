@@ -9,9 +9,9 @@ import { Txt } from "./ui/Text";
  * whatever the app's theme is, because the picture behind it is whatever the
  * room is.
  */
-export function Viewfinder({ width, height, caption }: { width: number; height: number; caption: string }) {
+export function Viewfinder({ width, height, caption, lift = 0 }: { width: number; height: number; caption: string; /** Points the frame sits above the middle: the controls are at the bottom, the eye is not. */ lift?: number }) {
   return (
-    <View pointerEvents="none" style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 18 }}>
+    <View pointerEvents="none" style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 18, paddingBottom: lift * 2 }}>
       <View style={{ width, height }}>
         {(["tl", "tr", "bl", "br"] as const).map((c) => (
           <View
@@ -40,6 +40,19 @@ export function Viewfinder({ width, height, caption }: { width: number; height: 
       <Txt variant="labelM" style={{ color: "rgba(255,255,255,0.85)" }}>
         {caption}
       </Txt>
+    </View>
+  );
+}
+
+/** The strip at the top of a camera: close on the left, what this camera is for in the middle. */
+export function CameraTop({ onClose, closeLabel, title }: { onClose: () => void; closeLabel: string; title: string }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+      <CameraClose onPress={onClose} label={closeLabel} />
+      <Txt variant="displayS" align="center" numberOfLines={1} style={{ flex: 1, color: "#fff" }}>
+        {title}
+      </Txt>
+      <View style={{ width: 44 }} />
     </View>
   );
 }

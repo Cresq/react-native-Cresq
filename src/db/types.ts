@@ -172,6 +172,37 @@ export type FoodProfile = { weightKg?: number; heightCm?: number; sex?: "m" | "f
 /** Daily targets. Absent until the person sets them; the app never guesses. */
 export type NutritionTargets = { kcal: number; protein: number; carbs: number; fat: number };
 
+/**
+ * A workout as an invitation carries it: the movements, how many sets, at what
+ * reps and rest, and which of them alternate. Never the weights; those are each
+ * person's own. `from` is the sender's name, because a link can arrive from a
+ * phone the directory has never heard of. `at` is when it was sent.
+ */
+export type InviteWorkout = { v: 1; from: string; at: number; name: string; focus?: string; ex: { i: string; n: string; s: number; r: number; k: number; t: number; g?: string }[] };
+
+/**
+ * One invitation to train together, sent or received. Until accounts sync a
+ * sent one goes no further than this phone; a received one came in through a
+ * link, or is the sample that shows what arriving looks like.
+ */
+export type TrainInvite = {
+  id: string;
+  /** Directory id of the sender; absent for a link from somebody not in it. */
+  from?: string;
+  fromName: string;
+  /** Directory id of the receiver. */
+  to: string;
+  at: number;
+  /** The session it was sent from, so asking the same person twice is one invitation. */
+  sessionId?: string;
+  workout: InviteWorkout;
+  status: "pending" | "accepted";
+  /** When it was seen: the banner came down, or its screen was opened. */
+  seenAt?: number;
+  /** Generated so arriving can be seen once; leaves with the sample sessions. */
+  sample?: boolean;
+};
+
 export const DEFAULT_FAVOURITES = ["bench", "squat", "deadlift", "ohp"];
 export const MIN_AGE = 16;
 
@@ -194,6 +225,8 @@ export type Db = {
   foods: Food[];
   /** What was eaten, one entry per portion. */
   foodLog: FoodEntry[];
+  /** Invitations to train together, sent and received. */
+  invites: TrainInvite[];
   /**
    * Comments this device has written, by post id. Only the words and the time:
    * the name and the face are read from the profile when they are shown, so a
@@ -213,4 +246,4 @@ export type Db = {
  * carried forward by `migrate`; it is never discarded, because it is somebody's
  * training history.
  */
-export const DB_VERSION = 5;
+export const DB_VERSION = 6;

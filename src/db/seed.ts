@@ -1,4 +1,5 @@
-import { DB_VERSION, type Db, type Exercise, type ExerciseEntry, type Plan, type Session, type SetEntry, type SplitDay } from "./types";
+import { DB_VERSION, type Db, type Exercise, type ExerciseEntry, type Plan, type Session, type SetEntry, type SplitDay, type TrainInvite } from "./types";
+import { ME } from "@/data/people";
 import { libraryExercises } from "@/data/exercises";
 import { uid } from "./storage";
 import { translate, type Language } from "@/i18n/translate";
@@ -82,6 +83,35 @@ export function seedSampleSessions(exercises: Exercise[], plans: Plan[]): Sessio
   return out.sort((a, b) => a.startedAt - b.startedAt);
 }
 
+/**
+ * One invitation waiting on a fresh install, from the coach in the directory,
+ * so what arriving looks like can be seen before anybody real can send one.
+ * Marked sample and removed with the sample sessions.
+ */
+export function seedSampleInvite(at = Date.now() - 4 * 60_000): TrainInvite {
+  return {
+    id: "sample-invite-u7",
+    from: "u7",
+    fromName: "Noah de Groot",
+    to: ME,
+    at,
+    status: "pending",
+    sample: true,
+    workout: {
+      v: 1,
+      from: "Noah de Groot",
+      at,
+      name: "Push",
+      ex: [
+        { i: "bench", n: "Bench press", s: 4, r: 6, k: 85, t: 120 },
+        { i: "ohp", n: "Overhead press", s: 3, r: 8, k: 45, t: 90 },
+        { i: "incline-db", n: "Incline dumbbell press", s: 3, r: 10, k: 26, t: 90 },
+        { i: "cable-fly", n: "Cable fly", s: 2, r: 15, k: 15, t: 60 },
+      ],
+    },
+  };
+}
+
 export function createSeedDb(lang: Language = "nl"): Db {
   const exercises = libraryExercises;
   const plans = seedPlansIn(lang);
@@ -102,5 +132,6 @@ export function createSeedDb(lang: Language = "nl"): Db {
     blocked: [],
     foods: [],
     foodLog: [],
+    invites: [seedSampleInvite()],
   };
 }

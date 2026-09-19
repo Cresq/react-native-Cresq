@@ -10,13 +10,14 @@ import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
 import { Divider } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
+import { Avatar } from "@/components/ui/PhotoSlot";
 import { useT } from "@/i18n";
 
 /**
- * Notifications, all of them worked out from your own log: records you set and
- * the day your split has next. Likes, comments and follows belong here too, and
- * will, once there is a server that knows about them. Until then this list
- * would have to invent them, and it will not.
+ * Notifications: records you set, the day your split has next, and invitations
+ * to train together, sent and received. Likes, comments and follows belong
+ * here too, and will, once there is a server that knows about them. Until then
+ * this list would have to invent them, and it will not.
  */
 export default function Notifications() {
   const { colors } = useTheme();
@@ -41,7 +42,7 @@ export default function Notifications() {
         <View style={{ gap: 4, paddingVertical: 8 }}>
           <Txt variant="displayM">{t("Nothing yet")}</Txt>
           <Txt variant="bodyM" tone="secondary">
-            {t("Log a session and your records show up here.")}
+            {t("Records, what your split has next and invitations to train together show up here.")}
           </Txt>
         </View>
       ) : null}
@@ -54,9 +55,13 @@ export default function Notifications() {
               <View key={n.id}>
                 {i > 0 ? <Divider inset={54} /> : null}
                 <Pressable accessibilityRole="button" onPress={() => n.href && router.push(n.href)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "flex-start", gap: 12, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
-                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: n.gold ? colors.pr.soft : colors.bg.surface, alignItems: "center", justifyContent: "center" }}>
-                    <Icon name={n.icon} size={18} color={n.gold ? colors.pr.gold : colors.text.secondary} strokeWidth={1.9} />
-                  </View>
+                  {n.avatar || n.initial ? (
+                    <Avatar source={n.avatar} size={40} initial={n.initial} />
+                  ) : (
+                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: n.gold ? colors.pr.soft : colors.bg.surface, alignItems: "center", justifyContent: "center" }}>
+                      <Icon name={n.icon} size={18} color={n.gold ? colors.pr.gold : colors.text.secondary} strokeWidth={1.9} />
+                    </View>
+                  )}
                   <View style={{ flex: 1, gap: 4 }}>
                     <Txt variant={isUnread ? "labelL" : "bodyM"} tone={isUnread ? "primary" : "secondary"}>
                       {t(n.title, n.vars)}

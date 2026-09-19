@@ -27,6 +27,17 @@ export const relativeDay = (t: number) => {
   return nl ? `${w} weken geleden` : `${w} weeks ago`;
 };
 
+/** How long ago, in the smallest unit that reads well: just now, minutes, hours, then the day. */
+export const relativeTime = (t: number, now: number) => {
+  const nl = locale.startsWith("nl");
+  const m = Math.floor((now - t) / 60000);
+  if (m < 1) return nl ? "zojuist" : "just now";
+  if (m < 60) return nl ? `${m} min geleden` : `${m} min ago`;
+  const h = Math.floor(m / 60);
+  if (h < 12) return nl ? `${h} uur geleden` : h === 1 ? "1 hour ago" : `${h} hours ago`;
+  return relativeDay(t);
+};
+
 export function startOfDay(t: number) {
   const d = new Date(t);
   d.setHours(0, 0, 0, 0);

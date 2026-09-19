@@ -10,6 +10,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { LocaleSync } from "@/i18n";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SaveTrouble } from "@/components/SaveTrouble";
+import { InviteBanner } from "@/components/InviteBanner";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -32,6 +33,7 @@ SplashScreen.preventAutoHideAsync();
  *   /progress/volume      Volume per week
  *   /progress/muscles     Working sets per muscle group
  *   /join?w=CODE          An invitation to somebody else's workout, carried in the link
+ *   /join?invite=ID       The same screen for an invitation already kept on this phone
  *   /compare              People you follow who share their figures
  *   /compare/[id]         Your figures beside theirs
  *   /progress/[lift]      One exercise: trend, forecast, records, history
@@ -86,6 +88,7 @@ function Themed() {
           <Routes />
         </ErrorBoundary>
         <SaveTrouble />
+        <InviteBanner />
       </WorkoutProvider>
     </ThemeProvider>
   );

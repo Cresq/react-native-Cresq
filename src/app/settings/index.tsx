@@ -119,7 +119,7 @@ export default function Settings() {
 
       <BottomSheet visible={confirm === "samples"} onClose={() => setConfirm(null)} title={t("Remove sample sessions?")} subtitle={t("Your own logged sessions stay. Charts will be empty until you train.")}>
         <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
-          <Button label={plural(samples, "Remove {n} session", "Remove {n} sessions")} variant="danger" size="M" onPress={() => { update((d) => ({ ...d, sessions: d.sessions.filter((s) => !s.sample) })); setConfirm(null); }} />
+          <Button label={plural(samples, "Remove {n} session", "Remove {n} sessions")} variant="danger" size="M" onPress={() => { update((d) => ({ ...d, sessions: d.sessions.filter((s) => !s.sample), invites: d.invites.filter((i) => !i.sample) })); setConfirm(null); }} />
         </View>
       </BottomSheet>
       <BottomSheet visible={confirm === "reset"} onClose={() => setConfirm(null)} title={t("Reset everything?")} subtitle={t("This cannot be undone. You will be signed out.")}>

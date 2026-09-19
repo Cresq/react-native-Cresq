@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { AppState } from "react-native";
 import { DB_VERSION, type Db } from "./types";
 import { clearDb, flushDb, loadDb, onSaveTrouble, saveDb, uid } from "./storage";
-import { createSeedDb } from "./seed";
+import { createSeedDb, seedSampleInvite } from "./seed";
 
 type DbState = {
   db: Db;
@@ -56,6 +56,8 @@ function migrate(stored: Db): Db {
     blocked: stored.blocked ?? [],
     foods: stored.foods ?? [],
     foodLog: stored.foodLog ?? [],
+    // Invitations arrived after this log began: the sample one comes along only where the sample sessions still are.
+    invites: stored.invites ?? ((stored.sessions ?? []).some((s) => s.sample) ? [seedSampleInvite()] : []),
   };
 }
 

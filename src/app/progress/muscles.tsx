@@ -104,7 +104,7 @@ export default function Muscles() {
                       {r.previous ? (
                         <Row gap={4}>
                           <Icon name={delta >= 0 ? "trendingUp" : "trendingDown"} size={12} color={delta >= 0 ? colors.accent.ember : colors.status.warning} strokeWidth={2.2} />
-                          <Txt variant="labelS" tone={delta >= 0 ? "ember" : "warning"} tabular>
+                          <Txt variant="labelS" tone={delta >= 0 ? "ember" : "danger"} tabular>
                             {delta >= 0 ? "+" : ""}
                             {delta}
                           </Txt>

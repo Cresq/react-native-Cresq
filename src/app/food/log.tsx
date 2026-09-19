@@ -71,7 +71,7 @@ export default function LogFood() {
       <Field label={t("Search")} value={q} onChangeText={setQ} placeholder={t("Name or brand")} icon="search" autoCorrect={false} autoFocus />
 
       {searching ? (
-        <Section title={hits.length ? t("In your products") : undefined} gap={0}>
+        <Section title={hits.length ? t("In your products") : undefined}>
           {hits.length ? (
             <Card padding={16} gap={0}>{hits.map((f, i) => row(f, i, i === hits.length - 1))}</Card>
           ) : (
@@ -87,14 +87,14 @@ export default function LogFood() {
         <>
           {offered.pattern.length ? (
             <View>
-              <Section title={t("Usually at {meal}", { meal })} gap={0}>
+              <Section title={t("Usually at {meal}", { meal })}>
                 <Card padding={16} gap={0}>{offered.pattern.map((f, i) => row(f, i, i === offered.pattern.length - 1))}</Card>
               </Section>
             </View>
           ) : null}
           {offered.recent.length ? (
             <View>
-              <Section title={offered.pattern.length ? t("Recently added") : t("Your products")} gap={0}>
+              <Section title={offered.pattern.length ? t("Recently added") : t("Your products")}>
                 <Card padding={16} gap={0}>{offered.recent.map((f, i) => row(f, i, i === offered.recent.length - 1))}</Card>
               </Section>
             </View>
@@ -110,7 +110,7 @@ export default function LogFood() {
         </>
       )}
 
-      <Section title={t("New product")} gap={0}>
+      <Section title={t("New product")}>
         <Card padding={16} gap={0}>
           <Pressable accessibilityRole="button" accessibilityLabel={t("Scan a pack")} onPress={scan} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
             <Icon name="camera" size={20} color={colors.text.secondary} strokeWidth={1.9} />
