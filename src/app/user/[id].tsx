@@ -4,6 +4,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useSocial } from "@/store/social";
+import { otherPosts } from "@/data/mock";
 import { followersOf, person as findPerson } from "@/data/people";
 import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
@@ -89,9 +90,11 @@ export default function UserProfile() {
         />
         {tab === "workouts" ? (
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
-            {p.recent.map((r, i) => (
-              <WorkoutTile key={i} name={r.name} date={r.date} photo={r.photo} records={r.records} size={tile} />
-            ))}
+            {p.recent.map((r, i) => {
+              // A tile opens the post it stands for, among this person's other posts; a tile with no post behind it (placeholder data) stays a picture.
+              const post = otherPosts.find((x) => x.userId === p.id && x.title === r.name);
+              return <WorkoutTile key={i} name={r.name} date={r.date} photo={r.photo} records={r.records} size={tile} onPress={post ? () => router.push(`/workout/${post.id}?of=${p.id}`) : undefined} />;
+            })}
           </View>
         ) : withPhoto.length === 0 ? (
           <Txt variant="bodyM" tone="secondary" style={{ paddingTop: 4 }}>

@@ -78,6 +78,8 @@ export default function Review() {
       fibre: num(fibre),
       salt: num(salt),
       serving: num(serving),
+      // The photo of the table stays with the product; a correction keeps whatever photo it had.
+      photo: from === "edit" && existing ? existing.photo : photo,
       source: from === "edit" && existing ? existing.source : from === "label" ? ("label" as const) : ("manual" as const),
       verified: true,
     };

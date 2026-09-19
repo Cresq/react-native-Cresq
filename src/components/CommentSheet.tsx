@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, TextInput, View, useWindowDimensions, type ImageSourcePropType } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, FadeInDown, FadeOut, LinearTransition, SlideInDown, ZoomIn, ZoomOut, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import { project, rubberband, spring, springs } from "@/motion";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useT, usePlural } from "@/i18n";
@@ -112,10 +112,10 @@ export function CommentSheet({
       setMounted(true);
       y.value = sheetH;
       requestAnimationFrame(() => {
-        y.value = withSpring(0, springs.base);
+        y.value = withSpring(0, spring(0.4, 0.88));
       });
     } else if (mounted) {
-      y.value = withTiming(sheetH, { duration: 180 }, (done) => {
+      y.value = withTiming(sheetH, { duration: 200, easing: Easing.in(Easing.quad) }, (done) => {
         if (done) runOnJS(setMounted)(false);
       });
     }
@@ -200,16 +200,7 @@ export function CommentSheet({
         </Pressable>
       </View>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ selected: !!liked[c.id] }}
-        accessibilityLabel={t("Like this comment")}
-        hitSlop={8}
-        onPress={() => { haptic("tap"); setLiked((l) => ({ ...l, [c.id]: !l[c.id] })); }}
-        style={({ pressed }) => ({ paddingTop: 3, opacity: pressed ? 0.6 : 1 })}
-      >
-        <Icon name="heart" size={15} color={liked[c.id] ? colors.status.danger : colors.text.tertiary} fill={liked[c.id] ? colors.status.danger : undefined} strokeWidth={1.9} />
-      </Pressable>
+      <Heart on={!!liked[c.id]} label={t("Like this comment")} onPress={() => { haptic("tap"); setLiked((l) => ({ ...l, [c.id]: !l[c.id] })); }} />
     </View>
   );
 
@@ -252,18 +243,18 @@ export function CommentSheet({
                 </View>
               ) : null}
 
-              {threads.map(({ comment, replies }) => (
-                <View key={comment.id} style={{ gap: 14 }}>
+              {threads.map(({ comment, replies }, i) => (
+                <Animated.View key={comment.id} entering={FadeInDown.duration(200).delay(Math.min(i * 22, 130))} layout={LinearTransition.duration(220)} style={{ gap: 14 }}>
                   {line(comment, false)}
                   {replies.map((r) => line(r, true))}
-                </View>
+                </Animated.View>
               ))}
             </ScrollView>
 
             <View style={{ height: 1, backgroundColor: colors.border.subtle }} />
 
             {replyTo ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 2 }}>
+              <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOut.duration(120)} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 2 }}>
                 <Icon name="chatCircle" size={13} color={colors.text.tertiary} strokeWidth={1.9} />
                 <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} numberOfLines={1}>
                   {t("Replying to {name}", { name: replyTo.name })}
@@ -271,7 +262,7 @@ export function CommentSheet({
                 <Pressable accessibilityRole="button" accessibilityLabel={t("Cancel reply")} hitSlop={8} onPress={() => setReplyTo(null)} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
                   <Icon name="close" size={14} color={colors.text.tertiary} strokeWidth={2.2} />
                 </Pressable>
-              </View>
+              </Animated.View>
             ) : null}
 
             <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(insets.bottom, 12) }}>
@@ -292,15 +283,19 @@ export function CommentSheet({
               </View>
               {/* The send button only exists once there is something to send. */}
               {draft.trim() ? (
-                <Pressable accessibilityRole="button" accessibilityLabel={t("Post comment")} onPress={send} style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent.ember, opacity: pressed ? 0.8 : 1 })}>
-                  <Icon name="arrowRight" size={19} color={colors.accent.on} strokeWidth={2.4} />
-                </Pressable>
+                <Animated.View entering={ZoomIn.duration(160)} exiting={ZoomOut.duration(120)}>
+                  <Pressable accessibilityRole="button" accessibilityLabel={t("Post comment")} onPress={send} style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent.ember, opacity: pressed ? 0.8 : 1 })}>
+                    <Icon name="arrowRight" size={19} color={colors.accent.on} strokeWidth={2.4} />
+                  </Pressable>
+                </Animated.View>
               ) : null}
             </View>
             {held ? (
               <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "flex-end" }}>
-                <Pressable accessibilityRole="button" accessibilityLabel={t("Cancel")} onPress={() => setHeld(null)} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.45)" }} />
-                <View style={{ backgroundColor: colors.bg.surface, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, paddingHorizontal: 12, paddingTop: 16, paddingBottom: Math.max(insets.bottom, 12) + 4, gap: 4 }}>
+                <Animated.View entering={FadeIn.duration(140)} exiting={FadeOut.duration(120)} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+                  <Pressable accessibilityRole="button" accessibilityLabel={t("Cancel")} onPress={() => setHeld(null)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} />
+                </Animated.View>
+                <Animated.View entering={SlideInDown.duration(220)} style={{ backgroundColor: colors.bg.surface, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, paddingHorizontal: 12, paddingTop: 16, paddingBottom: Math.max(insets.bottom, 12) + 4, gap: 4 }}>
                   <View style={{ gap: 2, paddingHorizontal: 8, paddingBottom: 10 }}>
                     <Txt variant="labelL">{held.done === "reported" ? t("Hidden and noted") : held.done === "blocked" ? t("{name} is blocked", { name: held.comment.name }) : held.comment.name}</Txt>
                     <Txt variant="bodyS" tone="tertiary" numberOfLines={2}>
@@ -315,12 +310,36 @@ export function CommentSheet({
                     </>
                   )}
                   <Button label={held.done ? t("Done") : t("Cancel")} variant="secondary" size="M" onPress={() => setHeld(null)} style={{ marginTop: 6 }} />
-                </View>
+                </Animated.View>
               </View>
             ) : null}
           </Animated.View>
         </KeyboardAvoidingView>
       </GestureHandlerRootView>
     </Modal>
+  );
+}
+
+/** A heart that answers the thumb with a small pop, then rests: no bounce, no wait. */
+function Heart({ on, label, onPress }: { on: boolean; label: string; onPress: () => void }) {
+  const { colors } = useTheme();
+  const scale = useSharedValue(1);
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: on }}
+      accessibilityLabel={label}
+      hitSlop={8}
+      onPress={() => {
+        scale.value = withSequence(withSpring(1.35, springs.snappy), withSpring(1, springs.snappy));
+        onPress();
+      }}
+      style={({ pressed }) => ({ paddingTop: 3, opacity: pressed ? 0.6 : 1 })}
+    >
+      <Animated.View style={style}>
+        <Icon name="heart" size={15} color={on ? colors.status.danger : colors.text.tertiary} fill={on ? colors.status.danger : undefined} strokeWidth={1.9} />
+      </Animated.View>
+    </Pressable>
   );
 }

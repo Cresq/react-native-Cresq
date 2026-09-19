@@ -7,7 +7,6 @@ import { useNow } from "@/clock";
 import { haptic } from "@/haptics";
 import { longDate } from "@/db/derive";
 import { useFood } from "@/store/food";
-import { setDraft } from "@/nutrition/draft";
 import { MEALS, MEAL_NAME, entriesOn, fmtG, fmtKcal, portion, totals } from "@/nutrition/derive";
 import type { Food, FoodEntry, Meal } from "@/db/types";
 import { Screen, Row, Section } from "@/components/ui/Screen";
@@ -18,6 +17,9 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/Icon";
 import { Field } from "@/components/ui/Field";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { FoodWelcome } from "@/components/FoodWelcome";
+import { FoodMark } from "@/components/FoodMark";
+import { useDb } from "@/db/DbProvider";
 
 /**
  * Food, top to bottom: what today adds up to against what you aimed for, the
@@ -33,6 +35,7 @@ export default function FoodTab() {
   const t = useT();
   const locale = localeOf(useLanguage());
   const now = useNow();
+  const { db } = useDb();
   const { foods, log, byId, targets, removeEntry, setTargets } = useFood();
   const [picked, setPicked] = useState<FoodEntry | null>(null);
   const [editingTargets, setEditingTargets] = useState(false);
@@ -54,10 +57,6 @@ export default function FoodTab() {
 
   const n = (v: number) => Math.round(v).toLocaleString(locale);
   const scan = () => router.push("/food/scan");
-  const byHand = () => {
-    setDraft({ unit: "g", source: "manual", verified: false });
-    router.push("/food/review?from=manual");
-  };
   const openTargets = () => {
     setTKcal(targets ? String(targets.kcal) : "");
     setTProtein(targets ? String(targets.protein) : "");
@@ -76,6 +75,9 @@ export default function FoodTab() {
     haptic("done");
     setEditingTargets(false);
   };
+
+  // The first time: a welcome and two questions, in the tab itself, before any of this.
+  if (!db.profile.food) return <FoodWelcome />;
 
   return (
     <Screen tabs>
@@ -115,8 +117,8 @@ export default function FoodTab() {
       </Card>
 
       <Row gap={10}>
-        <View style={{ flex: 1 }}><Button label={t("Scan")} icon="camera" size="M" onPress={scan} /></View>
-        <View style={{ flex: 1 }}><Button label={t("By hand")} icon="noteEdit" variant="secondary" size="M" onPress={byHand} /></View>
+        <View style={{ flex: 1 }}><Button label={t("Log food")} icon="addPlus" size="M" onPress={() => router.push("/food/log")} /></View>
+        <IconButton name="camera" size={48} iconSize={20} onPress={scan} accessibilityLabel={t("Scan a pack")} />
       </Row>
 
       {today.length === 0 ? (
@@ -138,7 +140,8 @@ export default function FoodTab() {
                   return (
                     <View key={e.id}>
                       {i > 0 ? <Divider /> : null}
-                      <Pressable accessibilityRole="button" accessibilityLabel={f?.name ?? t("Removed product")} onPress={() => setPicked(e)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 11, opacity: pressed ? 0.7 : 1 })}>
+                      <Pressable accessibilityRole="button" accessibilityLabel={f?.name ?? t("Removed product")} onPress={() => setPicked(e)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 9, opacity: pressed ? 0.7 : 1 })}>
+                        <FoodMark photo={f?.photo} size={36} />
                         <View style={{ flex: 1, gap: 2 }}>
                           <Txt variant="labelL" numberOfLines={1}>
                             {f?.name ?? t("Removed product")}
@@ -224,7 +227,8 @@ function Bar({ label, value, target, colour, track }: { label: string; value: nu
 
 function RecentRow({ food, sub, onPress, unchecked, uncheckedLabel, colour, chevron }: { food: Food; sub: string; onPress: () => void; unchecked: boolean; uncheckedLabel: string; colour: string; chevron: string }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={food.name} onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 11, opacity: pressed ? 0.7 : 1 })}>
+    <Pressable accessibilityRole="button" accessibilityLabel={food.name} onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 9, opacity: pressed ? 0.7 : 1 })}>
+      <FoodMark photo={food.photo} size={36} />
       <View style={{ flex: 1, gap: 2 }}>
         <Row gap={8}>
           <Txt variant="labelL" numberOfLines={1} style={{ flexShrink: 1 }}>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useNav, useOnce } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -15,7 +15,12 @@ import { Card, Divider } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { Chip } from "@/components/ui/Chip";
+import { Icon } from "@/components/ui/Icon";
 import { Field } from "@/components/ui/Field";
+import { PhotoSlot } from "@/components/ui/PhotoSlot";
+import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
+import { PhotoViewer } from "@/components/PhotoViewer";
+import { pickPhoto } from "@/photo";
 
 const num = (s: string) => {
   const n = Number(s.replace(",", ".").trim());
@@ -32,7 +37,9 @@ export default function FoodDetail() {
   const once = useOnce();
   const t = useT();
   const { id } = useLocalSearchParams<{ id: string; log?: string }>();
-  const { byId, logFood } = useFood();
+  const { byId, logFood, updateFood } = useFood();
+  const [photoSheet, setPhotoSheet] = useState(false);
+  const [zoom, setZoom] = useState(false);
   const food = byId.get(id);
   const [amount, setAmount] = useState(() => String(food?.serving ?? 100));
   const [meal, setMeal] = useState<Meal>(() => mealAt(Date.now()));
@@ -59,6 +66,15 @@ export default function FoodDetail() {
     setDraft(null);
     router.push(`/food/review?from=edit&id=${food.id}`);
   };
+  const choosePhoto = async (source: "library" | "camera") => {
+    setPhotoSheet(false);
+    const uri = await pickPhoto(source);
+    if (uri) {
+      updateFood(food.id, { photo: uri });
+      haptic("done");
+    }
+  };
+
   const log = once(() => {
     if (!grams) return;
     logFood(food.id, grams, meal);
@@ -98,6 +114,33 @@ export default function FoodDetail() {
           </Txt>
         </Row>
       </View>
+
+      {/* The pack, the plate or the label: whatever helps the person recognise it in a list. */}
+      {food.photo ? (
+        <View style={{ gap: 8 }}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("See the photo")} onPress={() => setZoom(true)}>
+            <PhotoSlot source={{ uri: food.photo }} height={200} radius={18} />
+          </Pressable>
+          <Button label={t("Change photo")} variant="tertiary" size="M" full={false} onPress={() => setPhotoSheet(true)} />
+        </View>
+      ) : (
+        <Pressable accessibilityRole="button" accessibilityLabel={t("Add a photo")} onPress={() => setPhotoSheet(true)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 16, borderWidth: 1, borderStyle: "dashed", borderColor: colors.border.strong, opacity: pressed ? 0.7 : 1 })}>
+          <Icon name="camera" size={18} color={colors.text.secondary} strokeWidth={1.9} />
+          <View style={{ flex: 1, gap: 1 }}>
+            <Txt variant="labelL">{t("Add a photo")}</Txt>
+            <Txt variant="bodyS" tone="tertiary">
+              {t("The pack, the label or the plate, so you know it at a glance")}
+            </Txt>
+          </View>
+        </Pressable>
+      )}
+      <PhotoViewer source={food.photo ? { uri: food.photo } : undefined} visible={zoom} onClose={() => setZoom(false)} />
+
+      <BottomSheet visible={photoSheet} onClose={() => setPhotoSheet(false)} title={t("Photo of this product")}>
+        <SheetOption icon="camera" label={t("Take a photo")} onPress={() => void choosePhoto("camera")} />
+        <SheetOption icon="rows" label={t("Choose from your library")} onPress={() => void choosePhoto("library")} />
+        {food.photo ? <SheetOption icon="trash" label={t("Remove photo")} danger onPress={() => { updateFood(food.id, { photo: undefined }); setPhotoSheet(false); }} /> : null}
+      </BottomSheet>
 
       <Section title={unit === "g" ? t("Per 100 g") : t("Per 100 ml")} gap={0}>
         <Card padding={16} gap={0}>

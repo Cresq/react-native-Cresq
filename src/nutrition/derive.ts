@@ -1,4 +1,4 @@
-import type { Food, FoodEntry, Meal } from "@/db/types";
+import type { Food, FoodEntry, Meal, NutritionTargets } from "@/db/types";
 import { locale, startOfDay } from "@/db/derive";
 
 export const MEALS: Meal[] = ["breakfast", "lunch", "dinner", "snack"];
@@ -61,3 +61,38 @@ export const fmtKcal = (n: number) => Math.round(n).toLocaleString(locale);
 
 /** Energy in kJ to kcal, for a pack that states only the one. */
 export const kjToKcal = (kj: number) => kj / 4.184;
+
+/**
+ * A starting point for daily targets, never a prescription: an active lifter's
+ * rough maintenance from body weight, nudged the way the goal points, protein
+ * and fat per kilo, carbohydrates whatever is left. The person sees the four
+ * figures before anything is saved and can change every one.
+ */
+export function proposeTargets(weightKg: number, goal: "cut" | "maintain" | "gain"): NutritionTargets {
+  const maintenance = weightKg * 31;
+  const kcal = Math.round((goal === "cut" ? maintenance * 0.85 : goal === "gain" ? maintenance * 1.1 : maintenance) / 10) * 10;
+  const protein = Math.round(weightKg * 1.8);
+  const fat = Math.round(weightKg * 0.9);
+  const carbs = Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4));
+  return { kcal, protein, carbs, fat };
+}
+
+/**
+ * What to offer at this hour: the foods this person has logged at this meal
+ * before, most often first, then the products they added most recently to
+ * fill the row. Skyr at breakfast because that is what they eat at breakfast.
+ */
+export function suggestions(log: FoodEntry[], foods: Food[], now: number, limit = 6): { pattern: Food[]; recent: Food[] } {
+  const slot = mealAt(now);
+  const byId = new Map(foods.map((f) => [f.id, f]));
+  const seen = new Map<string, { n: number; last: number }>();
+  for (const e of log) {
+    if (e.meal !== slot || !byId.has(e.foodId)) continue;
+    const c = seen.get(e.foodId) ?? { n: 0, last: 0 };
+    seen.set(e.foodId, { n: c.n + 1, last: Math.max(c.last, e.at) });
+  }
+  const pattern = [...seen.entries()].sort((a, b) => b[1].n - a[1].n || b[1].last - a[1].last).map(([id]) => byId.get(id)!).slice(0, limit);
+  const taken = new Set(pattern.map((f) => f.id));
+  const recent = [...foods].sort((a, b) => b.createdAt - a.createdAt).filter((f) => !taken.has(f.id)).slice(0, Math.max(0, limit - pattern.length) + 2);
+  return { pattern, recent };
+}

@@ -92,6 +92,8 @@ export type Profile = {
   lastNotificationsSeen?: number;
   /** What a day should add up to. Set by the person under Food; absent until then. */
   targets?: NutritionTargets;
+  /** Absent until Food has been opened once and its questions answered or waved off. */
+  food?: FoodProfile;
 };
 
 /**
@@ -155,12 +157,17 @@ export type Food = {
   source: FoodSource;
   verified: boolean;
   createdAt: number;
+  /** Local uri of a photo of the pack, the food or the label, when the person added one. */
+  photo?: string;
 };
 
 export type Meal = "breakfast" | "lunch" | "dinner" | "snack";
 
 /** One thing eaten: which food, how much of it in g or ml, at which meal, when. */
 export type FoodEntry = { id: string; foodId: string; amount: number; meal: Meal; at: number };
+
+/** What the person said when Food was first opened; the targets were proposed from it. */
+export type FoodProfile = { weightKg?: number; goal: "cut" | "maintain" | "gain"; onboardedAt: number };
 
 /** Daily targets. Absent until the person sets them; the app never guesses. */
 export type NutritionTargets = { kcal: number; protein: number; carbs: number; fat: number };

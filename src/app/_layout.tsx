@@ -128,6 +128,7 @@ function Routes() {
             <Stack.Screen name="food/label" options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }} />
             <Stack.Screen name="food/review" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="food/[id]" options={{ animation: "slide_from_right" }} />
+            <Stack.Screen name="food/log" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
           </Stack>
   );
 }

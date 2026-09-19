@@ -62,6 +62,7 @@ function EditForm({ s }: { s: Session }) {
 
   // A working copy. Weights and reps are kept as text while they are typed, so
   // "12," does not snap to 12 under the person's thumb.
+  const [caption, setCaption] = useState(s.caption ?? "");
   const [minutes, setMinutes] = useState(() => (s.finishedAt ? String(Math.max(1, Math.round((s.finishedAt - s.startedAt) / 60_000))) : ""));
   const [exercises, setExercises] = useState<(Omit<ExerciseEntry, "sets"> & { sets: (Omit<SetEntry, "kg" | "reps"> & { kg: string; reps: string })[] })[]>(() =>
     s.exercises.map((e) => ({ ...e, sets: e.sets.map((x) => ({ ...x, kg: String(x.kg), reps: String(x.reps) })) })),
@@ -87,6 +88,7 @@ function EditForm({ s }: { s: Session }) {
     const mins = num(minutes);
     const next: Session = {
       ...s,
+      caption: caption.trim() || undefined,
       finishedAt: mins > 0 ? s.startedAt + Math.round(mins) * 60_000 : s.finishedAt,
       exercises: exercises.map((e) => ({ ...e, sets: e.sets.map((x) => ({ ...x, kg: num(x.kg), reps: Math.round(num(x.reps)) })) })),
       currentIndex: Math.max(0, Math.min(s.currentIndex, exercises.length - 1)),
@@ -106,7 +108,10 @@ function EditForm({ s }: { s: Session }) {
         {t("Change what was taken down wrongly. Only ticked sets count; {n} count now.", { n: counted })}
       </Txt>
 
-      <Field label={t("Duration (min)")} value={minutes} onChangeText={setMinutes} keyboardType="number-pad" inputMode="numeric" placeholder="60" selectTextOnFocus />
+      <View style={{ gap: 10 }}>
+        <Field label={t("Caption")} value={caption} onChangeText={setCaption} placeholder={t("How did it go?")} multiline />
+        <Field label={t("Duration (min)")} value={minutes} onChangeText={setMinutes} keyboardType="number-pad" inputMode="numeric" placeholder="60" selectTextOnFocus />
+      </View>
 
       <View style={{ gap: 12 }}>
         {exercises.map((e, index) => (

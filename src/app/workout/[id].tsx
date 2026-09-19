@@ -1,10 +1,10 @@
-import { useMemo , useState } from "react";
-import { Share, View, Pressable } from "react-native";
+import { useMemo, useState } from "react";
+import { FlatList, Share, View, Pressable, useWindowDimensions } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
-import { fmtKg, longDate, newRecords, sessionStats } from "@/db/derive";
+import { finished, fmtKg, longDate, newRecords, sessionStats } from "@/db/derive";
 import { otherPosts } from "@/data/mock";
 import { person } from "@/data/people";
 import { Screen, Row, Header } from "@/components/ui/Screen";
@@ -19,32 +19,74 @@ import { SessionBreakdown, type BreakdownExercise } from "@/components/SessionBr
 import { useT, usePlural } from "@/i18n";
 import { PhotoViewer } from "@/components/PhotoViewer";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
-import { Field } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 
 /**
- * One workout, read-only: the figures, any records, the photo, then every
- * exercise with each set on its own line. Your own sessions come from the
- * log; someone else's come with their post.
+ * One workout, or a row of them.
+ *
+ * Opened from a profile it arrives with `of`: "me" for your own log, a
+ * person's id for their posts. Then it is a horizontal pager, one workout per
+ * page, and the next one is a swipe away instead of a close and a tap.
+ * Opened from anywhere else it is the single page it always was.
  */
 export default function SessionDetail() {
+  const { id, of } = useLocalSearchParams<{ id: string; of?: string }>();
+  const { db } = useDb();
+  const { width } = useWindowDimensions();
+
+  const ids = useMemo(() => {
+    if (of === "me") return [...finished(db.sessions)].reverse().map((s) => s.id);
+    if (of) return otherPosts.filter((p) => p.userId === of).map((p) => p.id);
+    return [id];
+  }, [of, id, db.sessions]);
+  const start = Math.max(0, ids.indexOf(id));
+
+  if (ids.length <= 1) return <Page id={id} />;
+  return (
+    <FlatList
+      horizontal
+      pagingEnabled
+      bounces={false}
+      data={ids}
+      keyExtractor={(x) => x}
+      initialScrollIndex={start}
+      getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
+      renderItem={({ item, index }) => (
+        <View style={{ width }}>
+          <Page id={item} at={{ index, count: ids.length }} />
+        </View>
+      )}
+      showsHorizontalScrollIndicator={false}
+      windowSize={3}
+      initialNumToRender={1}
+      maxToRenderPerBatch={2}
+    />
+  );
+}
+
+/**
+ * The page itself: the figures, any records, the photo, then every exercise
+ * with each set on its own line. Your own sessions come from the log; someone
+ * else's come with their post.
+ */
+function Page({ id, at }: { id: string; at?: { index: number; count: number } }) {
   const { colors } = useTheme();
   const router = useNav();
   const t = useT();
   const plural = usePlural();
   const { db, update } = useDb();
-  const [menu, setMenu] = useState<"menu" | "caption" | "delete" | null>(null);
-  const [captionText, setCaptionText] = useState("");
+  const [menu, setMenu] = useState<"menu" | "delete" | null>(null);
   const [zoom, setZoom] = useState(false);
-  const { id } = useLocalSearchParams<{ id: string }>();
   const session = db.sessions.find((s) => s.id === id) ?? (db.activeSession?.id === id ? db.activeSession : undefined);
   const post = session ? undefined : otherPosts.find((p) => p.id === id);
   const recs = useMemo(() => (session ? newRecords(session, db.sessions.filter((x) => x.startedAt < session.startedAt)) : []), [session, db.sessions]);
+  const position = at ? t("{a} of {b}", { a: at.index + 1, b: at.count }) : "";
+  const back = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)"));
 
   if (!session && !post) {
     return (
       <Screen>
-        <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Workout")} />
+        <Header left={<IconButton name="chevronLeft" onPress={back} accessibilityLabel={t("Back")} />} title={t("Workout")} />
         <Txt variant="bodyM" tone="secondary">
           {t("This workout is no longer available.")}
         </Txt>
@@ -58,7 +100,7 @@ export default function SessionDetail() {
     const [title, ...rest] = post.meta.split(", ").map((part) => t(part));
     return (
       <Screen>
-        <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={title} subtitle={rest.join(", ")} />
+        <Header left={<IconButton name="chevronLeft" onPress={back} accessibilityLabel={t("Back")} />} title={title} subtitle={[...rest, position].filter(Boolean).join(", ")} />
         <Pressable accessibilityRole={author ? "button" : undefined} accessibilityLabel={author ? t("Open {name}", { name: post.name }) : undefined} disabled={!author} onPress={() => author && router.push(`/user/${author.id}`)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, opacity: pressed ? 0.7 : 1 })}>
           <Avatar source={post.avatar ?? author?.avatar} size={40} initial={post.name[0]} />
           <View style={{ flex: 1, gap: 1 }}>
@@ -102,7 +144,7 @@ export default function SessionDetail() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={s.planName} subtitle={longDate(s.startedAt)} right={<IconButton name="moreHorizontal" onPress={() => setMenu("menu")} accessibilityLabel={t("Options")} />} />
+      <Header left={<IconButton name="chevronLeft" onPress={back} accessibilityLabel={t("Back")} />} title={s.planName} subtitle={[longDate(s.startedAt), position].filter(Boolean).join(", ")} right={<IconButton name="moreHorizontal" onPress={() => setMenu("menu")} accessibilityLabel={t("Options")} />} />
 
       {s.photo ? (
         <Pressable accessibilityRole="button" accessibilityLabel={t("See the photo")} onPress={() => setZoom(true)}>
@@ -142,39 +184,26 @@ export default function SessionDetail() {
       </Row>
 
       {/* One sheet that changes its face: a second modal opened while the first closes locks up iOS. */}
-      <BottomSheet
-        visible={!!menu}
-        onClose={() => setMenu(null)}
-        title={menu === "caption" ? t("Caption") : menu === "delete" ? t("Delete this workout?") : s.planName}
-        subtitle={menu === "delete" ? t("It disappears from the feed and from your log. Records from it are recalculated. This cannot be undone.") : menu === "menu" ? longDate(s.startedAt) : undefined}
-      >
+      <BottomSheet visible={!!menu} onClose={() => setMenu(null)} title={menu === "delete" ? t("Delete this workout?") : s.planName} subtitle={menu === "delete" ? t("It disappears from the feed and from your log. Records from it are recalculated. This cannot be undone.") : longDate(s.startedAt)}>
         {menu === "menu" ? (
           <>
-            <SheetOption icon="share" label={t("Share")} sub={t("Send a summary to another app")} onPress={() => { setMenu(null); Share.share({ message: `${s.planName}, ${longDate(s.startedAt)}: ${plural(stats.setsDone, "{n} set", "{n} sets")}, ${fmtKg(stats.volume)} kg, ${stats.minutes} min. CresQ.` }); }} />
-            <SheetOption icon="noteEdit" label={t("Edit caption")} onPress={() => { setCaptionText(s.caption ?? ""); setMenu("caption"); }} />
-            <SheetOption icon="sliders" label={t("Edit workout")} sub={t("Sets, weights, duration, exercises")} onPress={() => { const id = s.id; setMenu(null); router.push(`/workout/edit/${id}`); }} />
+            <SheetOption icon="sliders" label={t("Edit workout")} sub={t("Caption, sets, weights, duration, exercises")} onPress={() => { setMenu(null); router.push(`/workout/edit/${s.id}`); }} />
             {s.shared ? (
               <SheetOption icon="lock" label={t("Make private")} sub={t("Removes it from the feed, keeps it in your log")} onPress={() => { setMenu(null); update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, shared: false } : x)) })); }} />
             ) : (
               <SheetOption icon="users" label={t("Share to feed")} sub={t("Your followers see it in their feed")} onPress={() => { setMenu(null); update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, shared: true } : x)) })); }} />
             )}
-            <SheetOption icon="trash" label={t("Delete workout")} sub={t("Gone from the feed and from your log")} danger onPress={() => setMenu("delete")} />
+            <SheetOption icon="share" label={t("Share")} sub={t("Send a summary to another app")} onPress={() => { setMenu(null); Share.share({ message: `${s.planName}, ${longDate(s.startedAt)}: ${plural(stats.setsDone, "{n} set", "{n} sets")}, ${fmtKg(stats.volume)} kg, ${stats.minutes} min. CresQ.` }); }} />
+            <SheetOption icon="trash" label={t("Delete workout")} danger onPress={() => setMenu("delete")} />
           </>
-        ) : null}
-        {menu === "caption" ? (
-          <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
-            <Field label={t("Caption")} value={captionText} onChangeText={setCaptionText} placeholder={t("How did it go?")} multiline autoFocus />
-            <Button label={t("Save caption")} onPress={() => { update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, caption: captionText.trim() } : x)) })); setMenu(null); }} />
-          </View>
         ) : null}
         {menu === "delete" ? (
           <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 8 }}>
             <Button label={t("Keep it")} variant="secondary" size="M" onPress={() => setMenu("menu")} />
-            <Button label={t("Delete workout")} variant="danger" size="M" onPress={() => { const id = s.id; setMenu(null); update((d) => ({ ...d, sessions: d.sessions.filter((x) => x.id !== id) })); if (router.canGoBack()) router.back(); else router.replace("/(tabs)"); }} />
+            <Button label={t("Delete workout")} variant="danger" size="M" onPress={() => { const gone = s.id; setMenu(null); update((d) => ({ ...d, sessions: d.sessions.filter((x) => x.id !== gone) })); back(); }} />
           </View>
         ) : null}
       </BottomSheet>
-
     </Screen>
   );
 }

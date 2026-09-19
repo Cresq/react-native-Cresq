@@ -129,7 +129,7 @@ export default function Profile() {
                   </Txt>
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
                     {group.items.map(({ s, prs, photo }) => (
-                      <WorkoutTile key={s.id} name={s.planName} date={String(new Date(s.startedAt).getDate())} photo={photo} records={prs} size={tile} onPress={() => router.push(`/workout/${s.id}`)} />
+                      <WorkoutTile key={s.id} name={s.planName} date={String(new Date(s.startedAt).getDate())} photo={photo} records={prs} size={tile} onPress={() => router.push(`/workout/${s.id}?of=me`)} />
                     ))}
                   </View>
                 </View>
@@ -146,7 +146,7 @@ export default function Profile() {
           ) : (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
               {withPhoto.map(({ s, photo }) => (
-                <Pressable key={s.id} accessibilityRole="button" accessibilityLabel={`${s.planName}, ${shortDate(s.startedAt)}`} onPress={() => router.push(`/workout/${s.id}`)} style={({ pressed }) => ({ width: tile, height: tile, borderRadius: 14, overflow: "hidden", backgroundColor: colors.bg.surface, opacity: pressed ? 0.8 : 1 })}>
+                <Pressable key={s.id} accessibilityRole="button" accessibilityLabel={`${s.planName}, ${shortDate(s.startedAt)}`} onPress={() => router.push(`/workout/${s.id}?of=me`)} style={({ pressed }) => ({ width: tile, height: tile, borderRadius: 14, overflow: "hidden", backgroundColor: colors.bg.surface, opacity: pressed ? 0.8 : 1 })}>
                   <Image source={photo} style={{ width: tile, height: tile }} resizeMode="cover" />
                 </Pressable>
               ))}
