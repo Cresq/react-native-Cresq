@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { View } from "react-native";
+import { ExerciseMark } from "@/components/ExerciseMark";
 import { useLocalSearchParams } from "expo-router";
 import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -97,7 +98,12 @@ export default function Compare() {
           {shared.map((l, i) => (
             <View key={l.exerciseId}>
               {i > 0 ? <Divider /> : null}
-              <Line label={nameOf(l.exerciseId)} mine={l.kg} theirs={theirs.lifts.find((x) => x.exerciseId === l.exerciseId)!.kg} unit="kg" />
+              <Row gap={12}>
+                <ExerciseMark exerciseId={l.exerciseId} name={nameOf(l.exerciseId)} size={44} />
+                <View style={{ flex: 1 }}>
+                  <Line label={nameOf(l.exerciseId)} mine={l.kg} theirs={theirs.lifts.find((x) => x.exerciseId === l.exerciseId)!.kg} unit="kg" />
+                </View>
+              </Row>
             </View>
           ))}
         </Card>

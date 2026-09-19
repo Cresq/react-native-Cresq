@@ -96,13 +96,10 @@ export default function Profile() {
           <Txt variant="bodyS" tone="secondary">
             {[db.profile.handle, db.profile.showCity === false ? "" : db.profile.city].filter(Boolean).join(", ")}
           </Txt>
-          {db.profile.bio ? (
-            <Txt variant="bodyS" tone="secondary">
-              {db.profile.bio}
-            </Txt>
-          ) : null}
         </View>
       </Row>
+
+      {db.profile.bio ? <Txt variant="bodyM">{db.profile.bio}</Txt> : null}
 
       <Row gap={0} align="stretch">
         <Count label={t("Sessions")} value={done.length} />
@@ -134,7 +131,7 @@ export default function Profile() {
                   </Txt>
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
                     {group.items.map(({ s, prs, photo }) => (
-                      <WorkoutTile key={s.id} name={s.planName} date={String(new Date(s.startedAt).getDate())} photo={photo} records={prs} size={tile} onPress={() => router.push(`/workout/${s.id}?of=me`)} />
+                      <WorkoutTile key={s.id} name={s.planName} date={new Date(s.startedAt).toLocaleDateString(locale, { weekday: "short", day: "numeric" }).replace(".", "")} minutes={s.finishedAt ? Math.max(1, Math.round((s.finishedAt - s.startedAt) / 60_000)) : undefined} photo={photo} records={prs} size={tile} onPress={() => router.push(`/workout/${s.id}?of=me`)} />
                     ))}
                   </View>
                 </View>

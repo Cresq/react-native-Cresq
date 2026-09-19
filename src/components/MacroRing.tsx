@@ -139,6 +139,7 @@ export function MacroBars({ eaten, targets }: { eaten: Eaten; targets?: Nutritio
 
 /** One bar. The track is the macro's own colour, faint, so the bar reads as that macro even when it is empty. */
 function Bar({ hue, fraction }: { hue: string; fraction: number }) {
+  const { scheme } = useTheme();
   const filled = useSharedValue(fraction);
   useEffect(() => {
     filled.set(withTiming(fraction, timings.slow));
@@ -146,7 +147,7 @@ function Bar({ hue, fraction }: { hue: string; fraction: number }) {
   const fill = useAnimatedStyle(() => ({ width: `${Math.max(0, Math.min(1, filled.get())) * 100}%` }));
   return (
     <View style={{ height: 5, borderRadius: 3, overflow: "hidden" }}>
-      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: hue, opacity: 0.2 }} />
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: hue, opacity: scheme === "light" ? 0.32 : 0.2 }} />
       <Animated.View style={[{ height: 5, borderRadius: 3, backgroundColor: hue }, fill]} />
     </View>
   );

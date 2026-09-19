@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useDb } from "@/db/DbProvider";
 import type { Exercise, ExerciseEntry, Session, SetEntry, SetType, SharePrefs } from "@/db/types";
 import { haptic } from "@/haptics";
-import { sessionFromPlan } from "@/db/derive";
+import { bodyWeightAt, sessionFromPlan } from "@/db/derive";
 import { uid } from "@/db/storage";
 
 export { fmtKg, fmtTime, sessionStats } from "@/db/derive";
@@ -193,7 +193,10 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
       update((d) => {
         const s = d.activeSession;
         if (!s) return d;
-        const done = { ...s, finishedAt: s.finishedAt ?? Date.now(), shared };
+        const finishedAt = s.finishedAt ?? Date.now();
+        // The body weight this was done at goes into the log with it: see `Session.bodyKg`.
+        const body = bodyWeightAt(d, finishedAt);
+        const done = { ...s, finishedAt, shared, ...(body ? { bodyKg: body.kg, bodyKgAt: body.at } : {}) };
         const hasWork = done.exercises.some((e) => e.sets.some((x) => x.done));
         const sessions = hasWork ? [...d.sessions, done] : d.sessions;
         const dayIdx = d.split.days.findIndex((x) => x.planId === done.planId || x.name === done.planName);

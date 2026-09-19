@@ -6,10 +6,11 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { useT } from "@/i18n";
 import { useNow } from "@/clock";
 import { useLoggingDay } from "@/nutrition/useLoggingDay";
+import { useMeals } from "@/store/meals";
 import { useFood } from "@/store/food";
 import { setDraft } from "@/nutrition/draft";
-import { MEALS, MEAL_NAME, fmtKcal, mealAt, suggestions } from "@/nutrition/derive";
-import type { Food, Meal } from "@/db/types";
+import { MEAL_NAME, fmtKcal, mealAt, suggestions } from "@/nutrition/derive";
+import type { Food } from "@/db/types";
 import { Screen, Row, Section, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { Card, Divider } from "@/components/ui/Card";
@@ -34,7 +35,8 @@ export default function LogFood() {
   const { meal: wanted } = useLocalSearchParams<{ meal?: string }>();
   const [q, setQ] = useState("");
   // The meal the person came from goes with them to the product, so it is preselected there.
-  const from = wanted && (MEALS as string[]).includes(wanted) ? (wanted as Meal) : null;
+  const meals = useMeals();
+  const from = meals.known(wanted) ? wanted : null;
   const mealQ = from ? `&meal=${from}` : "";
   const onDay = useLoggingDay();
 
@@ -75,7 +77,7 @@ export default function LogFood() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="close" onPress={() => router.back("/(tabs)/food")} accessibilityLabel={t("Close")} />} title={t("Search a product")} subtitle={[from ? t(MEAL_NAME[from]) : null, onDay.name].filter(Boolean).join(", ") || undefined} />
+      <Header left={<IconButton name="close" onPress={() => router.back("/(tabs)/food")} accessibilityLabel={t("Close")} />} title={t("Search a product")} subtitle={[from ? meals.nameOf(from) : null, onDay.name].filter(Boolean).join(", ") || undefined} />
       <Field label={t("Search")} value={q} onChangeText={setQ} placeholder={t("Name or brand")} icon="search" autoCorrect={false} autoFocus />
 
       <Card tone="raised" padding={14} gap={0} onPress={scan} accessibilityLabel={t("Scan a barcode")}>

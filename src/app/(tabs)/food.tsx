@@ -13,10 +13,11 @@ import { useTween } from "@/tween";
 import { startOfDay, startOfWeek } from "@/db/derive";
 import { useFood } from "@/store/food";
 import { useHealth } from "@/store/health";
+import { useMeals } from "@/store/meals";
 import { KIND_NAME } from "@/health/types";
-import { MEALS, MEAL_NAME, burnsOn, entriesOn, estimateSessionBurn, fmtG, fmtKcal, portion, totals } from "@/nutrition/derive";
+import { MEALS, burnsOn, entriesOn, estimateSessionBurn, fmtG, fmtKcal, portion, totals } from "@/nutrition/derive";
 import { addDays, dayMarks, dayOffset, kcalOnTarget, macroReached, setLoggingDay } from "@/nutrition/day";
-import type { Burn, FoodEntry, Meal, NutritionTargets } from "@/db/types";
+import type { Burn, FoodEntry, Meal, MealKey, NutritionTargets } from "@/db/types";
 import { Screen, Row } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { Card, Divider } from "@/components/ui/Card";
@@ -58,7 +59,7 @@ const DAYS_AHEAD = 60;
  * training, which is why the one ember thing here is the energy you burned.
  */
 export default function FoodTab() {
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
   const router = useNav();
   const t = useT();
   const locale = localeOf(useLanguage());
@@ -67,6 +68,7 @@ export default function FoodTab() {
   const { db, update } = useDb();
   const { foods, log, byId, targets, removeEntry, setTargets, burns, addBurn, removeBurn } = useFood();
   const store = useHealth();
+  const meals = useMeals();
   /** The day on the page. Nothing chosen means today, so a page left open over midnight moves on with the date. */
   const [chosen, setChosen] = useState<number | null>(null);
   const [calendar, setCalendar] = useState(false);
@@ -98,7 +100,9 @@ export default function FoodTab() {
 
   const entries = useMemo(() => entriesOn(log, day), [log, day]);
   const sum = useMemo(() => totals(entries, foods), [entries, foods]);
-  const byMeal = useMemo(() => Object.fromEntries(MEALS.map((m) => [m, entries.filter((e) => e.meal === m)])) as Record<Meal, FoodEntry[]>, [entries]);
+  // The meals on the page, in the order of a day: the app's six with the person's own after them. Pre- and post-workout only show once something is in them; a meal somebody made is always there, because they made it to use it.
+  const mealKeys: MealKey[] = [...MEALS, ...meals.own.map((m) => m.id)];
+  const shownMeals = mealKeys.filter((m) => MAIN.includes(m as Meal) || m.startsWith("own_") || entries.some((e) => e.meal === m));
   const burnedDay = useMemo(() => burnsOn(burns, day), [burns, day]);
   const burned = burnedDay.reduce((s, b) => s + b.kcal, 0);
   // What the day still holds: the target, plus what was burned, minus what was eaten.
@@ -153,7 +157,7 @@ export default function FoodTab() {
     setLoggingDay(chosen);
     router.push("/food/scan");
   };
-  const search = (meal?: Meal) => {
+  const search = (meal?: MealKey) => {
     setLoggingDay(chosen);
     router.push(meal ? `/food/log?meal=${meal}` : "/food/log");
   };
@@ -287,10 +291,10 @@ export default function FoodTab() {
 
           <Animated.View style={[{ gap: 16 }, pageStyle]}>
             {/* The day. Pressing the figures is how the targets, and the questions behind them, are changed; what was burned is the small chip under them. */}
-            <Card padding={16} gap={12} style={{ backgroundColor: colors.fuel.soft }}>
+            <Card padding={16} gap={12} style={{ backgroundColor: colors.fuel.soft, borderWidth: 1, borderColor: colors.fuel.line }}>
               <Pressable accessibilityRole="button" accessibilityLabel={t("Daily targets")} onPress={openTargets} style={({ pressed }) => ({ gap: 12, opacity: pressed ? opacity.pressed : 1 })}>
                 <Row gap={16}>
-                  <MacroRing size={104} stroke={10} eaten={sum} budget={targets ? targets.kcal + burned : undefined} track={colors.fuel.sage} trackOpacity={0.16}>
+                  <MacroRing size={104} stroke={10} eaten={sum} budget={targets ? targets.kcal + burned : undefined} track={colors.fuel.sage} trackOpacity={scheme === "light" ? 0.3 : 0.16}>
                     <Txt variant="numberM" tabular>
                       {n(shownKcal)}
                     </Txt>
@@ -322,10 +326,10 @@ export default function FoodTab() {
 
             {/* The meals: one line each, its energy and its own way in, and under it what was eaten. An empty meal is only its line. */}
             <View style={{ gap: 12 }}>
-              {MEALS.filter((m) => MAIN.includes(m) || byMeal[m].length).map((m) => {
-                const list = byMeal[m];
+              {shownMeals.map((m) => {
+                const list = entries.filter((e) => e.meal === m);
                 const mealSum = totals(list, foods);
-                const name = t(MEAL_NAME[m]);
+                const name = meals.nameOf(m);
                 const share = targets && targets.kcal > 0 ? Math.round((mealSum.kcal / targets.kcal) * 100) : null;
                 return (
                   <View key={m} style={{ gap: 8 }}>
@@ -386,7 +390,7 @@ export default function FoodTab() {
         onClose={() => setPicked(null)}
         onClosed={() => { const go = afterSheet; setAfterSheet(null); go?.(); }}
         title={picked ? byId.get(picked.foodId)?.name ?? t("Removed product") : ""}
-        subtitle={picked ? `${fmtG(picked.amount)} ${byId.get(picked.foodId)?.unit ?? "g"}, ${t(MEAL_NAME[picked.meal])}` : undefined}
+        subtitle={picked ? `${fmtG(picked.amount)} ${byId.get(picked.foodId)?.unit ?? "g"}, ${meals.nameOf(picked.meal)}` : undefined}
       >
         {picked && byId.get(picked.foodId) ? (
           <SheetGroup>

@@ -1,4 +1,4 @@
-import type { Exercise, ExerciseEntry, Plan, PlanExercise, PlannedSet, Session, SetEntry, SetType } from "./types";
+import type { Db, Exercise, ExerciseEntry, Plan, PlanExercise, PlannedSet, Session, SetEntry, SetType } from "./types";
 import { uid } from "./storage";
 
 /** Epley estimate of a one-rep max. Warm-ups are excluded everywhere this is used. */
@@ -42,6 +42,26 @@ export function startOfDay(t: number) {
   const d = new Date(t);
   d.setHours(0, 0, 0, 0);
   return d.getTime();
+}
+
+/** How far a weigh-in may be from a session and still be called the weight it was done at. */
+const BODY_WEIGHT_WINDOW = 10 * 86_400_000;
+
+/**
+ * What somebody weighed around the moment `t`: the weigh-in nearest to it,
+ * before or after, as long as it is within ten days. Body weight moves slowly,
+ * so a figure from last week is a fair answer; one from last spring is not,
+ * and then there is no answer rather than a wrong one. The weight given when
+ * Food was first opened counts as a weigh-in on that day.
+ */
+export function bodyWeightAt(db: Pick<Db, "weights" | "profile">, t: number): { kg: number; at: number } | undefined {
+  const given = db.profile.food?.weightKg && db.profile.food.onboardedAt ? [{ kg: db.profile.food.weightKg, at: db.profile.food.onboardedAt }] : [];
+  let best: { kg: number; at: number } | undefined;
+  for (const w of [...(db.weights ?? []), ...given]) {
+    const gap = Math.abs(w.at - t);
+    if (gap <= BODY_WEIGHT_WINDOW && (!best || gap < Math.abs(best.at - t))) best = { kg: w.kg, at: w.at };
+  }
+  return best;
 }
 
 /** Monday 00:00 of the week containing t. */

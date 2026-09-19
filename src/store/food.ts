@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useDb } from "@/db/DbProvider";
 import { uid } from "@/db/storage";
-import type { Burn, Food, FoodEntry, Meal, NutritionTargets } from "@/db/types";
+import type { Burn, Food, FoodEntry, MealKey, NutritionTargets } from "@/db/types";
 
 export type NewFood = Omit<Food, "id" | "createdAt">;
 
@@ -37,7 +37,7 @@ export function useFood() {
   );
 
   const logFood = useCallback(
-    (foodId: string, amount: number, meal: Meal, at = Date.now()) => {
+    (foodId: string, amount: number, meal: MealKey, at = Date.now()) => {
       const entry: FoodEntry = { id: uid(), foodId, amount, meal, at };
       update((d) => ({ ...d, foodLog: [...d.foodLog, entry] }));
       return entry.id;

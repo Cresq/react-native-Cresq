@@ -10,7 +10,8 @@ export const darkColors = {
   text: { primary: "#F4EFE6", secondary: "#A8A197", tertiary: "#6F695F", inverse: "#16100A" },
   icon: { default: "#A8A197", strong: "#F4EFE6" },
   accent: { ember: "#F26B1D", pressed: "#D4581A", soft: "#3A2416", on: "#16100A" },
-  fuel: { sage: "#8FCBA8", soft: "#1B2E25", on: "#0F1A14", pressed: "#7AB894" },
+  /** `line` is the edge the soft ground needs on paper, where pale green on off-white has almost no contrast of its own; on the dark ground the fill carries itself and the line is not drawn. */
+  fuel: { sage: "#8FCBA8", soft: "#1B2E25", on: "#0F1A14", pressed: "#7AB894", line: "transparent" },
   pr: { gold: "#F2B826", soft: "#3A2F10" },
   status: { success: "#5DBE7A", warning: "#E8B84A", danger: "#E5544B" },
   /**
@@ -28,7 +29,7 @@ export const lightColors: Colors = {
   text: { primary: "#1B1815", secondary: "#5E5850", tertiary: "#8C867C", inverse: "#F6F3EE" },
   icon: { default: "#5E5850", strong: "#1B1815" },
   accent: { ember: "#E8621A", pressed: "#C9520F", soft: "#FDE6D8", on: "#1B1815" },
-  fuel: { sage: "#3F8F66", soft: "#E2F1E8", on: "#FFFFFF", pressed: "#357A56" },
+  fuel: { sage: "#3F8F66", soft: "#DDEEE3", on: "#FFFFFF", pressed: "#357A56", line: "rgba(63,143,102,0.34)" },
   pr: { gold: "#C9920A", soft: "#FBF0CC" },
   status: { success: "#2E9E55", warning: "#C2901A", danger: "#D23F36" },
   macro: { protein: "#3F8F66", carbs: "#E8621A", fat: "#2A78D6" },

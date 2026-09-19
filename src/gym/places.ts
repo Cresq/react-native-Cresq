@@ -3,9 +3,15 @@ import type { GymPlace } from "@/db/types";
 /**
  * Finding a real gym. The places come from OpenStreetMap, searched through
  * Photon (komoot's open geocoder, built for search-as-you-type, free under
- * fair use, no key). Only places mapped as a fitness centre come back, so what
- * a person links is a gym that exists, at an address, with an id of its own,
- * and everybody who picks that gym is talking about the same one.
+ * fair use, no key). Only places mapped as somewhere to train come back, so
+ * what a person links is a gym that exists, at an address, with an id of its
+ * own, and everybody who picks that gym is talking about the same one.
+ *
+ * Mappers do not agree on what a gym is. Most are a fitness centre, but plenty
+ * of real ones (Biggym in Zwolle was the one that showed it) are mapped as a
+ * sports centre, and a few still carry the old gym tag. All three are asked
+ * for; fitness centres come first in the answer, because a sports centre is
+ * as often a swimming pool or a football ground.
  *
  * The Netherlands is searched first, because that is where CresQ's lifters
  * train; a search that finds nothing there is tried again without a border,
@@ -18,16 +24,22 @@ const LIMIT = 8;
 
 type Feature = {
   geometry?: { coordinates?: [number, number] };
-  properties?: { osm_id?: number; osm_type?: string; name?: string; street?: string; housenumber?: string; city?: string; town?: string; village?: string; postcode?: string };
+  properties?: { osm_id?: number; osm_type?: string; osm_value?: string; name?: string; street?: string; housenumber?: string; city?: string; town?: string; village?: string; postcode?: string };
 };
 
+/** What counts as a place to train, in the order the answer should favour them. */
+const KINDS = ["leisure:fitness_centre", "amenity:gym", "leisure:sports_centre"];
+const rank = (value?: string) => (value === "fitness_centre" || value === "gym" ? 0 : 1);
+
 async function ask(q: string, bbox: string | null, signal?: AbortSignal): Promise<GymPlace[]> {
-  const params = [`q=${encodeURIComponent(q)}`, "osm_tag=leisure:fitness_centre", `limit=${LIMIT}`, bbox ? `bbox=${bbox}` : ""].filter(Boolean).join("&");
+  const params = [`q=${encodeURIComponent(q)}`, ...KINDS.map((k) => `osm_tag=${k}`), `limit=${LIMIT}`, bbox ? `bbox=${bbox}` : ""].filter(Boolean).join("&");
   const res = await fetch(`${PHOTON}?${params}`, { signal });
   if (!res.ok) throw new Error(`photon ${res.status}`);
   const data = (await res.json()) as { features?: Feature[] };
   const out: GymPlace[] = [];
-  for (const f of data.features ?? []) {
+  // Photon orders by how well the words match; within that, a fitness centre goes before a sports centre. The sort is stable, so the match order holds inside each kind.
+  const features = [...(data.features ?? [])].sort((a, b) => rank(a.properties?.osm_value) - rank(b.properties?.osm_value));
+  for (const f of features) {
     const p = f.properties;
     // A gym without a name cannot be told from the one next door, and an id is what makes it one place for everybody.
     if (!p?.name || !p.osm_id || !p.osm_type) continue;

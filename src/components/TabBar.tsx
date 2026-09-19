@@ -157,17 +157,34 @@ function Pulse({ color }: { color: string }) {
 }
 
 
-/** The chosen tab gives a short hop, so a tap lands somewhere. */
+/** The size a tab's icon rests at, and how much bigger it gets at the top of its hop. */
+const ICON = 22;
+const HOP = 1.2;
+/** What is actually drawn: the icon at the top of its hop, rounded up to whole points. */
+const DRAWN = Math.ceil(ICON * HOP);
+const REST = ICON / DRAWN;
+
+/**
+ * The chosen tab gives a short hop, so a tap lands somewhere.
+ *
+ * A vector drawn at 22 points and scaled up to 26 is a small picture
+ * stretched: for the length of the hop it went soft. So the icon is drawn at
+ * the size of the top of the hop and rests scaled down, which only ever
+ * shrinks it and stays sharp the whole way. It sits in a box of its resting
+ * size, so nothing around it knows the difference.
+ */
 function TabIcon({ name, on }: { name: IconName; on: boolean }) {
   const { colors } = useTheme();
-  const s = useSharedValue(1);
+  const s = useSharedValue(REST);
   useEffect(() => {
-    if (on) s.value = withSequence(withSpring(1.2, springs.snappy), withSpring(1, springs.snappy));
+    if (on) s.value = withSequence(withSpring(1, springs.snappy), withSpring(REST, springs.snappy));
   }, [on, s]);
   const style = useAnimatedStyle(() => ({ transform: [{ scale: s.value }] }));
   return (
-    <Animated.View style={style}>
-      <Icon name={name} size={22} color={on ? colors.text.primary : colors.text.tertiary} strokeWidth={on ? 2 : 1.7} />
-    </Animated.View>
+    <View style={{ width: ICON, height: ICON, alignItems: "center", justifyContent: "center" }}>
+      <Animated.View style={[{ width: DRAWN, height: DRAWN }, style]}>
+        <Icon name={name} size={DRAWN} color={on ? colors.text.primary : colors.text.tertiary} strokeWidth={on ? 2 : 1.7} />
+      </Animated.View>
+    </View>
   );
 }

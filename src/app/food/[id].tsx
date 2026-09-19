@@ -13,7 +13,8 @@ import { setDraft } from "@/nutrition/draft";
 import { MEALS, MEAL_NAME, fmtG, fmtKcal, mealAt, portion } from "@/nutrition/derive";
 import { loggingAt } from "@/nutrition/day";
 import { useLoggingDay } from "@/nutrition/useLoggingDay";
-import type { Food, Meal } from "@/db/types";
+import { useMeals } from "@/store/meals";
+import type { Food, Meal, MealKey } from "@/db/types";
 import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { Card, Divider } from "@/components/ui/Card";
@@ -21,7 +22,7 @@ import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { Chip } from "@/components/ui/Chip";
 import { Icon, type IconName } from "@/components/ui/Icon";
-import { BottomSheet, SheetGroup, SheetOption } from "@/components/ui/BottomSheet";
+import { BottomSheet, SheetGroup, SheetOption, SheetTextRow } from "@/components/ui/BottomSheet";
 import { PhotoViewer } from "@/components/PhotoViewer";
 import { FoodMark } from "@/components/FoodMark";
 import { pickPhoto } from "@/photo";
@@ -82,6 +83,9 @@ function Product({ food, toLog, wantedMeal }: { food: Food; toLog: boolean; want
   const { logFood, updateFood } = useFood();
   const { db } = useDb();
   const onDay = useLoggingDay();
+  const meals = useMeals();
+  /** A meal of one's own is named here, in the sheet that was already open to pick one. */
+  const [newMeal, setNewMeal] = useState<string | null>(null);
   const lastFinished = db.sessions.reduce((m, x) => Math.max(m, x.finishedAt ?? 0), 0);
   const [photoSheet, setPhotoSheet] = useState(false);
   const [mealSheet, setMealSheet] = useState(false);
@@ -90,7 +94,7 @@ function Product({ food, toLog, wantedMeal }: { food: Food; toLog: boolean; want
   const [table, setTable] = useState(!toLog);
   const [amount, setAmount] = useState(() => String(food.serving ?? 100));
   // The meal the person came from, when they came from one; otherwise the clock's guess.
-  const [meal, setMeal] = useState<Meal>(() => (wantedMeal && (MEALS as string[]).includes(wantedMeal) ? (wantedMeal as Meal) : mealAt(Date.now(), lastFinished)));
+  const [meal, setMeal] = useState<MealKey>(() => (meals.known(wantedMeal) ? wantedMeal : mealAt(Date.now(), lastFinished)));
 
   const leave = () => router.back("/(tabs)/food");
 
@@ -129,7 +133,18 @@ function Product({ food, toLog, wantedMeal }: { food: Food; toLog: boolean; want
   });
 
   // Today needs no saying. Another day is named on the button, and a day still to come is planned rather than added.
-  const said = { amount: fmtG(grams), unit, meal: t(MEAL_NAME[meal]).toLowerCase(), day: onDay.name ?? "" };
+  const said = { amount: fmtG(grams), unit, meal: meals.nameOf(meal).toLowerCase(), day: onDay.name ?? "" };
+  const closeMeals = () => {
+    setMealSheet(false);
+    setNewMeal(null);
+  };
+  const makeMeal = () => {
+    const name = (newMeal ?? "").trim();
+    if (!name) return;
+    setMeal(meals.add(name));
+    haptic("done");
+    closeMeals();
+  };
   const addLabel = !grams ? t("Enter an amount") : !onDay.name ? t("Add {amount} {unit} to {meal}", said) : onDay.ahead ? t("Plan {amount} {unit} for {meal}, {day}", said) : t("Add {amount} {unit} to {meal}, {day}", said);
 
   const rows: [string, string, boolean?][] = [
@@ -233,7 +248,7 @@ function Product({ food, toLog, wantedMeal }: { food: Food; toLog: boolean; want
             </View>
             <IconButton name="addPlus" size={34} iconSize={16} tone="raised" onPress={() => step(STEP)} accessibilityLabel={t("{n} {unit} more", { n: STEP, unit })} />
           </Row>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 8 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 6, flexGrow: 1, justifyContent: "center" }}>
             {food.serving ? <Chip label={t("1 portion, {n} {unit}", { n: fmtG(food.serving), unit })} selected={grams === food.serving} onPress={() => setAmount(String(food.serving))} /> : null}
             {[50, 100, 200].map((n) => (
               <Chip key={n} label={`${n} ${unit}`} selected={grams === n && grams !== food.serving} onPress={() => setAmount(String(n))} />
@@ -243,11 +258,11 @@ function Product({ food, toLog, wantedMeal }: { food: Food; toLog: boolean; want
 
         <Divider />
 
-        <Pressable accessibilityRole="button" accessibilityLabel={`${t("Meal")}, ${t(MEAL_NAME[meal])}`} onPress={() => setMealSheet(true)} hitSlop={12} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, opacity: pressed ? opacity.pressed : 1 })}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`${t("Meal")}, ${meals.nameOf(meal)}`} onPress={() => setMealSheet(true)} hitSlop={12} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, opacity: pressed ? opacity.pressed : 1 })}>
           <Txt variant="labelM" tone="secondary" style={{ flex: 1 }}>
             {t("Meal")}
           </Txt>
-          <Txt variant="labelL">{t(MEAL_NAME[meal])}</Txt>
+          <Txt variant="labelL">{meals.nameOf(meal)}</Txt>
           <Icon name="chevronDown" size={16} color={colors.text.tertiary} strokeWidth={2} />
         </Pressable>
       </Card>
@@ -304,12 +319,38 @@ function Product({ food, toLog, wantedMeal }: { food: Food; toLog: boolean; want
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={mealSheet} onClose={() => setMealSheet(false)} title={t("Meal")}>
-        <SheetGroup>
-          {MEALS.map((m) => (
-            <SheetOption key={m} icon={MEAL_ICON[m]} label={t(MEAL_NAME[m])} selected={meal === m} onPress={() => { setMeal(m); haptic("select"); setMealSheet(false); }} />
-          ))}
-        </SheetGroup>
+      {/* One sheet with two faces: picking a meal, and naming a new one. */}
+      <BottomSheet visible={mealSheet} onClose={closeMeals} title={newMeal === null ? t("Meal") : t("New meal")} confirm={newMeal === null ? undefined : { label: t("Add meal"), onPress: makeMeal, disabled: !newMeal.trim(), accent: "sage" }}>
+        {newMeal === null ? (
+          <>
+            <SheetGroup>
+              {MEALS.map((m) => (
+                <SheetOption key={m} icon={MEAL_ICON[m]} label={t(MEAL_NAME[m])} selected={meal === m} onPress={() => { setMeal(m); haptic("select"); closeMeals(); }} />
+              ))}
+            </SheetGroup>
+            {meals.own.length ? (
+              <SheetGroup title={t("Your own")}>
+                {meals.own.map((m) => (
+                  <SheetOption
+                    key={m.id}
+                    icon="star"
+                    label={m.name}
+                    selected={meal === m.id}
+                    onPress={() => { setMeal(m.id); haptic("select"); closeMeals(); }}
+                    right={<IconButton name="trash" size={30} iconSize={15} tone="surface" onPress={() => { if (meal === m.id) setMeal("snack"); meals.remove(m.id); haptic("tap"); }} accessibilityLabel={t("Remove {name}", { name: m.name })} />}
+                  />
+                ))}
+              </SheetGroup>
+            ) : null}
+            <SheetGroup>
+              <SheetOption icon="addPlus" label={t("Add a meal")} sub={t("With a name of your own, such as snacks after dinner")} onPress={() => setNewMeal("")} />
+            </SheetGroup>
+          </>
+        ) : (
+          <SheetGroup caption={t("It joins your meals on the Food page. Taking it away later moves what was in it to snacks.")}>
+            <SheetTextRow value={newMeal} onChangeText={setNewMeal} placeholder={t("Snacks after dinner")} accessibilityLabel={t("Name of the meal")} maxLength={32} autoCapitalize="sentences" autoFocus returnKeyType="done" onSubmitEditing={makeMeal} />
+          </SheetGroup>
+        )}
       </BottomSheet>
     </Screen>
   );

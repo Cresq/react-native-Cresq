@@ -1159,4 +1159,14 @@ export const nl: Record<string, string> = {
   "Your session, {plan}": "Je sessie, {plan}",
   "Plan {amount} {unit} for {meal}, {day}": "{amount} {unit} inplannen voor {meal}, {day}",
   "Add {amount} {unit} to {meal}, {day}": "{amount} {unit} toevoegen aan {meal}, {day}",
+
+  /* Meals of one's own. */
+  "New meal": "Nieuwe maaltijd",
+  "Add meal": "Maaltijd toevoegen",
+  "Add a meal": "Maaltijd toevoegen",
+  "Your own": "Je eigen maaltijden",
+  "With a name of your own, such as snacks after dinner": "Met een eigen naam, zoals snacks na het avondeten",
+  "It joins your meals on the Food page. Taking it away later moves what was in it to snacks.": "Hij komt bij je maaltijden op de voedingspagina. Haal je hem later weg, dan verhuist wat erin stond naar tussendoor.",
+  "Snacks after dinner": "Snacks na het avondeten",
+  "Name of the meal": "Naam van de maaltijd",
 };

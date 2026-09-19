@@ -3,6 +3,7 @@ import { AppState } from "react-native";
 import { DB_VERSION, type Db } from "./types";
 import { clearDb, flushDb, loadDb, onSaveTrouble, saveDb, uid } from "./storage";
 import { createSeedDb, seedSampleInvite } from "./seed";
+import { bodyWeightAt } from "./derive";
 import { LanguageContext } from "@/i18n/language";
 
 type DbState = {
@@ -41,6 +42,7 @@ function migrate(stored: Db): Db {
     ...fresh.exercises.filter((e) => !had.has(e.id)),
   ];
   const auth = stored.auth ?? fresh.auth;
+  const weighed = { weights: stored.weights ?? [], profile: { ...fresh.profile, ...stored.profile } };
   return {
     ...fresh,
     ...stored,
@@ -52,7 +54,12 @@ function migrate(stored: Db): Db {
     profile: { ...fresh.profile, ...stored.profile, homeGym: typeof stored.profile?.homeGym === "object" ? stored.profile.homeGym : undefined },
     consent: { ...fresh.consent, ...(stored.consent ?? {}) },
     plans: stored.plans ?? fresh.plans,
-    sessions: stored.sessions ?? [],
+    // The body weight a session was done at, for the ones that do not carry it yet: sample sessions never do, they are nobody's.
+    sessions: (stored.sessions ?? []).map((s) => {
+      if (s.bodyKg || s.sample || !s.finishedAt) return s;
+      const body = bodyWeightAt(weighed, s.finishedAt);
+      return body ? { ...s, bodyKg: body.kg, bodyKgAt: body.at } : s;
+    }),
     split: stored.split ?? fresh.split,
     following: stored.following ?? fresh.following,
     blocked: stored.blocked ?? [],

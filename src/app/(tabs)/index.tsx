@@ -173,14 +173,16 @@ export default function Home() {
           </Txt>
           {db.profile.food ? (
             <Row gap={10}>
-              <MacroRing size={72} stroke={8} eaten={eaten} budget={db.profile.targets ? db.profile.targets.kcal + burned : undefined}>
-                <Txt variant="labelL" tabular>
-                  {Math.abs(Math.round(db.profile.targets ? db.profile.targets.kcal + burned - eaten.kcal : eaten.kcal)).toLocaleString(locale)}
-                </Txt>
+              <View style={{ alignItems: "center", gap: 4 }}>
+                <MacroRing size={72} stroke={8} eaten={eaten} budget={db.profile.targets ? db.profile.targets.kcal + burned : undefined}>
+                  <Txt variant="labelL" tabular>
+                    {Math.abs(Math.round(db.profile.targets ? db.profile.targets.kcal + burned - eaten.kcal : eaten.kcal)).toLocaleString(locale)}
+                  </Txt>
+                </MacroRing>
                 <Txt variant="labelS" tone="secondary">
                   {!db.profile.targets ? t("kcal eaten") : db.profile.targets.kcal + burned - eaten.kcal >= 0 ? t("kcal left") : t("kcal over")}
                 </Txt>
-              </MacroRing>
+              </View>
               <View style={{ flex: 1 }}>
                 <MacroLegend eaten={eaten} short />
               </View>

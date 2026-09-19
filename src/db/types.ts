@@ -50,6 +50,16 @@ export type Session = {
   share?: SharePrefs;
   /** Where you trained, shown with a pin on the post. Free text for now; a map lookup can fill it later. */
   gym?: string;
+  /**
+   * What the person weighed when they did this, from the weigh-in nearest the
+   * session. It is data rather than something the screens show: 100 kg on the
+   * bench means one thing at 89 kg of body weight and another at 110, and only
+   * a log that kept the two together can say which. Absent when no weigh-in
+   * was close enough to be honest about.
+   */
+  bodyKg?: number;
+  /** When that weight was measured, so its age next to the session can be judged. */
+  bodyKgAt?: number;
 };
 
 export type SharePrefs = { exercises: boolean; stats: boolean; records: boolean };
@@ -178,9 +188,13 @@ export type Food = {
 };
 
 export type Meal = "breakfast" | "lunch" | "pre" | "post" | "dinner" | "snack";
+/** A meal the person made and named themselves, such as "snacks after dinner". */
+export type CustomMeal = { id: `own_${string}`; name: string };
+/** Which meal an entry belongs to: one the app knows, or one of the person's own by its id. */
+export type MealKey = Meal | CustomMeal["id"];
 
 /** One thing eaten: which food, how much of it in g or ml, at which meal, when. */
-export type FoodEntry = { id: string; foodId: string; amount: number; meal: Meal; at: number };
+export type FoodEntry = { id: string; foodId: string; amount: number; meal: MealKey; at: number };
 
 /** What the person said when Food was first opened; the targets were proposed from it. */
 export type FoodProfile = { weightKg?: number; heightCm?: number; sex?: "m" | "f" | "x"; activity?: "low" | "moderate" | "high"; goal: "cut" | "maintain" | "gain"; onboardedAt: number };
@@ -267,6 +281,8 @@ export type Db = {
   foodLog: FoodEntry[];
   /** Invitations to train together, sent and received. */
   invites: TrainInvite[];
+  /** Meals the person added to the six the app knows. */
+  customMeals?: CustomMeal[];
   /** Energy spent, by day, added to the day's calories. */
   burns: Burn[];
   /** Body weight, one figure a day. */
