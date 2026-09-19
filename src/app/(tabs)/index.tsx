@@ -21,7 +21,7 @@ import { WeekStrip } from "@/components/WeekStrip";
 import { Card, Divider } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Stat, StatDivider } from "@/components/StatCard";
-import { MacroBars } from "@/components/MacroBars";
+import { MacroLegend, MacroRing } from "@/components/MacroRing";
 import { burnsOn, entriesOn, totals } from "@/nutrition/derive";
 import { LineChart } from "@/components/LineChart";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
@@ -161,51 +161,66 @@ export default function Home() {
             </Pressable>
           ) : null}
 
-      {/* Food today, eaten against the day's need, and a door to the tab. */}
-      <Section title={t("Food")} action={t("Open")} onAction={() => router.push("/(tabs)/food")}>
-        <Card padding={20} gap={14} onPress={() => router.push("/(tabs)/food")}>
+      {/* Food and weight, side by side: the day as a ring, and the last weigh-in with its line. Each opens its own page. */}
+      <Row gap={12} align="stretch">
+        <Card padding={16} gap={12} onPress={() => router.push("/(tabs)/food")} accessibilityLabel={t("Food")} style={{ flex: 1 }}>
+          <Txt variant="labelM" tone="secondary">
+            {t("Food")}
+          </Txt>
           {db.profile.food ? (
             <>
-              <Row gap={16} align="stretch">
-                <Stat size="M" label={t("Eaten")} value={Math.round(eaten.kcal).toLocaleString(locale)} unit="kcal" />
-                <StatDivider />
-                <Stat size="M" label={db.profile.targets ? t("To go") : t("Target")} value={db.profile.targets ? Math.max(0, Math.round(db.profile.targets.kcal + burned - eaten.kcal)).toLocaleString(locale) : t("none")} unit={db.profile.targets ? "kcal" : undefined} />
-              </Row>
-              {db.profile.targets ? <MacroBars eaten={eaten} targets={db.profile.targets} /> : null}
+              <View style={{ alignItems: "center" }}>
+                <MacroRing size={104} stroke={10} eaten={eaten} budget={db.profile.targets ? db.profile.targets.kcal + burned : undefined}>
+                  <Txt variant="numberM" tabular>
+                    {Math.abs(Math.round(db.profile.targets ? db.profile.targets.kcal + burned - eaten.kcal : eaten.kcal)).toLocaleString(locale)}
+                  </Txt>
+                  <Txt variant="labelS" tone="secondary">
+                    {!db.profile.targets ? t("kcal eaten") : db.profile.targets.kcal + burned - eaten.kcal >= 0 ? t("kcal left") : t("kcal over")}
+                  </Txt>
+                </MacroRing>
+              </View>
+              <MacroLegend eaten={eaten} short />
             </>
           ) : (
             <View style={{ gap: 4 }}>
               <Txt variant="labelL">{t("Food, the same way you log a set")}</Txt>
               <Txt variant="bodyS" tone="secondary">
-                {t("A few questions and your need is worked out; then a pack is two taps from a portion.")}
+                {t("A few questions and your need is worked out.")}
               </Txt>
             </View>
           )}
         </Card>
-      </Section>
 
-      {/* Body weight: today's figure if it is in, the way to log it if it is not. */}
-      <Section title={t("Weight")} action={t("Open")} onAction={() => router.push("/weight")}>
-        <Card padding={20} gap={14}>
-          <Row gap={16}>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Txt variant="labelS" tone="tertiary">
-                {weighedToday ? t("Today") : weight.latest ? t("Last logged, {when}", { when: relativeDay(weight.latest.at) }) : t("Not logged yet")}
+        <Card padding={16} gap={12} onPress={() => router.push("/weight")} accessibilityLabel={t("Weight")} style={{ flex: 1 }}>
+          <Txt variant="labelM" tone="secondary">
+            {t("Weight")}
+          </Txt>
+          <View style={{ gap: 2 }}>
+            <Row gap={4} align="baseline">
+              <Txt variant="numberL" tabular>
+                {weight.latest ? weight.latest.kg.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : "–"}
               </Txt>
-              <Row gap={4} align="baseline">
-                <Txt variant="numberL" tabular>
-                  {weight.latest ? weight.latest.kg.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : "–"}
+              <Txt variant="labelM" tone="secondary">
+                kg
+              </Txt>
+            </Row>
+            <Txt variant="labelS" tone="tertiary">
+              {weighedToday ? t("Today") : weight.latest ? t("Last logged, {when}", { when: relativeDay(weight.latest.at) }) : t("Not logged yet")}
+            </Txt>
+          </View>
+          <View style={{ flex: 1, justifyContent: "flex-end", gap: 10 }}>
+            {weight.entries.length >= 2 ? <LineChart points={weight.entries.slice(-14).map((w) => ({ value: w.kg }))} height={48} still /> : null}
+            {weighedToday ? null : (
+              <Row gap={2}>
+                <Txt variant="labelM" tone="sage">
+                  {t("Log today")}
                 </Txt>
-                <Txt variant="labelM" tone="secondary">
-                  kg
-                </Txt>
+                <Icon name="chevronRight" size={13} color={colors.fuel.sage} strokeWidth={2.2} />
               </Row>
-            </View>
-            <Button label={weighedToday ? t("Change") : t("Log today")} variant={weighedToday ? "secondary" : "sage"} size="S" full={false} onPress={() => router.push("/weight")} />
-          </Row>
-          {weight.entries.length >= 2 ? <LineChart points={weight.entries.slice(-14).map((w) => ({ value: w.kg }))} height={56} still /> : null}
+            )}
+          </View>
         </Card>
-      </Section>
+      </Row>
 
       {/* One glance at the data, and a door to the rest of it. */}
       <Section title={t("Data")} action={t("Open")} onAction={() => router.push("/progress")}>

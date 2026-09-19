@@ -1,3 +1,5 @@
+import type { WorkoutKind } from "@/health/types";
+
 /**
  * CresQ data model, v1. One JSON document persisted on the device.
  * Small enough for a strength log (thousands of sets), and simple to move to
@@ -94,6 +96,8 @@ export type Profile = {
   targets?: NutritionTargets;
   /** Absent until Food has been opened once and its questions answered or waved off. */
   food?: FoodProfile;
+  /** Present while the phone's health store is connected. */
+  health?: HealthLink;
 };
 
 /**
@@ -123,6 +127,9 @@ export type Account = {
   /** Set once the log has been sent to a server. Absent means this device is the only copy. */
   syncedAt?: number;
 };
+
+/** The phone's health store, once the person has connected it. Apple never says whether reading was allowed, so this is "asked", not "granted". */
+export type HealthLink = { connectedAt: number };
 
 /** Where the figures on a food came from. */
 export type FoodSource = "openfoodfacts" | "label" | "manual";
@@ -208,7 +215,21 @@ export type TrainInvite = {
  * a finished session offers an estimate they can take, anything else they
  * enter themselves. `sessionId` keeps a session from being counted twice.
  */
-export type Burn = { id: string; at: number; kcal: number; label?: string; sessionId?: string };
+export type Burn = {
+  id: string;
+  at: number;
+  kcal: number;
+  label?: string;
+  sessionId?: string;
+  /** Read from the phone's health store rather than entered here. Such an entry mirrors the store and is replaced on every read. */
+  source?: "health";
+  /** The store's id for the workout, its span, what kind it was and which app or device recorded it. */
+  externalId?: string;
+  from?: number;
+  to?: number;
+  kind?: WorkoutKind;
+  via?: string;
+};
 
 /** Body weight on a day. One per day: weighing again corrects the figure, it does not add a second. */
 export type WeightEntry = { id: string; at: number; kg: number };

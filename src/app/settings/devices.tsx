@@ -3,6 +3,8 @@ import { View } from "react-native";
 import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { devices } from "@/data/mock";
+import { useHealth } from "@/store/health";
+import { haptic } from "@/haptics";
 import { Screen, Row, Section, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
@@ -18,12 +20,21 @@ export default function Devices() {
   const t = useT();
   const [sheet, setSheet] = useState(false);
   const [coming, setComing] = useState<string | null>(null);
+  const [viaHealth, setViaHealth] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const store = useHealth();
+  const connect = async () => {
+    setBusy(true);
+    const ok = await store.connect();
+    setBusy(false);
+    if (ok) haptic("done");
+  };
 
   return (
     <Screen>
       <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Connected devices")} />
       <Txt variant="bodyM" tone="secondary">
-        {t("CresQ will read heart rate, energy and recovery from the devices you connect, and write your sessions back. Nothing is connected yet.")}
+        {store.connected ? t("{name} is connected. The workouts in it count towards what you may eat today; nothing leaves your phone.", { name: t(store.name) }) : t("CresQ will read heart rate, energy and recovery from the devices you connect, and write your sessions back. Nothing is connected yet.")}
       </Txt>
 
       <Section title={t("Available")} gap={0}>
@@ -31,7 +42,17 @@ export default function Devices() {
           <View key={d.key}>
             {i > 0 ? <Divider /> : null}
             <DeviceRow icon={d.icon} iconColor={d.icon === "heart" ? colors.status.danger : colors.icon.strong} letter={d.letter} name={d.name} sub={t(d.sub)}>
-              <Button label={t("Connect")} variant="inverse" size="S" full={false} onPress={() => setComing(d.name)} />
+              {d.key === "health" && !store.unavailable ? (
+                store.connected ? (
+                  <Button label={t("Disconnect")} variant="secondary" size="S" full={false} onPress={store.disconnect} />
+                ) : (
+                  <Button label={t("Connect")} variant="inverse" size="S" full={false} loading={busy} onPress={connect} />
+                )
+              ) : d.key === "garmin" ? (
+                <Button label={t("How")} variant="secondary" size="S" full={false} onPress={() => setViaHealth(d.name)} />
+              ) : (
+                <Button label={t("Connect")} variant="inverse" size="S" full={false} onPress={() => setComing(d.name)} />
+              )}
             </DeviceRow>
           </View>
         ))}
@@ -49,7 +70,12 @@ export default function Devices() {
           <Button label={t("Got it")} variant="secondary" size="M" onPress={() => setComing(null)} />
         </View>
       </BottomSheet>
-      <BottomSheet visible={sheet} onClose={() => setSheet(false)} title={t("What Health access asks for")} subtitle={t("This is the list you will see when connecting becomes possible. Each one powers a feature; the rest stays off. Nothing here is on yet.")}>
+      <BottomSheet visible={!!viaHealth} onClose={() => setViaHealth(null)} title={t("{name}, through Apple Health", { name: viaHealth ?? "" })} subtitle={t("In the Garmin Connect app, connect Apple Health and allow workouts and active energy. Then connect Apple Health here. From then on a workout recorded on your Garmin counts in CresQ by itself.")}>
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
+          <Button label={t("Got it")} variant="secondary" size="M" onPress={() => setViaHealth(null)} />
+        </View>
+      </BottomSheet>
+      <BottomSheet visible={sheet} onClose={() => setSheet(false)} title={t("What Health access asks for")} subtitle={t("Today CresQ asks for two things: your workouts and the active energy in them. The rest of this list comes with the features that need it, and stays off until then.")}>
         {devices.permissions.map((p, i) => (
           <View key={p.key}>
             {i > 0 ? <Divider inset={50} /> : null}

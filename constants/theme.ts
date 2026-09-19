@@ -13,6 +13,12 @@ export const darkColors = {
   fuel: { sage: "#8FCBA8", soft: "#1B2E25", on: "#0F1A14", pressed: "#7AB894" },
   pr: { gold: "#F2B826", soft: "#3A2F10" },
   status: { success: "#5DBE7A", warning: "#E8B84A", danger: "#E5544B" },
+  /**
+   * Chart colours for protein, carbohydrates and fat. A set, not three picks: sage's and ember's own hues at a
+   * step that holds on a dark card, and a blue because gold beside ember cannot be told apart by everyone.
+   * Checked together for lightness, chroma, contrast and red-green colour blindness; change one and check again.
+   */
+  macro: { protein: "#3FA67A", carbs: "#E8621A", fat: "#4C8FE0" },
 } as const;
 
 /** Proposed light theme. Same keys, second set of values. Not shipped in v1. */
@@ -25,6 +31,7 @@ export const lightColors: Colors = {
   fuel: { sage: "#3F8F66", soft: "#E2F1E8", on: "#FFFFFF", pressed: "#357A56" },
   pr: { gold: "#C9920A", soft: "#FBF0CC" },
   status: { success: "#2E9E55", warning: "#C2901A", danger: "#D23F36" },
+  macro: { protein: "#3F8F66", carbs: "#E8621A", fat: "#2A78D6" },
 };
 
 export type Colors = {

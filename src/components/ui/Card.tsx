@@ -47,7 +47,7 @@ export function Card({ tone = "surface", padding = 20, radius: r, gap = 12, bord
  */
 export function AnimatedCard({ onPress, feedback, wrapperStyle, accessibilityLabel, children, ...card }: Omit<CardProps, "onPress"> & { onPress: () => void; feedback?: Moment; wrapperStyle?: StyleProp<ViewStyle> }) {
   return (
-    <AnimatedPressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} feedback={feedback} scaleTo={pressScale.card} wrapperStyle={wrapperStyle}>
+    <AnimatedPressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} feedback={feedback} scaleTo={pressScale.card} wrapperStyle={wrapperStyle} style={{ flexGrow: 1 }}>
       <Card {...card}>{children}</Card>
     </AnimatedPressable>
   );

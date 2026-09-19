@@ -58,6 +58,14 @@
           "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
         }
+      ],
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "CresQ reads your workouts and the energy they burned, to count them towards what you may eat today. Nothing leaves your phone.",
+          "NSHealthUpdateUsageDescription": "CresQ only writes to Health if you ask it to save a session there.",
+          "background": false
+        }
       ]
     ],
     "experiments": {

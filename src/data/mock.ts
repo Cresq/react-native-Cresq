@@ -47,16 +47,16 @@ export const notifications: { group: string; items: Notification[] }[] = [
 ];
 
 /**
- * Nothing is connected, and nothing pretends to be. Reading from Apple Health
- * or a watch needs the build for iPhone and Android, so every row here offers
- * to connect and admits it cannot yet. The permissions list is a preview of
+ * Apple Health connects for real, in a build that carries the bindings; every
+ * other row offers to connect and admits it cannot yet. Garmin has no row of
+ * its own to connect: it writes into Apple Health, and CresQ reads it there. The permissions list is a preview of
  * what connecting will ask for, not a set of switches that do anything.
  */
 export const devices = {
   available: [
     { key: "health", icon: "heart" as const, name: "Apple Health", sub: "Heart rate, energy, sleep and weight, and your sessions written back." },
     { key: "watch", icon: "watch" as const, name: "Apple Watch", sub: "Live heart rate and logging from your wrist." },
-    { key: "garmin", letter: "G", name: "Garmin Connect", sub: "Daily heart rate, sleep, Body Battery" },
+    { key: "garmin", letter: "G", name: "Garmin Connect", sub: "Through Apple Health: let Garmin Connect write there, and your workouts arrive here." },
     { key: "fitbit", letter: "F", name: "Fitbit", sub: "Heart rate, sleep, active minutes" },
     { key: "whoop", letter: "W", name: "Whoop", sub: "Recovery and strain" },
     { key: "oura", letter: "O", name: "Oura", sub: "Readiness, sleep, HRV" },

@@ -11,6 +11,7 @@ import { LocaleSync } from "@/i18n";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SaveTrouble } from "@/components/SaveTrouble";
 import { InviteBanner } from "@/components/InviteBanner";
+import { HealthSync } from "@/components/HealthSync";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -90,6 +91,7 @@ function Themed() {
         </ErrorBoundary>
         <SaveTrouble />
         <InviteBanner />
+        <HealthSync />
       </WorkoutProvider>
     </ThemeProvider>
   );
