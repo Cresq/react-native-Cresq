@@ -90,7 +90,7 @@ export default function Review() {
     publishProduct(food);
     if (from === "edit" && existing) {
       updateFood(existing.id, food);
-      router.back();
+      router.back(`/food/${existing.id}`);
     } else {
       const newId = addFood(food);
       router.replace(`/food/${newId}?log=1`);
@@ -103,7 +103,7 @@ export default function Review() {
 
   return (
     <Screen bottom={90} footer={<Button label={from === "edit" ? t("Save changes") : t("Save and use")} variant="sage" onPress={save} disabled={!ready} />}>
-      <Header left={<IconButton name={from === "edit" ? "chevronLeft" : "close"} onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)/food"))} accessibilityLabel={from === "edit" ? t("Back") : t("Close")} />} title={title} />
+      <Header left={<IconButton name={from === "edit" ? "chevronLeft" : "close"} onPress={() => router.back("/(tabs)/food")} accessibilityLabel={from === "edit" ? t("Back") : t("Close")} />} title={title} />
 
       <View style={{ gap: 6 }}>
         <Txt variant="displayL">{title}</Txt>

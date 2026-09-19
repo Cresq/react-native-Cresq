@@ -32,7 +32,7 @@ export default function Devices() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Connected devices")} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back("/settings")} accessibilityLabel={t("Back")} />} title={t("Connected devices")} />
       <Txt variant="bodyM" tone="secondary">
         {store.connected ? t("{name} is connected. The workouts in it count towards what you may eat today; nothing leaves your phone.", { name: t(store.name) }) : t("CresQ will read heart rate, energy and recovery from the devices you connect, and write your sessions back. Nothing is connected yet.")}
       </Txt>

@@ -47,7 +47,7 @@ export default function Scan() {
     setTimeout(fn, 16);
   };
 
-  const leave = () => go(() => (router.canGoBack() ? router.back() : router.replace("/(tabs)/food")));
+  const leave = () => go(() => router.back("/(tabs)/food"));
 
   const onScan = async ({ data }: BarcodeScanningResult) => {
     if (busy.current || !data) return;

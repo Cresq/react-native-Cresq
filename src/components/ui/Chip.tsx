@@ -70,7 +70,8 @@ export function Chip({ label, selected, onPress, icon, tone = "neutral", size = 
     );
   }
   return (
-    <AnimatedPressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: !!selected }} onPress={onPress} scaleTo={pressScale.chip} wrapperStyle={style} style={[base, { backgroundColor: rest.bg, overflow: "hidden" }]}>
+    // A small chip is 22 points tall, and a thumb is not: the touch area reaches past the drawn one, mostly up and down so neighbours in a row keep their own.
+    <AnimatedPressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: !!selected }} onPress={onPress} hitSlop={size === "S" ? { top: 11, bottom: 11, left: 4, right: 4 } : { top: 6, bottom: 6, left: 4, right: 4 }} scaleTo={pressScale.chip} wrapperStyle={style} style={[base, { backgroundColor: rest.bg, overflow: "hidden" }]}>
       <Face label={label} icon={icon} size={size} fg={rest.fg} />
       <Chosen on={!!selected} base={base} bg={colors.bg.inverse}>
         <Face label={label} icon={icon} size={size} fg={colors.text.inverse} />

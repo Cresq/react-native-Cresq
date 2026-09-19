@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Image, Pressable, Share, View, useWindowDimensions } from "react-native";
+import { Image, Pressable, View, useWindowDimensions } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useNav } from "@/nav";
+import { shareText } from "@/share";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useSocial } from "@/store/social";
 import { otherPosts } from "@/data/mock";
@@ -113,7 +114,7 @@ export default function UserProfile() {
       </View>
 
       <BottomSheet visible={more === "menu"} onClose={() => setMore(null)} onClosed={() => { const go = afterSheet; setAfterSheet(null); go?.(); }} title={p.name}>
-        <SheetOption icon="share" label={t("Share profile")} onPress={() => { setAfterSheet(() => () => void Share.share({ message: `${p.name} - CresQ ${p.handle}` })); setMore(null); }} />
+        <SheetOption icon="share" label={t("Share profile")} onPress={() => { setAfterSheet(() => () => void shareText(`${p.name}, CresQ ${p.handle}`)); setMore(null); }} />
         <SheetOption icon="flag" label={t("Report account")} sub={t("Spam, impersonation or abuse")} onPress={() => setMore("report")} />
         <SheetOption icon="lock" label={t("Block {name}", { name: p.name.split(" ")[0] })} sub={t("They disappear from your feed and lists")} danger onPress={() => { setMore(null); block(p.id); router.back(); }} />
       </BottomSheet>

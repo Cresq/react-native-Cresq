@@ -55,7 +55,7 @@ export default function FoodDetail() {
   const { byId } = useFood();
   const { ready } = useDb();
   const food = byId.get(id);
-  const leave = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)/food"));
+  const leave = () => router.back("/(tabs)/food");
 
   if (!food) {
     return (
@@ -89,7 +89,7 @@ function Product({ food, toLog, wantedMeal }: { food: Food; toLog: boolean; want
   // The meal the person came from, when they came from one; otherwise the clock's guess.
   const [meal, setMeal] = useState<Meal>(() => (wantedMeal && (MEALS as string[]).includes(wantedMeal) ? (wantedMeal as Meal) : mealAt(Date.now(), lastFinished)));
 
-  const leave = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)/food"));
+  const leave = () => router.back("/(tabs)/food");
 
   const grams = num(amount);
   const p = portion(food, grams);
@@ -236,7 +236,7 @@ function Product({ food, toLog, wantedMeal }: { food: Food; toLog: boolean; want
 
         <Divider />
 
-        <Pressable accessibilityRole="button" accessibilityLabel={`${t("Meal")}, ${t(MEAL_NAME[meal])}`} onPress={() => setMealSheet(true)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, opacity: pressed ? opacity.pressed : 1 })}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`${t("Meal")}, ${t(MEAL_NAME[meal])}`} onPress={() => setMealSheet(true)} hitSlop={12} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, opacity: pressed ? opacity.pressed : 1 })}>
           <Txt variant="labelM" tone="secondary" style={{ flex: 1 }}>
             {t("Meal")}
           </Txt>
@@ -247,7 +247,7 @@ function Product({ food, toLog, wantedMeal }: { food: Food; toLog: boolean; want
 
       {/* The pack's own table: a line until it is asked for. */}
       <Card padding={16} gap={0}>
-        <Pressable accessibilityRole="button" accessibilityState={{ expanded: table }} accessibilityLabel={unit === "g" ? t("Per 100 g") : t("Per 100 ml")} onPress={() => setTable((v) => !v)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, opacity: pressed ? opacity.pressed : 1 })}>
+        <Pressable accessibilityRole="button" accessibilityState={{ expanded: table }} accessibilityLabel={unit === "g" ? t("Per 100 g") : t("Per 100 ml")} onPress={() => setTable((v) => !v)} hitSlop={12} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, opacity: pressed ? opacity.pressed : 1 })}>
           <Txt variant="labelL" style={{ flex: 1 }}>
             {unit === "g" ? t("Per 100 g") : t("Per 100 ml")}
           </Txt>

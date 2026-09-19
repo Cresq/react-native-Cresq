@@ -73,7 +73,7 @@ export default function LogFood() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="close" onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)/food"))} accessibilityLabel={t("Close")} />} title={t("Search a product")} subtitle={from ? t(MEAL_NAME[from]) : undefined} />
+      <Header left={<IconButton name="close" onPress={() => router.back("/(tabs)/food")} accessibilityLabel={t("Close")} />} title={t("Search a product")} subtitle={from ? t(MEAL_NAME[from]) : undefined} />
       <Field label={t("Search")} value={q} onChangeText={setQ} placeholder={t("Name or brand")} icon="search" autoCorrect={false} autoFocus />
 
       <Card tone="raised" padding={14} gap={0} onPress={scan} accessibilityLabel={t("Scan a barcode")}>

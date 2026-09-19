@@ -44,7 +44,7 @@ export default function SignUp() {
   };
 
   return (
-    <AuthLayout title={t("Create your account")} subtitle={t("Your log, records and photos stay yours.")} footerCopy={t("Already have an account?")} footerAction={t("Sign in")} onFooter={() => router.back()}>
+    <AuthLayout title={t("Create your account")} subtitle={t("Your log, records and photos stay yours.")} footerCopy={t("Already have an account?")} footerAction={t("Sign in")} onFooter={() => router.back("/(auth)/sign-in")}>
       <Field label={t("Name")} value={name} onChangeText={(v) => { setName(v); setError(null); }} error={error?.field === "name" ? error.msg : undefined} placeholder={t("Your name")} autoComplete="name" textContentType="name" style={{ marginTop: 0 }} />
       <Field label={t("Email")} value={email} onChangeText={(v) => { setEmail(v); setError(null); }} error={error?.field === "email" ? error.msg : undefined} keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" placeholder="you@example.com" />
       <Field label={t("Password")} value={password} onChangeText={(v) => { setPassword(v); setError(null); }} error={error?.field === "password" ? error.msg : undefined} secureTextEntry autoComplete="new-password" textContentType="newPassword" placeholder={t("At least {n} characters", { n: MIN_PASSWORD })} icon="lock" />

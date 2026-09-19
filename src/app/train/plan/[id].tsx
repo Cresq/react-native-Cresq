@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, TextInput, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -13,7 +13,8 @@ import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
 import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
-import { Field } from "@/components/ui/Field";
+import { HeldField } from "@/components/ui/Field";
+import { NumberInput } from "@/components/ui/NumberInput";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
@@ -44,7 +45,7 @@ export default function PlanEditor() {
   if (!plan) {
     return (
       <Screen>
-        <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Workout")} />
+        <Header left={<IconButton name="chevronLeft" onPress={() => router.back("/(tabs)/train")} accessibilityLabel={t("Back")} />} title={t("Workout")} />
         <Txt variant="bodyM" tone="secondary">
           {t("This workout no longer exists.")}
         </Txt>
@@ -73,7 +74,7 @@ export default function PlanEditor() {
   };
   const deletePlan = () => {
     update((d) => ({ ...d, plans: d.plans.filter((p) => p.id !== plan.id), split: { ...d.split, days: d.split.days.map((day) => (day.planId === plan.id ? { ...day, planId: undefined } : day)) } }));
-    router.back();
+    router.back("/(tabs)/train");
   };
   const begin = () => {
     if (!session || session.finishedAt) start(plan.id);
@@ -84,11 +85,11 @@ export default function PlanEditor() {
 
   return (
     <Screen bottom={90} footer={<Button label={session && !session.finishedAt ? t("Continue session") : t("Start this workout")} iconRight="arrowRight" onPress={begin} disabled={plan.exercises.length === 0} />}>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Workout")} subtitle={`${plural(plan.exercises.length, "{n} exercise", "{n} exercises")}, ${t("{n} min", { n: estimateMinutes(plan) })}`} right={<IconButton name="trash" onPress={() => setSheet({ kind: "delete" })} accessibilityLabel={t("Delete workout")} />} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back("/(tabs)/train")} accessibilityLabel={t("Back")} />} title={t("Workout")} subtitle={`${plural(plan.exercises.length, "{n} exercise", "{n} exercises")}, ${t("{n} min", { n: estimateMinutes(plan) })}`} right={<IconButton name="trash" onPress={() => setSheet({ kind: "delete" })} accessibilityLabel={t("Delete workout")} />} />
 
       <View style={{ gap: 12 }}>
-        <Field label={t("Name")} value={plan.name} onChangeText={(v) => patch((p) => ({ ...p, name: v }))} placeholder={t("Push day")} />
-        <Field label={t("Focus")} value={plan.focus} onChangeText={(v) => patch((p) => ({ ...p, focus: v }))} placeholder={t("Chest, shoulders, triceps")} />
+        <HeldField label={t("Name")} value={plan.name} onCommit={(v) => patch((p) => ({ ...p, name: v }))} placeholder={t("Push day")} />
+        <HeldField label={t("Focus")} value={plan.focus} onCommit={(v) => patch((p) => ({ ...p, focus: v }))} placeholder={t("Chest, shoulders, triceps")} />
       </View>
 
       <Section title={t("Exercises")} action={t("Add")} actionIcon="addPlus" onAction={() => router.push(`/exercises?plan=${plan.id}`)} gap={8}>
@@ -158,10 +159,10 @@ export default function PlanEditor() {
                           </Txt>
                         </Pressable>
                         <View style={{ flex: 1, height: 40, borderRadius: radius.input, backgroundColor: colors.bg.raised, justifyContent: "center" }}>
-                          <TextInput value={String(s.kg)} onChangeText={(v) => setSets(i, sets.map((x, k) => (k === si ? { ...x, kg: Number(v.replace(",", ".")) || 0 } : x)))} keyboardType="decimal-pad" selectTextOnFocus style={inputStyle} accessibilityLabel={t("Set {n} weight", { n: si + 1 })} />
+                          <NumberInput value={s.kg} decimal pause={0} onCommit={(n) => setSets(i, sets.map((x, k) => (k === si ? { ...x, kg: n } : x)))} style={inputStyle} accessibilityLabel={t("Set {n} weight", { n: si + 1 })} />
                         </View>
                         <View style={{ flex: 1, height: 40, borderRadius: radius.input, backgroundColor: colors.bg.raised, justifyContent: "center" }}>
-                          <TextInput value={String(s.reps)} onChangeText={(v) => setSets(i, sets.map((x, k) => (k === si ? { ...x, reps: Number(v) || 0 } : x)))} keyboardType="number-pad" selectTextOnFocus style={inputStyle} accessibilityLabel={t("Set {n} reps", { n: si + 1 })} />
+                          <NumberInput value={s.reps} pause={0} onCommit={(n) => setSets(i, sets.map((x, k) => (k === si ? { ...x, reps: n } : x)))} style={inputStyle} accessibilityLabel={t("Set {n} reps", { n: si + 1 })} />
                         </View>
                         <Pressable accessibilityRole="button" accessibilityLabel={t("Remove set")} hitSlop={6} disabled={sets.length === 1} onPress={() => setSets(i, sets.filter((_, k) => k !== si))} style={{ width: 36, height: 40, alignItems: "center", justifyContent: "center", opacity: sets.length === 1 ? 0.3 : 1 }}>
                           <Icon name="close" size={16} color={colors.text.tertiary} strokeWidth={2} />

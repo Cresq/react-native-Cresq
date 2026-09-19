@@ -17,7 +17,7 @@ const TRAVEL = WIDTH - 2 - THUMB - INSET * 2;
  * the resting track as the thumb crosses, and the thumb's own colour follows.
  * The value is the parent's: this only draws it, so it cannot disagree with it.
  */
-export function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+export function Toggle({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; /** What the switch turns on, for a screen reader: without it the switch is announced as a switch and nothing more. */ label: string }) {
   const { colors } = useTheme();
   const on = useSharedValue(value ? 1 : 0);
   useEffect(() => {
@@ -28,6 +28,7 @@ export function Toggle({ value, onChange }: { value: boolean; onChange: (v: bool
   return (
     <Pressable
       accessibilityRole="switch"
+      accessibilityLabel={label}
       accessibilityState={{ checked: value }}
       hitSlop={8}
       onPress={() => {

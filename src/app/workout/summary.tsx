@@ -13,7 +13,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
-import { Field } from "@/components/ui/Field";
+import { Field, HeldField } from "@/components/ui/Field";
 import { Toggle } from "@/components/ui/Toggle";
 import type { SharePrefs } from "@/db/types";
 import { Stat, StatDivider } from "@/components/StatCard";
@@ -85,7 +85,7 @@ export default function Summary() {
 
   return (
     <Screen bottom={214} footer={footer}>
-      <Header left={<IconButton name="close" onPress={savePrivately} accessibilityLabel={t("Close")} />} title={t("Session complete")} subtitle={`${session?.planName ?? t("Session")}, ${longDate(session?.startedAt ?? Date.now())}`} />
+      <Header left={<IconButton name="close" onPress={savePrivately} accessibilityLabel={t("Close")} />} title={t("Session complete")} subtitle={session ? `${session.planName}, ${longDate(session.startedAt)}` : t("Session")} />
 
       <View style={{ gap: 12, paddingTop: 8 }}>
         {record ? (
@@ -154,7 +154,7 @@ export default function Summary() {
             </Txt>
           </Pressable>
         )}
-        <Field label={t("Caption")} value={session?.caption ?? ""} onChangeText={setCaption} placeholder={t("How did it go?")} multiline />
+        <HeldField label={t("Caption")} value={session?.caption ?? ""} onCommit={setCaption} placeholder={t("How did it go?")} multiline />
         <Pressable accessibilityRole="button" accessibilityLabel={t("Where did you train?")} onPress={() => { setGymText(session?.gym ?? (db.profile.homeGym ? gymLabel(db.profile.homeGym) : "")); setGymSheet(true); }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
           <Icon name="mapPin" size={16} color={session?.gym ? colors.accent.ember : colors.text.tertiary} strokeWidth={1.9} />
           <Txt variant="labelL" tone={session?.gym ? "primary" : "tertiary"} style={{ flex: 1 }}>
@@ -254,7 +254,7 @@ function ShareRow({ label, value, onChange }: { label: string; value: boolean; o
       <Txt variant="labelL" style={{ flex: 1 }}>
         {label}
       </Txt>
-      <Toggle value={value} onChange={onChange} />
+      <Toggle label={label} value={value} onChange={onChange} />
     </Row>
   );
 }

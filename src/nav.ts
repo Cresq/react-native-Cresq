@@ -18,6 +18,8 @@ const WINDOW_MS = 700;
  * enough that a second, deliberate press is never eaten.
  */
 const BACK_MS = 300;
+/** Where back leads when nothing is behind the screen and the screen names no parent of its own. */
+const HOME: Href = "/(tabs)";
 let last = { key: "", at: 0 };
 
 function once(key: string, window = WINDOW_MS) {
@@ -50,6 +52,11 @@ export function releaseNavLock() {
 /**
  * Drop-in for `useRouter`. Same shape, same names, so a screen reads the way it
  * did; `push`, `replace` and `back` simply refuse to fire twice in a row.
+ *
+ * `back` also never leads nowhere. A screen opened from a link, or reloaded on
+ * the web, has nothing behind it, and a bare back is then an action no
+ * navigator handles: the button does nothing. With an empty history it goes
+ * to `fallback`, the screen's own parent, and to Home when none is named.
  */
 export function useNav() {
   const router = useRouter();
@@ -61,8 +68,10 @@ export function useNav() {
       replace: (href: Href) => {
         if (once(`replace:${String(href)}`)) router.replace(href);
       },
-      back: () => {
-        if (once("back", BACK_MS)) router.back();
+      back: (fallback: Href = HOME) => {
+        if (!once("back", BACK_MS)) return;
+        if (router.canGoBack()) router.back();
+        else router.replace(fallback);
       },
       canGoBack: () => router.canGoBack(),
       /** The escape hatch, for the rare case a repeat really is meant. */

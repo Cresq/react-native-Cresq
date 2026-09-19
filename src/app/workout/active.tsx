@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, Share, TextInput, View, useWindowDimensions, type LayoutChangeEvent } from "react-native";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Pressable, ScrollView, TextInput, View, useWindowDimensions, type LayoutChangeEvent } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { Extrapolation, LayoutAnimationConfig, interpolate, runOnJS, useAnimatedProps, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming, type SharedValue } from "react-native-reanimated";
 import { delay, distance, gesture, layouts, opacity, pressScale, project, rubberband, scroll, springs, timings, useReducedMotion } from "@/motion";
 import { useNav } from "@/nav";
+import { shareText } from "@/share";
+import { useHeld } from "@/typing";
 import Svg, { Circle } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -78,6 +80,29 @@ export default function ActiveWorkout() {
   const { height: viewportH } = useWindowDimensions();
   const scroller = useRef<ScrollView>(null);
   const scrollY = useSharedValue(0);
+  // What the cards call. The object never changes, so a memoised card is never
+  // redrawn for it; each call lands in the handlers of the newest render.
+  const handlersRef = useRef<CardActions | null>(null);
+  const actions = useMemo<CardActions>(
+    () => ({
+      toggle: (ex) => handlersRef.current?.toggle(ex),
+      focus: (index) => handlersRef.current?.focus(index),
+      dragStart: () => handlersRef.current?.dragStart(),
+      dragMove: (ex, dy) => handlersRef.current?.dragMove(ex, dy),
+      dragEnd: (ex, dy) => handlersRef.current?.dragEnd(ex, dy),
+      note: (ex, text) => handlersRef.current?.note(ex, text),
+      rest: (ex) => handlersRef.current?.rest(ex),
+      remove: (ex) => handlersRef.current?.remove(ex),
+      more: (ex) => handlersRef.current?.more(ex),
+      watch: (ex) => handlersRef.current?.watch(ex),
+      setType: (ex, s, i) => handlersRef.current?.setType(ex, s, i),
+      change: (ex, s, patch) => handlersRef.current?.change(ex, s, patch),
+      done: (ex, s, i) => handlersRef.current?.done(ex, s, i),
+      removeSet: (ex, s) => handlersRef.current?.removeSet(ex, s),
+      addSet: (ex) => handlersRef.current?.addSet(ex),
+    }),
+    [],
+  );
   const listTop = useRef(0);
   const seenExercises = useRef(session?.exercises.length ?? 0);
   // The heaviest working set each movement has seen before today, for telling a record from a good set.
@@ -123,13 +148,13 @@ export default function ActiveWorkout() {
     return (
       <Screen>
         <Txt variant="displayL">{t("No session running")}</Txt>
-        <Button label={t("Back")} variant="secondary" onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))} />
+        <Button label={t("Back")} variant="secondary" onPress={() => router.back()} />
       </Screen>
     );
   }
 
   const stats = sessionStats(session, finishAt || session.startedAt);
-  const leave = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)"));
+  const leave = () => router.back();
   if (!current) {
     return (
       <Screen>
@@ -165,7 +190,7 @@ export default function ActiveWorkout() {
   /** For somebody not on CresQ: the workout travels in the link itself, so there is nothing to upload and nobody to sign in. */
   const shareLink = () => {
     const payload = inviteFromSession(session, myName);
-    Share.share({ message: t("{name} is doing {plan} on CresQ. Do it with them: {link}", { name: myName, plan: session.planName, link: inviteLink(payload) }) });
+    void shareText(t("{name} is doing {plan} on CresQ. Do it with them: {link}", { name: myName, plan: session.planName, link: inviteLink(payload) }));
   };
   const invited = invitedTo(session.id);
   const followed = following.map((id) => findPerson(id)).filter((p): p is NonNullable<typeof p> => !!p);
@@ -317,9 +342,27 @@ export default function ActiveWorkout() {
   };
   const dragFrom = drop ? session.exercises.findIndex((e) => e.id === drop.dragging) : -1;
   const openFinish = () => setSheet({ kind: "finish" });
+  const handlers: CardActions = {
+    toggle: (ex) => { if (!isOpen(ex.id)) feel("select"); toggle(ex.id); },
+    focus: (index) => w.setCurrent(index),
+    dragStart: onDragStart,
+    dragMove: (ex, dy) => onDragMove(ex.id, dy),
+    dragEnd: (ex, dy) => onDragEnd(ex.id, dy),
+    note: (ex, text) => w.setNote(ex.id, text),
+    rest: (ex) => openRest(ex),
+    remove: (ex) => { feel("exerciseRemoved"); w.removeExercise(ex.id); },
+    more: (ex) => setSheet({ kind: "exercise", ex }),
+    watch: (ex) => setWatching(ex.exerciseId),
+    setType: (ex, s, i) => setSheet({ kind: "set", ex, set: s, index: i }),
+    change: (ex, s, patch) => w.updateSet(ex.id, s.id, patch),
+    done: (ex, s, i) => complete(ex, s, i),
+    removeSet: (ex, s) => { feel("removeSet"); w.removeSet(ex.id, s.id); },
+    addSet: (ex) => { feel("addSet"); w.addSet(ex.id); },
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg.ground }}>
+      <Newest handlersRef={handlersRef} handlers={handlers} />
       <Screen bottom={rest ? 110 : 20} contentStyle={{ gap: 20 }} scrollRef={scroller} scrollY={scrollY} keyboardInsets>
         <Header
           left={<IconButton name="chevronDown" onPress={leave} accessibilityLabel={t("Minimise")} />}
@@ -367,30 +410,16 @@ export default function ActiveWorkout() {
                     </Txt>
                   </Animated.View>
                 ) : null}
-                <ExerciseCard
+                <SteadyExerciseCard
                   ex={ex}
                   index={index}
                   isCurrent={ex.id === current.id}
                   expanded={isOpen(ex.id)}
                   highlighted={highlight === ex.id}
                   groupColor={groupColor}
-                  blocked={blocked}
+                  blocked={blocked && ex.sets.some((s) => s.id === blocked.id) ? blocked : null}
                   priorBest={priorBest.get(ex.exerciseId) ?? 0}
-                  onToggle={() => { if (!isOpen(ex.id)) feel("select"); toggle(ex.id); }}
-                  onFocus={() => w.setCurrent(index)}
-                  onDragStart={onDragStart}
-                  onDragMove={(dy) => onDragMove(ex.id, dy)}
-                  onDragEnd={(dy) => onDragEnd(ex.id, dy)}
-                  onNote={(text) => w.setNote(ex.id, text)}
-                  onRest={() => openRest(ex)}
-                  onRemove={() => { feel("exerciseRemoved"); w.removeExercise(ex.id); }}
-                  onMore={() => setSheet({ kind: "exercise", ex })}
-                  onWatch={() => setWatching(ex.exerciseId)}
-                  onSetType={(s, i) => setSheet({ kind: "set", ex, set: s, index: i })}
-                  onChange={(s, patch) => w.updateSet(ex.id, s.id, patch)}
-                  onDone={(s, i) => complete(ex, s, i)}
-                  onRemoveSet={(s) => { feel("removeSet"); w.removeSet(ex.id, s.id); }}
-                  onAddSet={() => { feel("addSet"); w.addSet(ex.id); }}
+                  actions={actions}
                 />
                 {lineBelow ? <DropLine /> : null}
               </AnimatedListItem>
@@ -618,10 +647,37 @@ function CompactBar({ scrollY, session, finishLabel, onFinish }: { scrollY: Shar
 }
 
 /** The ember line that shows where a dragged exercise will land. */
+/** Hands this render's handlers to the object the cards hold, at commit, before anything can be pressed. */
+function Newest({ handlersRef, handlers }: { handlersRef: { current: CardActions | null }; handlers: CardActions }) {
+  useLayoutEffect(() => {
+    handlersRef.current = handlers;
+  });
+  return null;
+}
+
 function DropLine() {
   const { colors } = useTheme();
   return <Animated.View entering={layouts.enter} style={{ height: 3, borderRadius: 2, backgroundColor: colors.accent.ember, marginHorizontal: 8 }} />;
 }
+
+/** Everything a card can ask of the screen. The exercise comes back with each call, so the card needs no closure made for it. */
+type CardActions = {
+  toggle: (ex: ExerciseEntry) => void;
+  focus: (index: number) => void;
+  dragStart: () => void;
+  dragMove: (ex: ExerciseEntry, dy: number) => void;
+  dragEnd: (ex: ExerciseEntry, dy: number) => void;
+  note: (ex: ExerciseEntry, text: string) => void;
+  rest: (ex: ExerciseEntry) => void;
+  remove: (ex: ExerciseEntry) => void;
+  more: (ex: ExerciseEntry) => void;
+  watch: (ex: ExerciseEntry) => void;
+  setType: (ex: ExerciseEntry, s: SetEntry, i: number) => void;
+  change: (ex: ExerciseEntry, s: SetEntry, patch: Partial<Pick<SetEntry, "kg" | "reps">>) => void;
+  done: (ex: ExerciseEntry, s: SetEntry, i: number) => void;
+  removeSet: (ex: ExerciseEntry, s: SetEntry) => void;
+  addSet: (ex: ExerciseEntry) => void;
+};
 
 type CardProps = {
   ex: ExerciseEntry;
@@ -650,6 +706,39 @@ type CardProps = {
   onAddSet: () => void;
 };
 
+type CardData = Pick<CardProps, "ex" | "index" | "isCurrent" | "expanded" | "highlighted" | "groupColor" | "blocked" | "priorBest">;
+
+/**
+ * The card, redrawn only when what it shows has changed. A keystroke in one
+ * set used to redraw all six exercises, because the handlers made for each of
+ * them in the list were new on every render; on a phone that is a stutter
+ * under the thumb. Here the card is compared on its data alone, and what it
+ * can do arrives as one object that stays the same.
+ */
+const SteadyExerciseCard = memo(function SteadyExerciseCard({ actions, ...data }: CardData & { actions: CardActions }) {
+  const { ex, index } = data;
+  return (
+    <ExerciseCard
+      {...data}
+      onToggle={() => actions.toggle(ex)}
+      onFocus={() => actions.focus(index)}
+      onDragStart={actions.dragStart}
+      onDragMove={(dy) => actions.dragMove(ex, dy)}
+      onDragEnd={(dy) => actions.dragEnd(ex, dy)}
+      onNote={(text) => actions.note(ex, text)}
+      onRest={() => actions.rest(ex)}
+      onRemove={() => actions.remove(ex)}
+      onMore={() => actions.more(ex)}
+      onWatch={() => actions.watch(ex)}
+      onSetType={(s, i) => actions.setType(ex, s, i)}
+      onChange={(s, patch) => actions.change(ex, s, patch)}
+      onDone={(s, i) => actions.done(ex, s, i)}
+      onRemoveSet={(s) => actions.removeSet(ex, s)}
+      onAddSet={() => actions.addSet(ex)}
+    />
+  );
+});
+
 /**
  * One exercise: a header row that is always there (handle, position, name,
  * note line, chevron) and, when open, the rest pill, a delete button, the
@@ -660,6 +749,14 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
   const t = useT();
   const { drag, style } = useDrag(onDragStart, onDragMove, onDragEnd);
   const [noteEditing, setNoteEditing] = useState(false);
+  // The note is typed into the card and handed to the session when the typing pauses or the box is left.
+  const [noteDraft, setNoteDraft] = useState<string | null>(null);
+  const { hold: holdNote, tell: tellNote } = useHeld<{ text: string }>((p) => onNote(p.text));
+  const closeNote = () => {
+    tellNote();
+    setNoteDraft(null);
+    setNoteEditing(false);
+  };
   const done = ex.sets.length > 0 && ex.sets.every((s) => s.done);
   const doneCount = ex.sets.filter((s) => s.done).length;
   // What changes about a card is a value between 0 and 1 on the UI thread, so nothing on it switches:
@@ -761,10 +858,10 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
             {/* The note sits under the controls, well clear of the name you tap to fold the card. */}
             {noteEditing ? (
               <TextInput
-                value={ex.note ?? ""}
-                onChangeText={onNote}
-                onBlur={() => setNoteEditing(false)}
-                onSubmitEditing={() => setNoteEditing(false)}
+                value={noteDraft ?? ex.note ?? ""}
+                onChangeText={(text) => { setNoteDraft(text); holdNote({ text }); }}
+                onBlur={closeNote}
+                onSubmitEditing={closeNote}
                 autoFocus
                 multiline
                 returnKeyType="done"
@@ -911,6 +1008,10 @@ function SetRow({ set, label, isCurrent, record, error, onType, onChange, onDone
   // out on every keystroke ate the decimal point, so 2.5 kg could not be typed.
   const [draft, setDraft] = useState<{ kg?: string; reps?: string }>({});
   const [editing, setEditing] = useState<"kg" | "reps" | null>(null);
+  // What is typed shows at once; the session hears of it when the typing
+  // pauses, the box is left, or the set is ticked. Telling it on every
+  // keystroke redraws the workout around the thumb, and on a phone that is lag.
+  const { hold: typed, tell, forget } = useHeld<Partial<Pick<SetEntry, "kg" | "reps">>>(onChange);
   const focus = useSharedValue(isCurrent ? 1 : 0);
   const ticked = useSharedValue(set.done ? 1 : 0);
   const down = useSharedValue(0);
@@ -978,7 +1079,7 @@ function SetRow({ set, label, isCurrent, record, error, onType, onChange, onDone
                 {label}
               </Txt>
             </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel={hasPrev ? t("Use previous, {prev}", { prev }) : t("No previous set")} disabled={!hasPrev} onPress={() => { feel("copyPrevious"); onChange({ kg: set.prevKg ?? set.kg, reps: set.prevReps ?? set.reps }); }} hitSlop={4} style={({ pressed }) => ({ width: 72, alignItems: "center", opacity: pressed ? opacity.pressed : 1 })}>
+            <Pressable accessibilityRole="button" accessibilityLabel={hasPrev ? t("Use previous, {prev}", { prev }) : t("No previous set")} disabled={!hasPrev} onPress={() => { feel("copyPrevious"); forget(); setDraft({}); onChange({ kg: set.prevKg ?? set.kg, reps: set.prevReps ?? set.reps }); }} hitSlop={4} style={({ pressed }) => ({ width: 72, alignItems: "center", opacity: pressed ? opacity.pressed : 1 })}>
               <Txt style={{ fontFamily: fontFamily.displaySemi, fontSize: 15, lineHeight: 20, letterSpacing: -0.1, color: hasPrev ? colors.text.secondary : colors.text.tertiary }} tabular>
                 {prev}
               </Txt>
@@ -989,10 +1090,10 @@ function SetRow({ set, label, isCurrent, record, error, onType, onChange, onDone
                 onChangeText={(v) => {
                   const clean = v.replace(",", ".").replace(/[^0-9.]/g, "");
                   setDraft((d) => ({ ...d, kg: clean }));
-                  onChange({ kg: Number(clean) || 0 });
+                  typed({ kg: Number(clean) || 0 });
                 }}
                 onFocus={() => setEditing("kg")}
-                onBlur={() => { setEditing((e) => (e === "kg" ? null : e)); setDraft((d) => ({ ...d, kg: undefined })); }}
+                onBlur={() => { tell(); setEditing((e) => (e === "kg" ? null : e)); setDraft((d) => ({ ...d, kg: undefined })); }}
                 keyboardType="decimal-pad"
                 selectTextOnFocus
                 selectionColor={colors.accent.ember}
@@ -1006,10 +1107,10 @@ function SetRow({ set, label, isCurrent, record, error, onType, onChange, onDone
                 onChangeText={(v) => {
                   const clean = v.replace(/[^0-9]/g, "");
                   setDraft((d) => ({ ...d, reps: clean }));
-                  onChange({ reps: Number(clean) || 0 });
+                  typed({ reps: Number(clean) || 0 });
                 }}
                 onFocus={() => setEditing("reps")}
-                onBlur={() => { setEditing((e) => (e === "reps" ? null : e)); setDraft((d) => ({ ...d, reps: undefined })); }}
+                onBlur={() => { tell(); setEditing((e) => (e === "reps" ? null : e)); setDraft((d) => ({ ...d, reps: undefined })); }}
                 keyboardType="number-pad"
                 selectTextOnFocus
                 selectionColor={colors.accent.ember}
@@ -1019,7 +1120,7 @@ function SetRow({ set, label, isCurrent, record, error, onType, onChange, onDone
             </View>
             <Animated.View style={tickGive}>
               <Pressable
-                onPress={onDone}
+                onPress={() => { tell(); onDone(); }}
                 onPressIn={() => { down.set(withSpring(1, springs.press)); }}
                 onPressOut={() => { down.set(withSpring(0, springs.press)); }}
                 hitSlop={4}

@@ -29,7 +29,7 @@ export default function CompareList() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Compare with others")} subtitle={db.profile.compareStats === false ? t("Your own figures are private") : undefined} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back("/progress")} accessibilityLabel={t("Back")} />} title={t("Compare with others")} subtitle={db.profile.compareStats === false ? t("Your own figures are private") : undefined} />
 
       {db.profile.compareStats === false ? (
         <Row gap={12} align="flex-start">

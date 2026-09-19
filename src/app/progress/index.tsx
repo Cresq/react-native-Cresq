@@ -60,7 +60,7 @@ export default function Data() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))} accessibilityLabel={t("Back")} />} title={t("Data")} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Data")} />
 
       <Row gap={16} align="stretch">
         <Stat

@@ -58,7 +58,7 @@ export default function Train() {
             {t("Session running")}
           </Txt>
         ) : (
-          <Pressable accessibilityRole="button" accessibilityLabel={t("Edit your split")} onPress={() => router.push("/train/split")} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("Edit your split")} onPress={() => router.push("/train/split")} hitSlop={12} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
             <Row gap={4}>
               <Txt variant="labelM" tone="tertiary">
                 {split.name}, {t("day {a} of {b}", { a: split.nextIndex + 1, b: split.days.length })}

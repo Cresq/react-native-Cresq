@@ -126,7 +126,7 @@ export default function Home() {
           <Txt variant="labelM" tone={running ? "ember" : "tertiary"}>
             {running ? t("Session running") : t("Today")}
           </Txt>
-              <Pressable accessibilityRole="button" accessibilityLabel={t("Choose another workout")} disabled={running} onPress={() => setChoosing(true)} style={({ pressed }) => ({ gap: 4, opacity: pressed ? 0.7 : 1 })}>
+              <Pressable accessibilityRole="button" accessibilityLabel={t("Choose another workout")} disabled={running} onPress={() => setChoosing(true)} hitSlop={10} style={({ pressed }) => ({ gap: 4, opacity: pressed ? 0.7 : 1 })}>
                 <Row gap={8}>
                   <Txt variant="displayM">{running ? session?.planName : plan ? plan.name : (nextDay?.rest ? t("Rest day") : nextDay?.name) ?? t("Quick session")}</Txt>
                   {!running ? <Icon name="chevronDown" size={18} color={colors.text.tertiary} strokeWidth={2} /> : null}

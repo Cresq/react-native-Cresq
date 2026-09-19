@@ -108,6 +108,8 @@ export const delay = {
   highlightHold: 1400,
   /** How long a refusal stays on screen. */
   refusalHold: 2500,
+  /** How long typing has to pause before what was typed is handed on. */
+  typingPause: 250,
 } as const;
 
 /** Scroll offsets, in points, between which the compact header comes in. */

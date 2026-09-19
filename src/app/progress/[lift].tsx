@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
-import { Pressable, Share, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useNav } from "@/nav";
+import { shareText } from "@/share";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
+import { useNow } from "@/clock";
 import { exerciseHistory, fmtKg, forecast, liftTrend, shortDate } from "@/db/derive";
 import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
@@ -32,6 +34,7 @@ export default function LiftDetail() {
   const tm = useTerms();
   const plural = usePlural();
   const { db } = useDb();
+  const now = useNow();
   const { lift: id } = useLocalSearchParams<{ lift: string }>();
   // A link to a lift that is no longer in the library must not take the app down with it.
   const exercise = db.exercises.find((e) => e.id === id) ?? db.exercises[0] ?? null;
@@ -41,7 +44,7 @@ export default function LiftDetail() {
   const [watching, setWatching] = useState(false);
 
   const all = useMemo(() => (exercise ? liftTrend(db.sessions, exercise.id) : []), [db.sessions, exercise]);
-  const since = Date.now() - RANGES[range] * 86400000;
+  const since = now - RANGES[range] * 86400000;
   const points = all.filter((p) => p.date >= since);
   const shown = points.length >= 2 ? points : all;
   const fc = useMemo(() => forecast(all), [all]);
@@ -60,7 +63,7 @@ export default function LiftDetail() {
   if (!exercise) {
     return (
       <Screen>
-        <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Exercise")} />
+        <Header left={<IconButton name="chevronLeft" onPress={() => router.back("/progress")} accessibilityLabel={t("Back")} />} title={t("Exercise")} />
         <Txt variant="bodyM" tone="secondary">
           {t("This exercise is not in your library.")}
         </Txt>
@@ -71,7 +74,7 @@ export default function LiftDetail() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={exercise.name} subtitle={`${tm(exercise.muscles)}, ${tm(exercise.equipment)}`} right={<IconButton name="share" onPress={() => Share.share({ message: `${exercise.name}: ${t("Estimated 1RM")} ${current} kg, ${delta >= 0 ? "+" : ""}${delta} kg. CresQ.` })} accessibilityLabel={t("Share")} />} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back("/progress")} accessibilityLabel={t("Back")} />} title={exercise.name} subtitle={`${tm(exercise.muscles)}, ${tm(exercise.equipment)}`} right={<IconButton name="share" onPress={() => void shareText(`${exercise.name}: ${t("Estimated 1RM")} ${current} kg, ${delta >= 0 ? "+" : ""}${delta} kg. CresQ.`)} accessibilityLabel={t("Share")} />} />
 
       <ExerciseMedia exercise={exercise} ratio={1936 / 1072} onPress={() => setWatching(true)} />
 
@@ -153,7 +156,7 @@ export default function LiftDetail() {
                         </Txt>
                       </>
                     )}
-                    <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setHow(true)}>
+                    <Pressable accessibilityRole="button" hitSlop={12} onPress={() => setHow(true)}>
                       <Row gap={4}>
                         <Txt variant="labelM" tone="secondary">
                           {t("How this is calculated")}

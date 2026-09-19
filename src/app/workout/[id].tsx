@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { FlatList, Share, View, Pressable, useWindowDimensions } from "react-native";
+import { FlatList, View, Pressable, useWindowDimensions } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useNav } from "@/nav";
+import { shareText } from "@/share";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { finished, fmtKg, longDate, newRecords, sessionStats } from "@/db/derive";
@@ -104,7 +105,7 @@ function Page({ id, at }: { id: string; at?: { index: number; count: number } })
   // Taking a session up again makes sense the same day, not next week.
   const resumable = !!session?.finishedAt && !db.activeSession && now - session.finishedAt < 12 * 3_600_000;
   const position = at ? t("{a} of {b}", { a: at.index + 1, b: at.count }) : "";
-  const back = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)"));
+  const back = () => router.back();
 
   if (!session && !post) {
     return (
@@ -235,7 +236,7 @@ function Page({ id, at }: { id: string; at?: { index: number; count: number } })
             ) : (
               <SheetOption icon="users" label={t("Share to feed")} sub={t("Your followers see it in their feed")} onPress={() => { setMenu(null); update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, shared: true } : x)) })); }} />
             )}
-            <SheetOption icon="share" label={t("Share")} sub={t("Send a summary to another app")} onPress={() => { setAfterSheet(() => () => void Share.share({ message: `${s.planName}, ${longDate(s.startedAt)}: ${plural(stats.setsDone, "{n} set", "{n} sets")}, ${fmtKg(stats.volume)} kg, ${stats.minutes} min. CresQ.` })); setMenu(null); }} />
+            <SheetOption icon="share" label={t("Share")} sub={t("Send a summary to another app")} onPress={() => { setAfterSheet(() => () => void shareText(`${s.planName}, ${longDate(s.startedAt)}: ${plural(stats.setsDone, "{n} set", "{n} sets")}, ${fmtKg(stats.volume)} kg, ${stats.minutes} min. CresQ.`)); setMenu(null); }} />
             <SheetOption icon="trash" label={t("Delete workout")} danger onPress={() => setMenu("delete")} />
           </>
         ) : null}

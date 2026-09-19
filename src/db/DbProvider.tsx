@@ -3,6 +3,7 @@ import { AppState } from "react-native";
 import { DB_VERSION, type Db } from "./types";
 import { clearDb, flushDb, loadDb, onSaveTrouble, saveDb, uid } from "./storage";
 import { createSeedDb, seedSampleInvite } from "./seed";
+import { LanguageContext } from "@/i18n/language";
 
 type DbState = {
   db: Db;
@@ -139,7 +140,12 @@ export function DbProvider({ children }: PropsWithChildren) {
   }, []);
 
   const value = useMemo(() => ({ db, ready, saveFailed, update, reset, restore, refresh }), [db, ready, saveFailed, update, reset, restore, refresh]);
-  return <DbContext.Provider value={value}>{children}</DbContext.Provider>;
+  // The language travels on a context of its own, so translating something does not subscribe a component to the whole document.
+  return (
+    <DbContext.Provider value={value}>
+      <LanguageContext.Provider value={db.profile.language ?? "nl"}>{children}</LanguageContext.Provider>
+    </DbContext.Provider>
+  );
 }
 
 export function useDb() {

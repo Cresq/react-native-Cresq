@@ -49,7 +49,7 @@ export default function LiveSession() {
   if (!p || !p.live || !isFollowing(p.id)) {
     return (
       <Screen>
-        <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Live")} />
+        <Header left={<IconButton name="chevronLeft" onPress={() => router.back("/(tabs)/feed")} accessibilityLabel={t("Back")} />} title={t("Live")} />
         <Txt variant="bodyM" tone="secondary">
           {t("This session is over, or you do not follow this person.")}
         </Txt>
@@ -63,7 +63,7 @@ export default function LiveSession() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={p.name} subtitle={live.planName} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back("/(tabs)/feed")} accessibilityLabel={t("Back")} />} title={p.name} subtitle={live.planName} />
 
       <Row gap={12}>
         <Avatar source={p.avatar} size={44} initial={p.name[0]} />

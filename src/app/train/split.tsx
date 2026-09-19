@@ -34,8 +34,8 @@ export default function SplitEditor() {
   const training = split.days.filter((d) => !d.rest).length;
 
   return (
-    <Screen bottom={90} footer={<Button label={t("Save split")} onPress={() => router.back()} />}>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Your split")} right={<IconButton name="noteEdit" onPress={() => { setNameText(split.name); setRenaming(true); }} accessibilityLabel={t("Rename split")} />} />
+    <Screen bottom={90} footer={<Button label={t("Save split")} onPress={() => router.back("/(tabs)/train")} />}>
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back("/(tabs)/train")} accessibilityLabel={t("Back")} />} title={t("Your split")} right={<IconButton name="noteEdit" onPress={() => { setNameText(split.name); setRenaming(true); }} accessibilityLabel={t("Rename split")} />} />
 
       <BottomSheet visible={renaming} onClose={() => setRenaming(false)} title={t("Rename your split")}>
         <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>

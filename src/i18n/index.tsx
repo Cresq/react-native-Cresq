@@ -1,16 +1,11 @@
 import { useCallback, useEffect } from "react";
 import { setLocale } from "@/db/derive";
-import { useDb } from "@/db/DbProvider";
 import { translate, localeOf, possessive, type Language } from "./translate";
 import { terms } from "./terms";
+import { useLanguage } from "./language";
 
 export { translate, localeOf, possessive, type Language };
-export { terms };
-
-export function useLanguage(): Language {
-  const { db } = useDb();
-  return db.profile.language ?? "nl";
-}
+export { terms, useLanguage };
 
 /**
  * One or many. Both languages need the singular, and "1 oefeningen" is the

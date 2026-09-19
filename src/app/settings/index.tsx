@@ -36,7 +36,7 @@ export default function Settings() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Settings")} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back("/(tabs)/profile")} accessibilityLabel={t("Back")} />} title={t("Settings")} />
 
       <Card padding={8} gap={0}>
         {rows.map((r, i) => (
@@ -107,7 +107,7 @@ export default function Settings() {
       />
       <Row gap={12} justify="center">
         {[["privacy", t("Privacy")], ["terms", t("Terms")], ["licences", t("Licences")]].map(([k, l]) => (
-          <Pressable key={k} accessibilityRole="link" onPress={() => router.push(`/legal/${k}`)} hitSlop={8}>
+          <Pressable key={k} accessibilityRole="link" onPress={() => router.push(`/legal/${k}`)} hitSlop={14}>
             <Txt variant="labelS" tone="secondary">
               {l}
             </Txt>

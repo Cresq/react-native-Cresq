@@ -51,8 +51,15 @@ export default function Posted() {
   }, [snap, session]);
 
   // File it as soon as we have it. Everything below reads the snapshot, not the store.
+  // Only a finished session is filed: reached by a link or a reload while a
+  // workout is still running, this screen must not post it, so it hands the
+  // person back to the workout.
   useEffect(() => {
     if (filed.current || !snap) return;
+    if (!snap.finishedAt) {
+      router.replace("/workout/active");
+      return;
+    }
     filed.current = true;
     file(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps

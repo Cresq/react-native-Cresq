@@ -95,14 +95,14 @@ function EditForm({ s }: { s: Session }) {
     };
     update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? next : x)) }));
     haptic("done");
-    router.back();
+    router.back(`/workout/${s.id}`);
   });
 
   const counted = exercises.reduce((n, e) => n + e.sets.filter((x) => x.done).length, 0);
 
   return (
     <Screen bottom={90} footer={<Button label={t("Save workout")} onPress={save} />}>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Edit workout")} subtitle={`${s.planName}, ${longDate(s.startedAt)}`} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back(`/workout/${s.id}`)} accessibilityLabel={t("Back")} />} title={t("Edit workout")} subtitle={`${s.planName}, ${longDate(s.startedAt)}`} />
 
       <Txt variant="bodyM" tone="secondary">
         {t("Change what was taken down wrongly. Only ticked sets count; {n} count now.", { n: counted })}

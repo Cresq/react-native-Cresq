@@ -38,7 +38,7 @@ export default function Muscles() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Muscle groups")} subtitle={total ? t("{n} working sets", { n: total }) : undefined} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back("/progress")} accessibilityLabel={t("Back")} />} title={t("Muscle groups")} subtitle={total ? t("{n} working sets", { n: total }) : undefined} />
 
       <Segmented
         value={range}
@@ -92,10 +92,17 @@ export default function Muscles() {
                       <View style={{ width: `${Math.max(4, (r.sets / peak) * 100)}%`, height: 6, borderRadius: 3, backgroundColor: colors.accent.ember }} />
                     </View>
                     <Row gap={8}>
-                      <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} numberOfLines={1}>
-                        {r.exercises.slice(0, 3).join(", ")}
-                        {r.exercises.length > 3 ? ` ${t("+{n} more", { n: r.exercises.length - 3 })}` : ""}
-                      </Txt>
+                      {/* The names give way on a narrow screen; how many more there are is never the part that is cut off. */}
+                      <Row gap={4} style={{ flex: 1 }}>
+                        <Txt variant="labelS" tone="tertiary" style={{ flexShrink: 1 }} numberOfLines={1}>
+                          {r.exercises.slice(0, 3).join(", ")}
+                        </Txt>
+                        {r.exercises.length > 3 ? (
+                          <Txt variant="labelS" tone="tertiary">
+                            {t("+{n} more", { n: r.exercises.length - 3 })}
+                          </Txt>
+                        ) : null}
+                      </Row>
                       {r.volume ? (
                         <Txt variant="labelS" tone="tertiary" tabular>
                           {fmtKg(r.volume)} kg

@@ -39,7 +39,7 @@ export default function Label() {
     setTimeout(fn, 16);
   };
 
-  const leave = () => go(() => (router.canGoBack() ? router.back() : router.replace("/(tabs)/food")));
+  const leave = () => go(() => router.back("/(tabs)/food"));
   // From the trouble sheet the review waits for the sheet to be gone; from the button under the camera it goes straight away.
   const byHand = () => {
     setDraft({ barcode, unit: "g", source: "manual", verified: false, photoUri: still ?? undefined });

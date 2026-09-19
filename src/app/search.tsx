@@ -21,7 +21,7 @@ export default function Search() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Find people")} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back("/(tabs)/feed")} accessibilityLabel={t("Back")} />} title={t("Find people")} />
       <Field label={t("Search")} value={q} onChangeText={setQ} placeholder={t("Name, handle or city")} icon="search" autoCorrect={false} autoCapitalize="none" autoFocus />
       <View>
         {!term ? (

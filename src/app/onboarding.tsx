@@ -55,14 +55,14 @@ export default function Onboarding() {
 
   const finish = () => {
     update((d) => ({ ...d, profile: { ...d.profile, ...a, onboarded: true }, consent: { ...d.consent, ...c, ageStats: c.ageStats && !!a.birthYear } }));
-    if (edit) router.back();
+    if (edit) router.back("/settings");
     else router.replace("/done?kind=account");
   };
   const next = () => (i < STEPS.length - 1 ? setI(i + 1) : finish());
 
   return (
     <Screen bottom={90} footer={<Button label={i < STEPS.length - 1 ? t("Continue") : edit ? t("Save") : t("Start training")} iconRight={i < STEPS.length - 1 ? "arrowRight" : undefined} onPress={next} disabled={!can} />}>
-      <Header left={i > 0 || edit ? <IconButton name="chevronLeft" onPress={() => (i > 0 ? setI(i - 1) : router.back())} accessibilityLabel={t("Back")} /> : undefined} />
+      <Header left={i > 0 || edit ? <IconButton name="chevronLeft" onPress={() => (i > 0 ? setI(i - 1) : router.back("/settings"))} accessibilityLabel={t("Back")} /> : undefined} />
       <ProgressBar value={0.2 + (i / STEPS.length) * 0.8} label={t("Step {a} of {b}", { a: i + 1, b: STEPS.length })} right={`${Math.round((0.2 + (i / STEPS.length) * 0.8) * 100)}%`} />
 
       <View style={{ gap: 8 }}>
@@ -128,7 +128,7 @@ export default function Onboarding() {
                 {t("Which screens are opened and how often, sent without your name, your email or anything from your log. It shows us what people use and what they skip.")}
               </Txt>
             </View>
-            <Toggle value={c.analytics} onChange={(v) => setC({ ...c, analytics: v })} />
+            <Toggle label={t("Anonymous usage statistics")} value={c.analytics} onChange={(v) => setC({ ...c, analytics: v })} />
           </Row>
           <Divider />
           <Row gap={12} style={{ paddingVertical: 12 }}>
@@ -138,7 +138,7 @@ export default function Onboarding() {
                 {t("Only your age as a band, such as 25 to 34, so we can see who CresQ serves. Never the year itself, never with your name.")}
               </Txt>
             </View>
-            <Toggle value={c.ageStats} onChange={(v) => setC({ ...c, ageStats: v })} />
+            <Toggle label={t("Age statistics")} value={c.ageStats} onChange={(v) => setC({ ...c, ageStats: v })} />
           </Row>
           <Divider />
           <Pressable accessibilityRole="link" onPress={() => router.push("/legal/privacy")} hitSlop={8} style={{ paddingVertical: 12 }}>

@@ -74,7 +74,7 @@ export default function Account() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Account and privacy")} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back("/settings")} accessibilityLabel={t("Back")} />} title={t("Account and privacy")} />
 
       <Section title={t("Account")}>
         {account ? (
@@ -202,7 +202,7 @@ function Setting({ label, sub, value, onChange, disabled }: { label: string; sub
         </Txt>
       </View>
       <View pointerEvents={disabled ? "none" : "auto"}>
-        <Toggle value={value} onChange={onChange} />
+        <Toggle label={label} value={value} onChange={onChange} />
       </View>
     </Row>
   );

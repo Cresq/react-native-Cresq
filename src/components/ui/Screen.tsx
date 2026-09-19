@@ -85,7 +85,7 @@ export function Section({ title, action, actionIcon, onAction, meta, children, g
               </Txt>
             ) : null}
             {action ? (
-              <Pressable accessibilityRole="button" onPress={onAction} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: actionIcon ? 5 : 2 }}>
+              <Pressable accessibilityRole="button" onPress={onAction} hitSlop={12} style={{ flexDirection: "row", alignItems: "center", gap: actionIcon ? 5 : 2 }}>
                 {actionIcon ? <Icon name={actionIcon} size={15} color={colors.text.secondary} strokeWidth={2.2} /> : null}
                 <Txt variant="labelM" tone="secondary">
                   {action}

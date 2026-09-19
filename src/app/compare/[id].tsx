@@ -51,7 +51,7 @@ export default function Compare() {
   if (!them || !them.compare) {
     return (
       <Screen>
-        <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Compare")} />
+        <Header left={<IconButton name="chevronLeft" onPress={() => router.back("/compare")} accessibilityLabel={t("Back")} />} title={t("Compare")} />
         <Txt variant="bodyM" tone="secondary">
           {t("This person keeps their figures private.")}
         </Txt>
@@ -65,7 +65,7 @@ export default function Compare() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("You and {name}", { name: them.name.split(" ")[0] })} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back("/compare")} accessibilityLabel={t("Back")} />} title={t("You and {name}", { name: them.name.split(" ")[0] })} />
 
       <Row gap={16} align="center" style={{ paddingVertical: 4 }}>
         <View style={{ flex: 1, alignItems: "center", gap: 8 }}>

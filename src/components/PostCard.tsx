@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Pressable, Share, View, type ImageSourcePropType } from "react-native";
+import { Pressable, View, type ImageSourcePropType } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import { useNav } from "@/nav";
+import { shareText } from "@/share";
 import { useTheme } from "@/theme/ThemeProvider";
 import { springs } from "@/motion";
 import { haptic } from "@/haptics";
@@ -145,7 +146,7 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
           </Txt>
         ) : (
           <Row gap={20}>
-            <Pressable onPress={toggleLike} accessibilityRole="button" accessibilityLabel={t("Like")} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Pressable onPress={toggleLike} accessibilityRole="button" accessibilityLabel={t("Like")} hitSlop={10} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <View style={{ width: 20, height: 20, alignItems: "center", justifyContent: "center" }}>
                 <Animated.View pointerEvents="none" style={[{ position: "absolute", width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: colors.accent.ember }, ringStyle]} />
                 <Animated.View style={heartStyle}>
@@ -163,7 +164,7 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
               </Txt>
             </Pressable>
             <View style={{ flex: 1 }} />
-            <Pressable onPress={() => Share.share({ message: `${post.name}: ${post.caption}, ${post.stats.map((s) => `${s.value} ${s.unit}`).join(", ")}, on CresQ` })} accessibilityRole="button" accessibilityLabel={t("Share post")} hitSlop={8}>
+            <Pressable onPress={() => void shareText(t("{name}: {caption}, {stats}, on CresQ", { name: post.name, caption: post.caption, stats: post.stats.map((s) => `${s.value} ${s.unit}`).join(", ") }))} accessibilityRole="button" accessibilityLabel={t("Share post")} hitSlop={12}>
               <Icon name="share" size={20} color={colors.text.secondary} strokeWidth={1.8} />
             </Pressable>
           </Row>

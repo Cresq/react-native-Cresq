@@ -54,7 +54,7 @@ export default function Join() {
   }, [fromLink, receive]);
 
   const running = !!session && !session.finishedAt;
-  const leave = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)"));
+  const leave = () => router.back();
 
   if (!invite) {
     return (

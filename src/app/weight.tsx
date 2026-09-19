@@ -54,7 +54,7 @@ export default function Weight() {
 
   const f = (kg: number) => kg.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const decimal = (1.1).toLocaleString(locale).charAt(1);
-  const leave = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)"));
+  const leave = () => router.back();
   const today = on(now);
   // The wheels open on what is known: today's figure, else the last one, else the food profile's.
   const openWheels = () => {

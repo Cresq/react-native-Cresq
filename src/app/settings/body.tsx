@@ -86,7 +86,7 @@ function Form() {
 
   return (
     <Screen bottom={90} footer={<Button label={savedAt ? t("Saved") : t("Save")} onPress={() => save()} />}>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Your figures")} subtitle={t("Only used for your food targets")} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back("/settings")} accessibilityLabel={t("Back")} />} title={t("Your figures")} subtitle={t("Only used for your food targets")} />
 
       <Section title={t("Height and weight")}>
         <Row gap={10} align="flex-start">

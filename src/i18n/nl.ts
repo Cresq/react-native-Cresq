@@ -1143,4 +1143,7 @@ export const nl: Record<string, string> = {
   "Fill in a day you missed": "Vul een gemiste dag in",
   "Weight on an earlier day": "Gewicht op een eerdere dag",
   "Log {kg} kg for {day}": "Log {kg} kg voor {day}",
+
+  /* What leaves the app through the share sheet. */
+  "{name}: {caption}, {stats}, on CresQ": "{name}: {caption}, {stats}, op CresQ",
 };

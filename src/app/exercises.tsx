@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { FlatList, Pressable, View } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, type Href } from "expo-router";
 import { useNav, useOnce } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
@@ -41,6 +41,8 @@ export default function Exercises() {
 
   const mode = planId ? "plan" : forSession ? "session" : swap ? "swap" : favourite ? "favourite" : editId ? "edit" : "browse";
   const favourites = db.profile.favourites ?? DEFAULT_FAVOURITES;
+  // What this list was opened from, for when nothing is behind it: a link, or a reload on the web.
+  const parent: Href = mode === "plan" ? `/train/plan/${planId}` : mode === "session" || mode === "swap" ? "/workout/active" : mode === "edit" ? `/workout/edit/${editId}` : mode === "favourite" ? "/progress" : "/(tabs)/train";
   // Sorted once, and each exercise carries the one line every search reads.
   // Both languages are in it: somebody typing "borst" and somebody typing
   // "chest" are after the same shelf.
@@ -70,18 +72,18 @@ export default function Exercises() {
     if (!ex) return;
     if (mode === "plan") {
       update((d) => ({ ...d, plans: d.plans.map((p) => (p.id === planId ? { ...p, exercises: [...p.exercises, { exerciseId: ex.id, sets: 3, reps: 10, kg: ex.bodyweight ? 0 : 20, restSeconds: 90 }] } : p)) }));
-      router.back();
+      router.back(parent);
     } else if (mode === "session") {
       addExercise(ex);
-      router.back();
+      router.back(parent);
     } else if (mode === "edit") {
       // Into a workout already filed: three sets, ticked, so they count until the person says otherwise.
       const entry = { id: uid(), exerciseId: ex.id, name: ex.name, restSeconds: 90, sets: Array.from({ length: 3 }, () => ({ id: uid(), type: "working" as const, prevKg: null, prevReps: null, kg: ex.bodyweight ? 0 : 20, reps: 10, done: true })) };
       update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === editId ? { ...x, exercises: [...x.exercises, entry] } : x)) }));
-      router.back();
+      router.back(parent);
     } else if (mode === "swap") {
       swapExercise(swap!, ex);
-      router.back();
+      router.back(parent);
     } else if (mode === "favourite") toggleFavourite(id);
     else router.push(`/progress/${ex.id}`);
   });
@@ -101,8 +103,8 @@ export default function Exercises() {
   const subtitle = mode === "favourite" ? t("{n} on Home, tap to add or remove", { n: favourites.length }) : mode === "swap" ? t("Sets and numbers stay, the movement changes") : t("{n} in your library", { n: db.exercises.length });
 
   return (
-    <Screen scroll={false} contentStyle={{ paddingBottom: 0, gap: 16 }} bottom={mode === "favourite" ? 80 : 0} footer={mode === "favourite" ? <Button label={t("Done")} variant="inverse" size="M" onPress={() => router.back()} /> : undefined}>
-      <Header left={<IconButton name={mode === "browse" ? "chevronLeft" : "close"} onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={titles[mode]} subtitle={subtitle} />
+    <Screen scroll={false} contentStyle={{ paddingBottom: 0, gap: 16 }} bottom={mode === "favourite" ? 80 : 0} footer={mode === "favourite" ? <Button label={t("Done")} variant="inverse" size="M" onPress={() => router.back(parent)} /> : undefined}>
+      <Header left={<IconButton name={mode === "browse" ? "chevronLeft" : "close"} onPress={() => router.back(parent)} accessibilityLabel={t("Back")} />} title={titles[mode]} subtitle={subtitle} />
       <Field label={t("Search")} value={q} onChangeText={setQ} placeholder={t("Name, muscle or equipment")} icon="search" autoCorrect={false} />
 
       <FlatList

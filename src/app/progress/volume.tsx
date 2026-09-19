@@ -29,7 +29,7 @@ export default function Volume() {
 
   return (
     <Screen>
-      <Header left={<IconButton name="chevronLeft" onPress={() => router.back()} accessibilityLabel={t("Back")} />} title={t("Volume per week")} subtitle={trained.length ? t("{n} kg a week on average", { n: fmtKg(Math.round(average)) }) : undefined} />
+      <Header left={<IconButton name="chevronLeft" onPress={() => router.back("/progress")} accessibilityLabel={t("Back")} />} title={t("Volume per week")} subtitle={trained.length ? t("{n} kg a week on average", { n: fmtKg(Math.round(average)) }) : undefined} />
 
       <View>
         {weeks.map((w, i) => {
