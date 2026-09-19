@@ -19,9 +19,9 @@ import { useT } from "@/i18n";
 /** Props expo-router hands to a custom `tabBar`, derived so no navigation package import is needed. */
 type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>["tabBar"]>>[0];
 
-const tabIcons: Record<string, IconName> = { index: "house", feed: "rows", train: "dumbbell", profile: "user" };
-const tabLabels: Record<string, string> = { index: "Home", feed: "Feed", train: "Workout", profile: "Profile" };
-const tabLabelsNl: Record<string, string> = { index: "Home", feed: "Feed", train: "Workout", profile: "Profiel" };
+const tabIcons: Record<string, IconName> = { index: "house", feed: "rows", train: "dumbbell", food: "leaf", profile: "user" };
+const tabLabels: Record<string, string> = { index: "Home", feed: "Feed", train: "Workout", food: "Food", profile: "Profile" };
+const tabLabelsNl: Record<string, string> = { index: "Home", feed: "Feed", train: "Workout", food: "Voeding", profile: "Profiel" };
 
 /**
  * Floating tab bar as a material: content scrolls underneath a blurred

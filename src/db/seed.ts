@@ -100,5 +100,7 @@ export function createSeedDb(lang: Language = "nl"): Db {
     consent: { analytics: false, ageStats: false, marketing: false },
     following: ["u2", "u3", "u4", "u5", "u6", "u7"],
     blocked: [],
+    foods: [],
+    foodLog: [],
   };
 }

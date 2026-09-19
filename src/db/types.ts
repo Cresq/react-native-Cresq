@@ -90,6 +90,8 @@ export type Profile = {
   lastFeedSeen?: number;
   /** When the notifications screen was last opened; anything newer carries a dot. */
   lastNotificationsSeen?: number;
+  /** What a day should add up to. Set by the person under Food; absent until then. */
+  targets?: NutritionTargets;
 };
 
 /**
@@ -120,6 +122,49 @@ export type Account = {
   syncedAt?: number;
 };
 
+/** Where the figures on a food came from. */
+export type FoodSource = "openfoodfacts" | "label" | "manual";
+
+/**
+ * A product or an ingredient. The figures are per 100 g, or per 100 ml for
+ * something you drink, which is how every European pack states them; what a
+ * portion comes to is worked out from that at the moment it is logged.
+ *
+ * `verified` is the person's word, not the app's: it turns true only when
+ * somebody has looked at the numbers next to the pack and said they are right.
+ * A product straight from Open Food Facts starts out unverified, and the app
+ * says so until they check it once.
+ */
+export type Food = {
+  id: string;
+  name: string;
+  brand?: string;
+  /** The EAN or UPC as scanned. Absent for something without a pack. */
+  barcode?: string;
+  unit: "g" | "ml";
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  sugars?: number;
+  saturated?: number;
+  fibre?: number;
+  salt?: number;
+  /** One portion in g or ml, when the pack or the person says what that is. */
+  serving?: number;
+  source: FoodSource;
+  verified: boolean;
+  createdAt: number;
+};
+
+export type Meal = "breakfast" | "lunch" | "dinner" | "snack";
+
+/** One thing eaten: which food, how much of it in g or ml, at which meal, when. */
+export type FoodEntry = { id: string; foodId: string; amount: number; meal: Meal; at: number };
+
+/** Daily targets. Absent until the person sets them; the app never guesses. */
+export type NutritionTargets = { kcal: number; protein: number; carbs: number; fat: number };
+
 export const DEFAULT_FAVOURITES = ["bench", "squat", "deadlift", "ohp"];
 export const MIN_AGE = 16;
 
@@ -138,6 +183,10 @@ export type Db = {
   following: string[];
   /** People the user blocked: hidden everywhere, cannot follow. */
   blocked: string[];
+  /** Every product and ingredient this person has scanned, read or typed in. */
+  foods: Food[];
+  /** What was eaten, one entry per portion. */
+  foodLog: FoodEntry[];
   /**
    * Comments this device has written, by post id. Only the words and the time:
    * the name and the face are read from the profile when they are shown, so a
@@ -151,4 +200,4 @@ export type Db = {
  * carried forward by `migrate`; it is never discarded, because it is somebody's
  * training history.
  */
-export const DB_VERSION = 4;
+export const DB_VERSION = 5;

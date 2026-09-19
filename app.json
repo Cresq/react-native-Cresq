@@ -49,7 +49,16 @@
           "cameraPermission": "CresQ takes the photo you choose to add to your session."
         }
       ],
-      "expo-video"
+      "expo-video",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "CresQ uses the camera to read barcodes and nutrition tables. Nothing is recorded.",
+          "microphonePermission": "CresQ does not use the microphone.",
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false,

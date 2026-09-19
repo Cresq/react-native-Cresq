@@ -52,6 +52,8 @@ function migrate(stored: Db): Db {
     split: stored.split ?? fresh.split,
     following: stored.following ?? fresh.following,
     blocked: stored.blocked ?? [],
+    foods: stored.foods ?? [],
+    foodLog: stored.foodLog ?? [],
   };
 }
 
