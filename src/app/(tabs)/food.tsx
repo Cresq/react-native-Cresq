@@ -8,17 +8,18 @@ import { haptic } from "@/haptics";
 import { longDate } from "@/db/derive";
 import { useFood } from "@/store/food";
 import { MEALS, MEAL_NAME, entriesOn, fmtG, fmtKcal, portion, totals } from "@/nutrition/derive";
-import type { Food, FoodEntry, Meal } from "@/db/types";
+import type { Food, FoodEntry, Meal, NutritionTargets } from "@/db/types";
 import { Screen, Row, Section } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { Card, Divider } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/Icon";
-import { Field } from "@/components/ui/Field";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { FoodWelcome } from "@/components/FoodWelcome";
 import { FoodMark } from "@/components/FoodMark";
+import { MacroBars } from "@/components/MacroBars";
+import { MacroTargets } from "@/components/MacroTargets";
 import { useDb } from "@/db/DbProvider";
 
 /**
@@ -35,15 +36,12 @@ export default function FoodTab() {
   const t = useT();
   const locale = localeOf(useLanguage());
   const now = useNow();
-  const { db } = useDb();
+  const { db, update } = useDb();
   const { foods, log, byId, targets, removeEntry, setTargets } = useFood();
   const [picked, setPicked] = useState<FoodEntry | null>(null);
   const [editingTargets, setEditingTargets] = useState(false);
   const [afterSheet, setAfterSheet] = useState<(() => void) | null>(null);
-  const [tKcal, setTKcal] = useState("");
-  const [tProtein, setTProtein] = useState("");
-  const [tCarbs, setTCarbs] = useState("");
-  const [tFat, setTFat] = useState("");
+  const [draftTargets, setDraftTargets] = useState<NutritionTargets>({ kcal: 0, protein: 0, carbs: 0, fat: 0 });
 
   const today = useMemo(() => entriesOn(log, now), [log, now]);
   const sum = useMemo(() => totals(today, foods), [today, foods]);
@@ -58,22 +56,20 @@ export default function FoodTab() {
   const n = (v: number) => Math.round(v).toLocaleString(locale);
   const scan = () => router.push("/food/scan");
   const openTargets = () => {
-    setTKcal(targets ? String(targets.kcal) : "");
-    setTProtein(targets ? String(targets.protein) : "");
-    setTCarbs(targets ? String(targets.carbs) : "");
-    setTFat(targets ? String(targets.fat) : "");
+    setDraftTargets(targets ?? { kcal: 0, protein: 0, carbs: 0, fat: 0 });
     setEditingTargets(true);
   };
-  const num = (s: string) => {
-    const v = Number(s.replace(",", ".").trim());
-    return Number.isFinite(v) && v > 0 ? Math.round(v) : 0;
-  };
-  const targetsReady = [tKcal, tProtein, tCarbs, tFat].every((v) => num(v) > 0);
+  const targetsReady = draftTargets.kcal > 0 && draftTargets.protein > 0 && draftTargets.carbs > 0 && draftTargets.fat > 0;
   const saveTargets = () => {
     if (!targetsReady) return;
-    setTargets({ kcal: num(tKcal), protein: num(tProtein), carbs: num(tCarbs), fat: num(tFat) });
+    setTargets(draftTargets);
     haptic("done");
     setEditingTargets(false);
+  };
+  /** Back to the questions: the welcome takes the tab again until they are answered. */
+  const askAgain = () => {
+    setEditingTargets(false);
+    update((d) => ({ ...d, profile: { ...d.profile, food: undefined } }));
   };
 
   // The first time: a welcome and two questions, in the tab itself, before any of this.
@@ -101,11 +97,7 @@ export default function FoodTab() {
           </Txt>
         </Row>
         {targets ? (
-          <View style={{ gap: 12 }}>
-            <Bar label={t("Protein")} value={sum.protein} target={targets.protein} colour={colors.fuel.sage} track={colors.bg.raised} />
-            <Bar label={t("Carbohydrates")} value={sum.carbs} target={targets.carbs} colour={colors.fuel.sage} track={colors.bg.raised} />
-            <Bar label={t("Fat")} value={sum.fat} target={targets.fat} colour={colors.fuel.sage} track={colors.bg.raised} />
-          </View>
+          <MacroBars eaten={sum} targets={targets} />
         ) : (
           <View style={{ gap: 10 }}>
             <Txt variant="bodyS" tone="secondary">
@@ -189,39 +181,15 @@ export default function FoodTab() {
         </View>
       </BottomSheet>
 
-      <BottomSheet visible={editingTargets} onClose={() => setEditingTargets(false)} title={t("Daily targets")} subtitle={t("What a day should add up to. Change them whenever your plan changes.")}>
+      <BottomSheet visible={editingTargets} onClose={() => setEditingTargets(false)} title={t("Daily targets")} subtitle={t("What a day should add up to. The four figures move together.")}>
         <View style={{ gap: 10, paddingHorizontal: 8, paddingVertical: 8 }}>
-          <Field label={t("Energy (kcal)")} value={tKcal} onChangeText={setTKcal} placeholder="2400" keyboardType="number-pad" inputMode="numeric" autoFocus />
-          <Row gap={10} align="flex-start">
-            <View style={{ flex: 1 }}><Field label={t("Protein (g)")} value={tProtein} onChangeText={setTProtein} placeholder="160" keyboardType="number-pad" inputMode="numeric" /></View>
-            <View style={{ flex: 1 }}><Field label={t("Carbohydrates (g)")} value={tCarbs} onChangeText={setTCarbs} placeholder="260" keyboardType="number-pad" inputMode="numeric" /></View>
-            <View style={{ flex: 1 }}><Field label={t("Fat (g)")} value={tFat} onChangeText={setTFat} placeholder="80" keyboardType="number-pad" inputMode="numeric" /></View>
-          </Row>
+          {editingTargets ? <MacroTargets initial={draftTargets} onChange={setDraftTargets} /> : null}
           <Button label={t("Save targets")} onPress={saveTargets} disabled={!targetsReady} style={{ marginTop: 4 }} />
+          <Button label={t("Answer the questions again")} variant="tertiary" size="M" onPress={askAgain} />
           {targets ? <Button label={t("Clear targets")} variant="tertiary" size="M" onPress={() => { setTargets(undefined); setEditingTargets(false); }} /> : null}
         </View>
       </BottomSheet>
     </Screen>
-  );
-}
-
-/** A thin line in the food colour, with the figure and the target beside it. */
-function Bar({ label, value, target, colour, track }: { label: string; value: number; target: number; colour: string; track: string }) {
-  const pct = Math.max(0, Math.min(1, target > 0 ? value / target : 0));
-  return (
-    <View style={{ gap: 6 }}>
-      <Row justify="space-between">
-        <Txt variant="labelS" tone="tertiary">
-          {label}
-        </Txt>
-        <Txt variant="labelS" tone="secondary" tabular>
-          {`${fmtG(value)} / ${Math.round(target)} g`}
-        </Txt>
-      </Row>
-      <View style={{ height: 4, borderRadius: 2, backgroundColor: track, overflow: "hidden" }}>
-        <View style={{ width: `${pct * 100}%`, height: 4, borderRadius: 2, backgroundColor: colour }} />
-      </View>
-    </View>
   );
 }
 

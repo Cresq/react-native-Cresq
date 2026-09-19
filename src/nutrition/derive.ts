@@ -1,10 +1,10 @@
 import type { Food, FoodEntry, Meal, NutritionTargets } from "@/db/types";
 import { locale, startOfDay } from "@/db/derive";
 
-export const MEALS: Meal[] = ["breakfast", "lunch", "dinner", "snack"];
+export const MEALS: Meal[] = ["breakfast", "lunch", "pre", "post", "dinner", "snack"];
 
 /** Translation keys, one per meal. */
-export const MEAL_NAME: Record<Meal, string> = { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snacks" };
+export const MEAL_NAME: Record<Meal, string> = { breakfast: "Breakfast", lunch: "Lunch", pre: "Pre-workout", post: "Post-workout", dinner: "Dinner", snack: "Snacks" };
 
 export type Figures = { kcal: number; protein: number; carbs: number; fat: number; sugars: number; saturated: number; fibre: number; salt: number };
 
@@ -43,8 +43,12 @@ export function totals(entries: FoodEntry[], foods: Food[]): Figures {
   return sum(entries.map((e) => (byId.get(e.foodId) ? portion(byId.get(e.foodId)!, e.amount) : ZERO)));
 }
 
-/** Which meal it probably is, from the clock: enough to preselect, never to insist. */
-export function mealAt(t: number): Meal {
+/**
+ * Which meal it probably is: post-workout for two hours after a session,
+ * otherwise from the clock. Enough to preselect, never to insist.
+ */
+export function mealAt(t: number, lastFinishedAt?: number): Meal {
+  if (lastFinishedAt && t >= lastFinishedAt && t - lastFinishedAt < 2 * 3_600_000) return "post";
   const h = new Date(t).getHours() + new Date(t).getMinutes() / 60;
   if (h < 10.5) return "breakfast";
   if (h < 14.5) return "lunch";
@@ -62,17 +66,36 @@ export const fmtKcal = (n: number) => Math.round(n).toLocaleString(locale);
 /** Energy in kJ to kcal, for a pack that states only the one. */
 export const kjToKcal = (kj: number) => kj / 4.184;
 
+/** Energy from the three macros: four calories a gram of protein or carbohydrate, nine a gram of fat. */
+export const kcalOf = (protein: number, carbs: number, fat: number) => Math.round(protein * 4 + carbs * 4 + fat * 9);
+
+export type NeedsInput = { weightKg: number; heightCm: number; age: number; sex: "m" | "f" | "x"; activity: "low" | "moderate" | "high"; goal: "cut" | "maintain" | "gain" };
+
 /**
- * A starting point for daily targets, never a prescription: an active lifter's
- * rough maintenance from body weight, nudged the way the goal points, protein
- * and fat per kilo, carbohydrates whatever is left. The person sees the four
- * figures before anything is saved and can change every one.
+ * What a day costs at rest and on its feet: Mifflin-St Jeor for the resting
+ * figure (the equation dietitians reach for first), then the day's activity.
+ * "Rather not say" takes the midpoint of the two constants.
  */
-export function proposeTargets(weightKg: number, goal: "cut" | "maintain" | "gain"): NutritionTargets {
-  const maintenance = weightKg * 31;
-  const kcal = Math.round((goal === "cut" ? maintenance * 0.85 : goal === "gain" ? maintenance * 1.1 : maintenance) / 10) * 10;
-  const protein = Math.round(weightKg * 1.8);
-  const fat = Math.round(weightKg * 0.9);
+export function maintenanceOf(i: NeedsInput) {
+  const base = 10 * i.weightKg + 6.25 * i.heightCm - 5 * i.age;
+  const rest = i.sex === "m" ? base + 5 : i.sex === "f" ? base - 161 : base - 78;
+  const factor = { low: 1.35, moderate: 1.55, high: 1.75 }[i.activity];
+  return Math.round(rest * factor);
+}
+
+/**
+ * A starting point for daily targets, never a prescription: maintenance, moved
+ * the way the goal points (a real deficit for fat loss, a modest surplus for
+ * muscle), protein per kilo of body weight and higher when cutting, fat a
+ * quarter of the energy, carbohydrate whatever is left. The person sees the
+ * four figures before anything is saved and can change every one; the four
+ * stay coupled through `kcalOf`.
+ */
+export function proposeTargets(i: NeedsInput): NutritionTargets {
+  const maintenance = maintenanceOf(i);
+  const kcal = Math.round((i.goal === "cut" ? maintenance * 0.82 : i.goal === "gain" ? maintenance * 1.1 : maintenance) / 10) * 10;
+  const protein = Math.round(i.weightKg * (i.goal === "cut" ? 2.0 : 1.8));
+  const fat = Math.round((kcal * 0.27) / 9);
   const carbs = Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4));
   return { kcal, protein, carbs, fat };
 }

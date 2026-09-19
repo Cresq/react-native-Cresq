@@ -161,13 +161,13 @@ export type Food = {
   photo?: string;
 };
 
-export type Meal = "breakfast" | "lunch" | "dinner" | "snack";
+export type Meal = "breakfast" | "lunch" | "pre" | "post" | "dinner" | "snack";
 
 /** One thing eaten: which food, how much of it in g or ml, at which meal, when. */
 export type FoodEntry = { id: string; foodId: string; amount: number; meal: Meal; at: number };
 
 /** What the person said when Food was first opened; the targets were proposed from it. */
-export type FoodProfile = { weightKg?: number; goal: "cut" | "maintain" | "gain"; onboardedAt: number };
+export type FoodProfile = { weightKg?: number; heightCm?: number; sex?: "m" | "f" | "x"; activity?: "low" | "moderate" | "high"; goal: "cut" | "maintain" | "gain"; onboardedAt: number };
 
 /** Daily targets. Absent until the person sets them; the app never guesses. */
 export type NutritionTargets = { kcal: number; protein: number; carbs: number; fat: number };

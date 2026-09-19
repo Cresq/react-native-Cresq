@@ -21,6 +21,8 @@ import { WeekStrip } from "@/components/WeekStrip";
 import { Card, Divider } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Stat, StatDivider } from "@/components/StatCard";
+import { MacroBars } from "@/components/MacroBars";
+import { entriesOn, totals } from "@/nutrition/derive";
 import { LineChart } from "@/components/LineChart";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { useSocial } from "@/store/social";
@@ -74,6 +76,7 @@ export default function Home() {
   const running = !!session && !session.finishedAt;
   const done = useMemo(() => finished(db.sessions), [db.sessions]);
   const week = useMemo(() => weekDays(db.sessions), [db.sessions]);
+  const eaten = useMemo(() => totals(entriesOn(db.foodLog, now), db.foods), [db.foodLog, db.foods, now]);
   const volume = useMemo(() => weeklyVolume(db.sessions, now, db.activeSession), [db.sessions, db.activeSession, now]);
   const thisWeek = useMemo(() => done.filter((s) => s.startedAt >= startOfWeek(now)).length, [done, now]);
   const goal = db.profile.daysPerWeek ?? 3;
@@ -163,6 +166,29 @@ export default function Home() {
               <Icon name="chevronRight" size={18} color={colors.text.tertiary} />
             </Pressable>
           ) : null}
+
+      {/* Food today, eaten against the day's need, and a door to the tab. */}
+      <Section title={t("Food")} action={t("Open")} onAction={() => router.push("/(tabs)/food")}>
+        <Card padding={20} gap={14} onPress={() => router.push("/(tabs)/food")}>
+          {db.profile.food ? (
+            <>
+              <Row gap={16} align="stretch">
+                <Stat size="M" label={t("Eaten")} value={Math.round(eaten.kcal).toLocaleString(locale)} unit="kcal" />
+                <StatDivider />
+                <Stat size="M" label={db.profile.targets ? t("To go") : t("Target")} value={db.profile.targets ? Math.max(0, Math.round(db.profile.targets.kcal - eaten.kcal)).toLocaleString(locale) : t("none")} unit={db.profile.targets ? "kcal" : undefined} />
+              </Row>
+              {db.profile.targets ? <MacroBars eaten={eaten} targets={db.profile.targets} /> : null}
+            </>
+          ) : (
+            <View style={{ gap: 4 }}>
+              <Txt variant="labelL">{t("Food, the same way you log a set")}</Txt>
+              <Txt variant="bodyS" tone="secondary">
+                {t("A few questions and your need is worked out; then a pack is two taps from a portion.")}
+              </Txt>
+            </View>
+          )}
+        </Card>
+      </Section>
 
       {/* One glance at the data, and a door to the rest of it. */}
       <Section title={t("Data")} action={t("Open")} onAction={() => router.push("/progress")}>

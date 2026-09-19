@@ -6,6 +6,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { useT } from "@/i18n";
 import { haptic } from "@/haptics";
 import { useFood } from "@/store/food";
+import { useDb } from "@/db/DbProvider";
 import { setDraft } from "@/nutrition/draft";
 import { MEALS, MEAL_NAME, fmtG, fmtKcal, mealAt, portion } from "@/nutrition/derive";
 import type { Meal } from "@/db/types";
@@ -38,11 +39,13 @@ export default function FoodDetail() {
   const t = useT();
   const { id } = useLocalSearchParams<{ id: string; log?: string }>();
   const { byId, logFood, updateFood } = useFood();
+  const { db } = useDb();
+  const lastFinished = db.sessions.reduce((m, x) => Math.max(m, x.finishedAt ?? 0), 0);
   const [photoSheet, setPhotoSheet] = useState(false);
   const [zoom, setZoom] = useState(false);
   const food = byId.get(id);
   const [amount, setAmount] = useState(() => String(food?.serving ?? 100));
-  const [meal, setMeal] = useState<Meal>(() => mealAt(Date.now()));
+  const [meal, setMeal] = useState<Meal>(() => mealAt(Date.now(), lastFinished));
 
   const leave = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)/food"));
 
