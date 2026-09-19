@@ -17,7 +17,7 @@ export type ChartPoint = { value: number; record?: boolean };
  * Put a finger on it and a marker follows, snapping to the nearest session
  * with a light tick; the value and its date read above the finger.
  */
-export function LineChart({ points, forecast, height = 96, labels, target, scrubLabels, unit = "kg", onScrub, onPress, still }: { points: ChartPoint[]; forecast?: number[]; height?: number; labels?: string[]; target?: number; /** One label per point, shown while scrubbing (usually the date). */ scrubLabels?: string[]; unit?: string; /** Fires true when a scrub starts and false when it ends, so a parent Pressable can ignore the release. */ onScrub?: (active: boolean) => void; /** A quick tap, and only that: a scrub never counts as one. */ onPress?: () => void; /** A picture only: no scrubbing, no taps of its own. */ still?: boolean }) {
+export function LineChart({ points, forecast, height = 96, labels, target, scrubLabels, unit = "kg", hint, onScrub, onPress, still }: { points: ChartPoint[]; /** What the quiet line over a tall chart says; a point is a session unless the caller says otherwise. */ hint?: string; forecast?: number[]; height?: number; labels?: string[]; target?: number; /** One label per point, shown while scrubbing (usually the date). */ scrubLabels?: string[]; unit?: string; /** Fires true when a scrub starts and false when it ends, so a parent Pressable can ignore the release. */ onScrub?: (active: boolean) => void; /** A quick tap, and only that: a scrub never counts as one. */ onPress?: () => void; /** A picture only: no scrubbing, no taps of its own. */ still?: boolean }) {
   const { colors } = useTheme();
   const t = useT();
   const [width, setWidth] = useState(0);
@@ -120,7 +120,7 @@ export function LineChart({ points, forecast, height = 96, labels, target, scrub
           </Animated.View>
         ) : (
           <Txt variant="labelS" tone="tertiary">
-            {points.length > 1 && height >= 140 ? t("Touch the line to read a session") : ""}
+            {points.length > 1 && height >= 140 ? (hint ?? t("Touch the line to read a session")) : ""}
           </Txt>
         )}
       </View>

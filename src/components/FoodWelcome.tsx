@@ -12,7 +12,7 @@ import { Screen, Row } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
-import { WheelPicker } from "@/components/ui/WheelPicker";
+import { NumberWheelField } from "@/components/ui/WheelField";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { Icon, type IconName } from "@/components/ui/Icon";
@@ -167,17 +167,11 @@ export function FoodWelcome() {
             <Chip label={t("Rather not say")} selected={sex === "x"} onPress={() => setSex("x")} />
           </Row>
           <Row gap={10} align="flex-start">
-            <View style={{ flex: 1, gap: 6 }}>
-              <Txt variant="labelS" tone="tertiary">
-                {t("Height (cm)")}
-              </Txt>
-              <WheelPicker values={Array.from({ length: 81 }, (_, k) => 140 + k)} value={height} onChange={setHeight} format={(v) => `${v} cm`} />
+            <View style={{ flex: 1 }}>
+              <NumberWheelField label={t("Height")} values={Array.from({ length: 81 }, (_, k) => 140 + k)} value={height} onChange={setHeight} format={(v) => `${v} cm`} accent="sage" />
             </View>
-            <View style={{ flex: 1, gap: 6 }}>
-              <Txt variant="labelS" tone="tertiary">
-                {t("Body weight (kg)")}
-              </Txt>
-              <WheelPicker values={Array.from({ length: 161 }, (_, k) => 40 + k)} value={weight} onChange={setWeight} format={(v) => `${v} kg`} />
+            <View style={{ flex: 1 }}>
+              <NumberWheelField label={t("Body weight")} values={Array.from({ length: 161 }, (_, k) => 40 + k)} value={weight} onChange={setWeight} format={(v) => `${v} kg`} accent="sage" />
             </View>
           </Row>
           {db.profile.birthYear ? (

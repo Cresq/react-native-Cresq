@@ -13,7 +13,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { Chip } from "@/components/ui/Chip";
-import { WheelPicker } from "@/components/ui/WheelPicker";
+import { NumberWheelField } from "@/components/ui/WheelField";
 
 type Sex = NonNullable<FoodProfile["sex"]>;
 type Activity = NonNullable<FoodProfile["activity"]>;
@@ -90,23 +90,14 @@ function Form() {
 
       <Section title={t("Height and weight")}>
         <Row gap={10} align="flex-start">
-          <View style={{ flex: 1, gap: 6 }}>
-            <Txt variant="labelS" tone="tertiary">
-              {t("Height (cm)")}
-            </Txt>
-            <WheelPicker values={range(140, 220)} value={height} onChange={(v) => { setHeight(v); setProposal(null); }} format={(v) => `${v} cm`} />
+          <View style={{ flex: 1 }}>
+            <NumberWheelField label={t("Height")} values={range(140, 220)} value={height} onChange={(v) => { setHeight(v); setProposal(null); }} format={(v) => `${v} cm`} />
           </View>
-          <View style={{ flex: 1, gap: 6 }}>
-            <Txt variant="labelS" tone="tertiary">
-              {t("Body weight (kg)")}
-            </Txt>
-            <WheelPicker values={range(40, 200)} value={weight} onChange={(v) => { setWeight(v); setProposal(null); }} format={(v) => `${v} kg`} />
+          <View style={{ flex: 1 }}>
+            <NumberWheelField label={t("Body weight")} values={range(40, 200)} value={weight} onChange={(v) => { setWeight(v); setProposal(null); }} format={(v) => `${v} kg`} />
           </View>
         </Row>
-      </Section>
-
-      <Section title={t("Year of birth")}>
-        <WheelPicker values={years} value={birthYear} onChange={(v) => { setBirthYear(v); setProposal(null); }} />
+        <NumberWheelField label={t("Year of birth")} values={years} value={birthYear} onChange={(v) => { setBirthYear(v); setProposal(null); }} />
       </Section>
 
       <Section title={t("About you")}>

@@ -122,7 +122,7 @@ export default function LiftDetail() {
             {tab === "trend" ? (
               <View style={{ gap: 20 }}>
                 <View style={{ gap: 12 }}>
-                  <Segmented size="M" value={range} onChange={setRange} segments={[{ key: "1m", label: "1M" }, { key: "3m", label: "3M" }, { key: "6m", label: "6M" }, { key: "1y", label: "1Y" }, { key: "all", label: "All" }]} />
+                  <Segmented size="M" value={range} onChange={setRange} segments={[{ key: "1m", label: "1M" }, { key: "3m", label: "3M" }, { key: "6m", label: "6M" }, { key: "1y", label: t("1Y") }, { key: "all", label: t("All") }]} />
                   <Card padding={20} gap={12}>
                     <Row gap={12}>
                       <Legend color={colors.accent.ember} label={t("Estimated 1RM")} />

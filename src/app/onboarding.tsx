@@ -12,7 +12,7 @@ import { Icon, type IconName } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Chip } from "@/components/ui/Chip";
-import { WheelPicker } from "@/components/ui/WheelPicker";
+import { NumberWheelField } from "@/components/ui/WheelField";
 import { Toggle } from "@/components/ui/Toggle";
 import { Divider } from "@/components/ui/Card";
 import { useT } from "@/i18n";
@@ -74,7 +74,7 @@ export default function Onboarding() {
 
       {step.key === "birth" ? (
         <View style={{ gap: 12 }}>
-          <WheelPicker values={Array.from({ length: 100 - MIN_AGE + 1 }, (_, k) => thisYear - 100 + k)} value={a.birthYear ?? thisYear - 25} onChange={(v) => setA({ ...a, birthYear: v })} />
+          <NumberWheelField label={t("Year of birth")} values={Array.from({ length: 100 - MIN_AGE + 1 }, (_, k) => thisYear - 100 + k)} value={a.birthYear ?? thisYear - 25} onChange={(v) => setA({ ...a, birthYear: v })} />
           {tooYoung ? (
             <Row gap={8} align="flex-start">
               <Icon name="info" size={16} color={colors.status.warning} strokeWidth={2} />

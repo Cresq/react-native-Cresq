@@ -8,11 +8,12 @@ import { haptic } from "@/haptics";
 import { longDate, relativeDay, shortDate, startOfDay } from "@/db/derive";
 import { useWeight } from "@/store/weight";
 import type { WeightEntry } from "@/db/types";
-import { Screen, Row, Section, Header } from "@/components/ui/Screen";
+import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
-import { Card, Divider } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import { Divider } from "@/components/ui/Card";
 import { IconButton } from "@/components/ui/IconButton";
+import { Segmented } from "@/components/ui/Segmented";
+import { WheelField } from "@/components/ui/WheelField";
 import { WheelPicker } from "@/components/ui/WheelPicker";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { LineChart } from "@/components/LineChart";
@@ -20,13 +21,18 @@ import { LineChart } from "@/components/LineChart";
 const KILOS = Array.from({ length: 221 }, (_, i) => i + 30);
 const TENTHS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const DAY = 86_400_000;
+/** How far back the line looks, in days. */
+const RANGES: Record<string, number> = { "1w": 7, "1m": 30, "3m": 91, "1y": 365, all: 100_000 };
+/** How many weigh-ins the list shows before it is asked for the rest. */
+const SHORT = 7;
 
 /**
- * Body weight, once a day. The figure on top, two wheels to set today's (whole
- * kilos and tenths, because a tenth is what a day moves), the line of the last
- * thirty weigh-ins, and every one of them underneath.
+ * Body weight, once a day, on a page that stays out of the way: one field
+ * with today's figure, which brings the wheels up when it is pressed (whole
+ * kilos and tenths, because a tenth is what a day moves), the line over the
+ * period you pick, and the weigh-ins underneath.
  *
- * Whether a change is good news depends on what the person is after, so the
+ * Whether a change is good news depends on what the person is after, so its
  * colour follows their food goal: down is green for somebody cutting, up is
  * green for somebody gaining, and for maintenance it is simply stated.
  */
@@ -35,112 +41,127 @@ export default function Weight() {
   const t = useT();
   const locale = localeOf(useLanguage());
   const now = useNow();
-  const { db, ready } = useDb();
+  const { db } = useDb();
   const { entries, latest, on, log, remove } = useWeight();
+  const [range, setRange] = useState("1m");
+  const [all, setAll] = useState(false);
   const [picked, setPicked] = useState<WeightEntry | null>(null);
+  const [kilo, setKilo] = useState(75);
+  const [tenth, setTenth] = useState(0);
 
   const f = (kg: number) => kg.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const decimal = (1.1).toLocaleString(locale).charAt(1);
   const leave = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)"));
   const today = on(now);
-  const start = today?.kg ?? latest?.kg ?? db.profile.food?.weightKg ?? 75;
+  // The wheels open on what is known: today's figure, else the last one, else the food profile's.
+  const openWheels = () => {
+    const tenths = Math.round((today?.kg ?? latest?.kg ?? db.profile.food?.weightKg ?? 75) * 10);
+    setKilo(Math.min(250, Math.max(30, Math.floor(tenths / 10))));
+    setTenth(tenths % 10);
+  };
+  const draft = kilo + tenth / 10;
 
-  // Where it went over the last thirty days, first weigh-in to last.
-  const month = entries.filter((w) => w.at >= now - 30 * DAY);
-  const first = month[0];
-  const change = latest && first && first.id !== latest.id ? Math.round((latest.kg - first.kg) * 10) / 10 : null;
-  const days = latest && first ? Math.max(1, Math.round((startOfDay(latest.at) - startOfDay(first.at)) / DAY)) : 0;
+  // The period on the chart, and where the weight went within it, first weigh-in to last.
+  const shown = entries.filter((w) => w.at >= now - RANGES[range] * DAY);
+  const first = shown[0];
+  const last = shown[shown.length - 1];
+  const change = first && last && first.id !== last.id ? Math.round((last.kg - first.kg) * 10) / 10 : null;
+  const days = first && last ? Math.max(1, Math.round((startOfDay(last.at) - startOfDay(first.at)) / DAY)) : 0;
   const goal = db.profile.food?.goal;
   const tone = change === null || change === 0 || !goal || goal === "maintain" ? "secondary" : (goal === "cut" ? change < 0 : change > 0) ? "success" : "danger";
-  const shown = entries.slice(-30);
+  const history = [...entries].reverse();
 
   return (
-    <Screen>
+    <Screen contentStyle={{ gap: 20 }}>
       <Header left={<IconButton name="chevronLeft" onPress={leave} accessibilityLabel={t("Back")} />} title={t("Weight")} />
 
-      <View style={{ gap: 4 }}>
-        <Txt variant="labelM" tone="tertiary">
-          {today ? t("Today") : latest ? t("Last logged, {when}", { when: relativeDay(latest.at) }) : t("Not logged yet")}
-        </Txt>
-        <Row gap={6} align="baseline">
-          <Txt variant="displayXL" tabular>
-            {latest ? f(latest.kg) : "–"}
-          </Txt>
-          <Txt variant="labelL" tone="secondary">
-            kg
-          </Txt>
-        </Row>
-        {change !== null ? (
-          <Txt variant="labelM" tone={tone}>
-            {t(days === 1 ? "{change} kg in {n} day" : "{change} kg in {n} days", { change: `${change > 0 ? "+" : ""}${f(change)}`, n: days })}
+      <View style={{ gap: 8 }}>
+        <WheelField
+          label={t("Today")}
+          text={today ? `${f(today.kg)} kg` : undefined}
+          placeholder={t("Tap to log")}
+          title={t("Weight today")}
+          confirm={today ? t("Change today to {kg} kg", { kg: f(draft) }) : t("Log {kg} kg for today", { kg: f(draft) })}
+          accent="sage"
+          onOpen={openWheels}
+          onConfirm={() => {
+            log(draft);
+            haptic("done");
+          }}
+        >
+          <Row gap={12}>
+            <View style={{ flex: 1 }}>
+              <WheelPicker values={KILOS} value={kilo} onChange={setKilo} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <WheelPicker values={TENTHS} value={tenth} onChange={setTenth} format={(v) => `${decimal}${v} kg`} />
+            </View>
+          </Row>
+        </WheelField>
+        {!today && latest ? (
+          <Txt variant="labelS" tone="tertiary" style={{ paddingLeft: 4 }}>
+            {t("Last logged, {when}", { when: relativeDay(latest.at) })}: {f(latest.kg)} kg
           </Txt>
         ) : null}
       </View>
 
-      {/* The wheels are built from what is known, so they wait for the stored log, and start again from a new figure once it is in. */}
-      {ready ? <Wheels key={`${latest?.id ?? "none"}`} start={start} changing={!!today} format={f} decimal={(1.1).toLocaleString(locale).charAt(1)} onLog={(kg) => { log(kg); haptic("done"); }} /> : null}
-
-      {shown.length >= 2 ? (
-        <Section title={t("The last 30 weigh-ins")}>
-          <Card padding={16} gap={0}>
-            <LineChart points={shown.map((w) => ({ value: w.kg }))} scrubLabels={shown.map((w) => shortDate(w.at))} height={120} unit="kg" />
-          </Card>
-        </Section>
-      ) : null}
-
-      {entries.length ? (
-        <Section title={t("History")}>
-          <Card padding={16} gap={0}>
-            {[...entries].reverse().slice(0, 60).map((w, i) => (
-              <View key={w.id}>
-                {i > 0 ? <Divider /> : null}
-                <Pressable accessibilityRole="button" accessibilityLabel={`${longDate(w.at)}, ${f(w.kg)} kg`} onPress={() => setPicked(w)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 11, opacity: pressed ? 0.7 : 1 })}>
-                  <Txt variant="bodyM" style={{ flex: 1 }}>
-                    {longDate(w.at)}
-                  </Txt>
-                  <Txt variant="labelL" tabular>
-                    {f(w.kg)} kg
-                  </Txt>
-                </Pressable>
-              </View>
-            ))}
-          </Card>
-        </Section>
-      ) : (
-        <Card tone="raised" padding={18} gap={6}>
-          <Txt variant="labelL">{t("No weight logged yet")}</Txt>
-          <Txt variant="bodyS" tone="secondary">
-            {t("Log it once a day and the line shows where it is going, which a single weigh-in never does.")}
+      <View style={{ gap: 12 }}>
+        <Segmented
+          size="M"
+          value={range}
+          onChange={setRange}
+          segments={[
+            { key: "1w", label: t("1W") },
+            { key: "1m", label: "1M" },
+            { key: "3m", label: "3M" },
+            { key: "1y", label: t("1Y") },
+            { key: "all", label: t("All") },
+          ]}
+        />
+        {shown.length >= 2 ? (
+          <View style={{ gap: 8 }}>
+            {change !== null ? (
+              <Txt variant="labelM" tone={tone}>
+                {t(days === 1 ? "{change} kg in {n} day" : "{change} kg in {n} days", { change: `${change > 0 ? "+" : ""}${f(change)}`, n: days })}
+              </Txt>
+            ) : null}
+            <LineChart points={shown.map((w) => ({ value: w.kg }))} scrubLabels={shown.map((w) => shortDate(w.at))} labels={[shortDate(first.at), shortDate(last.at)]} height={140} unit="kg" hint={t("Touch the line to read a weigh-in")} />
+          </View>
+        ) : (
+          <Txt variant="bodyS" tone="tertiary" style={{ paddingVertical: 8 }}>
+            {entries.length ? t("Not enough weigh-ins in this period for a line yet.") : t("Log it once a day and the line shows where it is going, which a single weigh-in never does.")}
           </Txt>
-        </Card>
-      )}
+        )}
+      </View>
+
+      {history.length ? (
+        <View>
+          {(all ? history : history.slice(0, SHORT)).map((w, i) => (
+            <View key={w.id}>
+              {i > 0 ? <Divider /> : null}
+              <Pressable accessibilityRole="button" accessibilityLabel={`${longDate(w.at)}, ${f(w.kg)} kg`} onPress={() => setPicked(w)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, opacity: pressed ? 0.7 : 1 })}>
+                <Txt variant="bodyS" tone="secondary" style={{ flex: 1 }}>
+                  {longDate(w.at)}
+                </Txt>
+                <Txt variant="labelM" tabular>
+                  {f(w.kg)} kg
+                </Txt>
+              </Pressable>
+            </View>
+          ))}
+          {history.length > SHORT ? (
+            <Pressable accessibilityRole="button" onPress={() => setAll((v) => !v)} hitSlop={8} style={{ paddingTop: 10, alignSelf: "flex-start" }}>
+              <Txt variant="labelM" tone="secondary">
+                {all ? t("Show less") : t("Show all {n}", { n: history.length })}
+              </Txt>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
 
       <BottomSheet visible={!!picked} onClose={() => setPicked(null)} title={picked ? longDate(picked.at) : ""} subtitle={picked ? `${f(picked.kg)} kg` : undefined}>
         <SheetOption icon="trash" label={t("Remove this weigh-in")} danger onPress={() => { if (picked) remove(picked.id); haptic("tap"); setPicked(null); }} />
       </BottomSheet>
     </Screen>
-  );
-}
-
-function Wheels({ start, changing, format, decimal, onLog }: { start: number; changing: boolean; format: (kg: number) => string; decimal: string; onLog: (kg: number) => void }) {
-  const t = useT();
-  const tenths = Math.round(start * 10);
-  const [kilo, setKilo] = useState(Math.min(250, Math.max(30, Math.floor(tenths / 10))));
-  const [tenth, setTenth] = useState(tenths % 10);
-  const kg = kilo + tenth / 10;
-  return (
-    <View style={{ gap: 12 }}>
-      <Row gap={12}>
-        <View style={{ flex: 1 }}>
-          <WheelPicker values={KILOS} value={kilo} onChange={setKilo} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <WheelPicker values={TENTHS} value={tenth} onChange={setTenth} format={(v) => `${decimal}${v} kg`} />
-        </View>
-      </Row>
-      <Button label={changing ? t("Change today to {kg} kg", { kg: format(kg) }) : t("Log {kg} kg for today", { kg: format(kg) })} variant="sage" onPress={() => onLog(kg)} />
-      <Txt variant="labelS" tone="tertiary">
-        {t("Weigh yourself at the same moment each day, first thing in the morning for instance. One figure a day; logging again changes today's.")}
-      </Txt>
-    </View>
   );
 }
