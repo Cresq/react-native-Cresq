@@ -1,3 +1,4 @@
+import { duration } from "./motion";
 /**
  * CresQ design tokens. Names mirror the Figma variables and text styles
  * (Foundations page, "CresQ · Build spec"). Code references tokens, never hex.
@@ -108,7 +109,8 @@ export const type = {
 
 export type TypeVariant = keyof typeof type;
 
-export const motion = { fast: 120, base: 200, slow: 320 } as const;
+/** Durations, from the motion tokens beside this file; springs and the rest live in `src/motion.ts`. */
+export const motion = duration;
 
 /** One depth level, as React Native wants it. */
 export type ShadowLevel = { shadowColor: string; shadowOpacity: number; shadowRadius: number; shadowOffset: { width: number; height: number }; elevation: number };

@@ -1,6 +1,8 @@
 import { ActivityIndicator, StyleSheet, View, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Press } from "./Press";
+import { pressScale } from "@/motion";
+import type { Moment } from "@/haptics";
 import { Txt } from "./Text";
 import { Icon, type IconName } from "./Icon";
 
@@ -25,6 +27,8 @@ export type ButtonProps = Omit<PressableProps, "style" | "children"> & {
   leading?: React.ReactNode;
   trailing?: React.ReactNode;
   loading?: boolean;
+  /** The moment this press is, if it earns a haptic. */
+  feedback?: Moment;
   full?: boolean;
   style?: StyleProp<ViewStyle>;
 };
@@ -47,7 +51,7 @@ export function Button({ label, variant = "primary", size = "L", icon, iconRight
     <Press
       accessibilityRole="button"
       disabled={disabled || loading}
-      scaleTo={0.97}
+      scaleTo={pressScale.button}
       wrapperStyle={[{ alignSelf: full ? "stretch" : "flex-start", opacity: disabled ? 0.4 : 1 }, style]}
       {...rest}
       style={({ pressed }) => [styles.base, { height, borderRadius: size === "S" ? radius.pill : radius.button, backgroundColor: pressed ? p.pressed : p.bg, paddingHorizontal: size === "L" ? 20 : 16 }]}

@@ -5,7 +5,7 @@ import Animated, { runOnJS, useAnimatedReaction, useAnimatedStyle, useSharedValu
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useT } from "@/i18n";
-import { project, rubberband, spring, springs } from "@/motion";
+import { gesture, project, rubberband, spring, springs } from "@/motion";
 import { useOnce } from "@/nav";
 import { dismissesKeyboard } from "@/keyboard";
 import { Txt } from "./Text";
@@ -85,7 +85,7 @@ export function BottomSheet({ visible, onClose, onClosed, title, subtitle, child
     })
     .onEnd((e) => {
       const projected = y.value + project(e.velocityY);
-      if (projected > sheetH.value * 0.45 || e.velocityY > 900) {
+      if (projected > sheetH.value * gesture.sheetClose || e.velocityY > gesture.flick) {
         runOnJS(onClose)();
         leave(e.velocityY);
       } else settle();

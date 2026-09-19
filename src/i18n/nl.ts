@@ -1078,4 +1078,7 @@ export const nl: Record<string, string> = {
   "Height": "Lengte",
   "Body weight": "Lichaamsgewicht",
   "Touch the line to read a weigh-in": "Raak de lijn aan om een meting te lezen",
+
+  /* The workout's motion pass. */
+  "Undo set, a record": "Set ongedaan maken, een record",
 };

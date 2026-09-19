@@ -1,5 +1,8 @@
 import { Pressable, View, type StyleProp, type ViewProps, type ViewStyle } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
+import { pressScale } from "@/motion";
+import type { Moment } from "@/haptics";
+import { AnimatedPressable } from "./AnimatedPressable";
 
 export type CardProps = ViewProps & {
   /** surface = one contained block per screen (the anchor); raised = inner element; transparent = layout only. */
@@ -33,6 +36,20 @@ export function Card({ tone = "surface", padding = 20, radius: r, gap = 12, bord
     <View style={[base, style]} {...rest}>
       {children}
     </View>
+  );
+}
+
+/**
+ * A card you can press. The bigger the surface the less it should move, so it
+ * gives by a point and a half in a hundred and nothing else changes: no colour
+ * flash, no shadow jump. `style` is the card's; `wrapperStyle` places it
+ * (flex, alignSelf), because the scale lives on a wrapper.
+ */
+export function AnimatedCard({ onPress, feedback, wrapperStyle, accessibilityLabel, children, ...card }: Omit<CardProps, "onPress"> & { onPress: () => void; feedback?: Moment; wrapperStyle?: StyleProp<ViewStyle> }) {
+  return (
+    <AnimatedPressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} feedback={feedback} scaleTo={pressScale.card} wrapperStyle={wrapperStyle}>
+      <Card {...card}>{children}</Card>
+    </AnimatedPressable>
   );
 }
 

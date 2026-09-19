@@ -1,7 +1,7 @@
 import type { PropsWithChildren } from "react";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
-import { project, rubberband, spring, springs } from "@/motion";
+import { gesture, project, rubberband, spring, springs } from "@/motion";
 
 /**
  * A bar you can push out of the way. It follows the finger, resists being
@@ -30,7 +30,7 @@ export function SwipeAway({
     })
     .onEnd((e) => {
       const projected = ty.value + project(e.velocityY);
-      if (projected * sign > 56) {
+      if (projected * sign > gesture.dismiss) {
         gone.value = true;
         ty.value = withSpring(sign * 260, spring(0.3, 1, e.velocityY), (done) => {
           if (done) runOnJS(onDismiss)();

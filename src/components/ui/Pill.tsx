@@ -1,5 +1,6 @@
 import { useTheme } from "@/theme/ThemeProvider";
 import { Press } from "./Press";
+import { pressScale } from "@/motion";
 import { Txt } from "./Text";
 
 /**
@@ -15,7 +16,7 @@ export function Pill({ label, onPress, tone = "surface", accessibilityLabel }: {
     <Press
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      scaleTo={0.94}
+      scaleTo={pressScale.pill}
       onPress={onPress}
       style={({ pressed }) => ({ paddingHorizontal: 12, height: 36, alignItems: "center", justifyContent: "center", borderRadius: radius.pill, backgroundColor: pressed ? (accent ? colors.accent.pressed : colors.border.strong) : accent ? colors.accent.ember : colors.bg.surface })}
     >

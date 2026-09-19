@@ -1,6 +1,7 @@
 import { useRef, type PropsWithChildren, type RefObject } from "react";
 import { useScrollToTop } from "expo-router";
 import { ScrollView, View, type NativeScrollEvent, type NativeSyntheticEvent, type StyleProp, type ViewStyle } from "react-native";
+import Animated, { useAnimatedScrollHandler, type SharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Txt } from "./Text";
@@ -17,7 +18,7 @@ import type { IconName } from "./Icon";
  * Sections are 24 pt apart; content inside a section is 12 pt apart (use <Section>).
  * `tabs` adds clearance for the floating tab bar; `footer` pins an action area.
  */
-export function Screen({ children, tabs, bottom = 0, scroll = true, footer, style, contentStyle, scrollRef, onScroll }: PropsWithChildren<{ tabs?: boolean; bottom?: number; scroll?: boolean; footer?: React.ReactNode; style?: StyleProp<ViewStyle>; contentStyle?: StyleProp<ViewStyle>; /** The list itself, for a screen that has to scroll it. */ scrollRef?: RefObject<ScrollView | null>; onScroll?: (e: NativeSyntheticEvent<NativeScrollEvent>) => void }>) {
+export function Screen({ children, tabs, bottom = 0, scroll = true, footer, style, contentStyle, scrollRef, onScroll, scrollY, keyboardInsets }: PropsWithChildren<{ tabs?: boolean; bottom?: number; scroll?: boolean; footer?: React.ReactNode; style?: StyleProp<ViewStyle>; contentStyle?: StyleProp<ViewStyle>; /** The list itself, for a screen that has to scroll it. */ scrollRef?: RefObject<ScrollView | null>; onScroll?: (e: NativeSyntheticEvent<NativeScrollEvent>) => void; /** Kept at the scroll offset on the UI thread, for anything that moves with the scroll. With it, `onScroll` is not called. */ scrollY?: SharedValue<number>; /** A screen with fields in its list: iOS moves the list clear of the keyboard and keeps the focused field in view, natively. */ keyboardInsets?: boolean }>) {
   const { colors, layout } = useTheme();
   const insets = useSafeAreaInsets();
   const running = useRunningSession();
@@ -26,8 +27,15 @@ export function Screen({ children, tabs, bottom = 0, scroll = true, footer, styl
   const own = useRef<ScrollView>(null);
   const scroller = scrollRef ?? own;
   const pull = useHoldToRefresh(!!tabs && scroll);
-  const list = scroll ? (
-    <ScrollView ref={scroller} contentContainerStyle={[content, contentStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" onScroll={(e) => { pull.onScroll(e); onScroll?.(e); }} scrollEventThrottle={16}>
+  const track = useAnimatedScrollHandler((e) => {
+    scrollY?.set(e.contentOffset.y);
+  });
+  const list = scroll && scrollY ? (
+    <Animated.ScrollView ref={scroller as never} contentContainerStyle={[content, contentStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" automaticallyAdjustKeyboardInsets={keyboardInsets} onScroll={track} scrollEventThrottle={16}>
+      {children}
+    </Animated.ScrollView>
+  ) : scroll ? (
+    <ScrollView ref={scroller} contentContainerStyle={[content, contentStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" automaticallyAdjustKeyboardInsets={keyboardInsets} onScroll={(e) => { pull.onScroll(e); onScroll?.(e); }} scrollEventThrottle={16}>
       {tabs ? <BackToTopOnTabPress target={scroller} /> : null}
       {children}
     </ScrollView>

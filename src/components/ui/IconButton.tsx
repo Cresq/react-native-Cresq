@@ -1,6 +1,8 @@
 import { View, type StyleProp, type ViewStyle } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Press } from "./Press";
+import { pressScale } from "@/motion";
+import type { Moment } from "@/haptics";
 import { Icon, type IconName } from "./Icon";
 
 export function IconButton({
@@ -12,6 +14,7 @@ export function IconButton({
   badge,
   style,
   accessibilityLabel,
+  feedback,
 }: {
   name: IconName;
   onPress?: () => void;
@@ -21,6 +24,8 @@ export function IconButton({
   badge?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
+  /** The moment this press is, if it earns a haptic. */
+  feedback?: Moment;
 }) {
   const { colors } = useTheme();
   const bg = tone === "ember" ? colors.accent.ember : tone === "raised" || tone === "danger" ? colors.bg.raised : colors.bg.surface;
@@ -30,7 +35,8 @@ export function IconButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? name}
       onPress={onPress}
-      scaleTo={0.92}
+      feedback={feedback}
+      scaleTo={pressScale.icon}
       wrapperStyle={style}
       style={({ pressed }) => ({
         width: size,
