@@ -117,6 +117,8 @@ export const delay = {
   refusalHold: 2500,
   /** How long typing has to pause before what was typed is handed on. */
   typingPause: 250,
+  /** How long a new record stays on the screen: long enough to read between two sets, gone before the next one starts. */
+  recordHold: 3200,
 } as const;
 
 /** Scroll offsets, in points, between which the compact header comes in. */

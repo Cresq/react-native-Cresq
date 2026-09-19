@@ -3,6 +3,7 @@ import { FlatList, View, Pressable, useWindowDimensions } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useNav } from "@/nav";
 import { shareText } from "@/share";
+import { fmtLoad, isBodyweight } from "@/load";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { finished, fmtKg, longDate, newRecords, sessionStats } from "@/db/derive";
@@ -209,7 +210,7 @@ function Page({ id, at }: { id: string; at?: { index: number; count: number } })
       {recs.length ? (
         <Row gap={8} style={{ flexWrap: "wrap" }}>
           {recs.map((r) => (
-            <Chip key={r.exerciseId} label={`${r.name} ${r.kg} kg`} icon="trophy" tone="gold" size="S" />
+            <Chip key={r.exerciseId} label={`${r.name} ${fmtLoad(r.kg, isBodyweight(r.exerciseId))}`} icon="trophy" tone="gold" size="S" />
           ))}
         </Row>
       ) : null}

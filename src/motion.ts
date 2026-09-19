@@ -1,4 +1,4 @@
-import { Easing, FadeIn, FadeInDown, FadeOut, FadeOutDown, LinearTransition, ReduceMotion, withSpring, type WithSpringConfig, type WithTimingConfig } from "react-native-reanimated";
+import { Easing, FadeIn, FadeInDown, FadeInUp, FadeOut, FadeOutDown, FadeOutUp, LinearTransition, ReduceMotion, withSpring, type WithSpringConfig, type WithTimingConfig } from "react-native-reanimated";
 import { distance, duration, springSpec } from "../constants/motion";
 
 export { delay, distance, duration, gesture, opacity, pressScale, scroll } from "../constants/motion";
@@ -81,6 +81,9 @@ export const layouts = {
   /** A bar docking at the bottom: a short rise, not a slide across the screen. */
   rise: FadeInDown.duration(duration.base).easing(easing).withInitialValues({ opacity: 0, transform: [{ translateY: distance.enter }] }),
   sink: FadeOutDown.duration(duration.fast).easing(easing),
+  /** A note arriving under the top edge, and leaving the way it came. */
+  drop: FadeInUp.duration(duration.slow).easing(easing).withInitialValues({ opacity: 0, transform: [{ translateY: -distance.enter }] }),
+  lift: FadeOutUp.duration(duration.base).easing(easing),
 } as const;
 
 /** Where a flick would come to rest, Apple's exponential-decay projection. */

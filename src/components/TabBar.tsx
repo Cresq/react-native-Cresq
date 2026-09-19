@@ -7,6 +7,7 @@ import { useNav } from "@/nav";
 import type { ComponentProps } from "react";
 import type { Tabs } from "expo-router";
 import { useTheme } from "@/theme/ThemeProvider";
+import { fmtSet, isBodyweight } from "@/load";
 import { fmtTime, sessionStats, useWorkout } from "@/store/workout";
 import { springs, to } from "@/motion";
 import { Txt } from "./ui/Text";
@@ -118,7 +119,7 @@ function RunningStrip() {
   const stats = sessionStats(session, now);
   const current = session.exercises[session.currentIndex];
   const resting = !!rest;
-  const nextLabel = rest?.next ? (rest.next.kg ? t("Set {n}, {kg} kg × {reps}", { n: rest.next.set, kg: rest.next.kg, reps: rest.next.reps }) : t("Set {n}, {reps} reps", { n: rest.next.set, reps: rest.next.reps })) : t("Next exercise");
+  const nextLabel = rest?.next ? (rest.next.kg || isBodyweight(rest.next.exerciseId) ? t("Set {n}, {set}", { n: rest.next.set, set: fmtSet(rest.next.kg, rest.next.reps, isBodyweight(rest.next.exerciseId)) }) : t("Set {n}, {reps} reps", { n: rest.next.set, reps: rest.next.reps })) : t("Next exercise");
   return (
     <Animated.View style={[style, { marginHorizontal: layout.tabBarInset, marginBottom: 8, borderRadius: radius.pill, backgroundColor: resting ? colors.bg.raised : colors.accent.ember, flexDirection: "row", alignItems: "center", paddingRight: 8 }, shadow.floating]}>
       <Pressable accessibilityRole="button" accessibilityLabel={t("Return to your running session")} onPress={() => router.push("/workout/active")} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingLeft: 16, paddingRight: 8, opacity: pressed ? 0.8 : 1 })}>

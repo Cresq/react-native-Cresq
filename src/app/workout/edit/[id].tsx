@@ -7,6 +7,7 @@ import { useDb } from "@/db/DbProvider";
 import { uid } from "@/db/storage";
 import { longDate } from "@/db/derive";
 import { useT, usePlural } from "@/i18n";
+import { BW, isBodyweight } from "@/load";
 import { haptic } from "@/haptics";
 import type { ExerciseEntry, Session, SetEntry } from "@/db/types";
 import { Screen, Row, Header } from "@/components/ui/Screen";
@@ -151,7 +152,7 @@ function EditForm({ s }: { s: Session }) {
                     {x.type === "warmup" ? "W" : String(i + 1)}
                   </Txt>
                   <View style={{ flex: 1 }}>
-                    <Field label="kg" value={x.kg} onChangeText={(v) => patchSet(e.id, x.id, (y) => ({ ...y, kg: v }))} keyboardType="decimal-pad" inputMode="decimal" selectTextOnFocus />
+                    <Field label={isBodyweight(e.exerciseId) ? `${BW} + kg` : "kg"} value={x.kg} onChangeText={(v) => patchSet(e.id, x.id, (y) => ({ ...y, kg: v }))} keyboardType="decimal-pad" inputMode="decimal" selectTextOnFocus />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Field label={t("Reps")} value={x.reps} onChangeText={(v) => patchSet(e.id, x.id, (y) => ({ ...y, reps: v }))} keyboardType="number-pad" inputMode="numeric" selectTextOnFocus />

@@ -3,6 +3,7 @@ import { Pressable, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useNav } from "@/nav";
 import { shareText } from "@/share";
+import { fmtLoad, fmtSet } from "@/load";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { useNow } from "@/clock";
@@ -178,7 +179,7 @@ export default function LiftDetail() {
                       <View style={{ flex: 1, gap: 1 }}>
                         <Row gap={8} align="baseline">
                           <Txt variant="numberM" tabular>
-                            {r.kg} kg
+                            {fmtLoad(r.kg, !!exercise.bodyweight)}
                           </Txt>
                           <Txt variant="labelS" tone="secondary">
                             × {r.reps}
@@ -206,7 +207,7 @@ export default function LiftDetail() {
                     {i > 0 ? <Divider /> : null}
                     <Row gap={12} style={{ paddingVertical: 12 }}>
                       <View style={{ flex: 1, gap: 2 }}>
-                        <Txt variant="labelL">{h.top ? `${h.top.kg ? `${h.top.kg} kg × ` : ""}${h.top.reps}` : t("no working sets")}</Txt>
+                        <Txt variant="labelL">{h.top ? (h.top.kg || exercise.bodyweight ? fmtSet(h.top.kg, h.top.reps, !!exercise.bodyweight) : String(h.top.reps)) : t("no working sets")}</Txt>
                         <Txt variant="bodyS" tone="tertiary">
                           {shortDate(h.date)}, {h.planName}, {plural(h.sets, "{n} set", "{n} sets")}, {fmtKg(h.volume)} kg
                         </Txt>

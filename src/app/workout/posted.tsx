@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { PostCard } from "@/components/PostCard";
 import { BottomSheet, SheetGroup, SheetTextRow } from "@/components/ui/BottomSheet";
 import { useT, usePlural } from "@/i18n";
+import { isBodyweight, loadFigure } from "@/load";
 
 /**
  * Posted. The session is filed the moment this screen opens, so leaving any
@@ -121,7 +122,7 @@ export default function Posted() {
           photo: snap?.photo ? { uri: snap.photo } : undefined,
           photoHeight: 300,
           exercises: snap ? sessionRows(snap).map((r) => ({ name: r.name, detail: t(r.count === 1 ? "{n} set" : "{n} sets", { n: r.count }) })) : [],
-          record: record ? t("New record, {name} {kg} kg", { name: record.name, kg: record.kg }) : undefined,
+          record: record ? t("New record, {name} {kg} kg", { name: record.name, kg: loadFigure(record.kg, isBodyweight(record.exerciseId)) }) : undefined,
           caption: snap?.caption || t("{plan} done. Every set counted.", { plan: snap?.planName ?? t("Session") }),
           stats: [
             { value: String(stats.minutes), unit: "min" },

@@ -14,7 +14,7 @@ export type { Session };
  * both are wrong in the same direction: it tells you to lift sooner than you
  * should.
  */
-type Rest = { total: number; left: number; endsAt: number; next: { set: number; kg: number; reps: number } | null } | null;
+type Rest = { total: number; left: number; endsAt: number; next: { set: number; kg: number; reps: number; /** The movement the next set belongs to, so its load can be written the way that movement writes it. */ exerciseId: string } | null } | null;
 
 /** Exercises as blocks: a superset is one block, a loose exercise is a block of one. */
 function blocks(exs: ExerciseEntry[]) {
@@ -222,7 +222,7 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
       const next = ex.sets.slice(idx + 1).find((x) => !x.done);
       const seconds = Math.max(1, ex.restSeconds || 60);
       // What comes next travels as numbers, not as a sentence: the sentence is written on screen, in the reader's language.
-      setRest({ total: seconds, left: seconds, endsAt: Date.now() + seconds * 1000, next: next ? { set: ex.sets.indexOf(next) + 1, kg: next.kg, reps: next.reps } : null });
+      setRest({ total: seconds, left: seconds, endsAt: Date.now() + seconds * 1000, next: next ? { set: ex.sets.indexOf(next) + 1, kg: next.kg, reps: next.reps, exerciseId: ex.exerciseId } : null });
     },
     [mutate],
   );

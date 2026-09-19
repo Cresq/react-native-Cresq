@@ -8,7 +8,7 @@ import { compareToLast, fmtKg, longDate, newRecords, sessionStats, shortDate } f
 import { Screen, Row, Header, Section } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
-import { Divider } from "@/components/ui/Card";
+import { Card, Divider } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
@@ -22,7 +22,8 @@ import { ExerciseMark } from "@/components/ExerciseMark";
 import { BottomSheet, SheetGroup, SheetInputRow, SheetOption, SheetTextRow } from "@/components/ui/BottomSheet";
 import { pickPhoto } from "@/photo";
 import { gymLabel } from "@/gym/places";
-import { useT } from "@/i18n";
+import { fmtLoad, isBodyweight, loadFigure } from "@/load";
+import { useT, usePlural } from "@/i18n";
 
 /**
  * Session complete. The hero is typographic: the record, or the plain fact
@@ -33,6 +34,7 @@ export default function Summary() {
   const { colors } = useTheme();
   const router = useNav();
   const t = useT();
+  const plural = usePlural();
   const { db } = useDb();
   const { session, file, unfinish, setPhoto, setCaption, setShare, setGym, setDuration } = useWorkout();
   const [durationSheet, setDurationSheet] = useState(false);
@@ -55,6 +57,7 @@ export default function Summary() {
   };
   const [tab, setTab] = useState("exercises");
   const stats = sessionStats(session);
+  const openSets = stats.setsTotal - stats.setsDone;
   const recs = useMemo(() => (session ? newRecords(session, db.sessions).sort((a, b) => b.kg - a.kg) : []), [session, db.sessions]);
   const record = recs[0] ?? null;
   const cmp = useMemo(() => (session ? compareToLast(session, db.sessions) : { previous: null, rows: [] }), [session, db.sessions]);
@@ -62,6 +65,11 @@ export default function Summary() {
   const savePrivately = () => {
     file(false);
     router.replace("/(tabs)");
+  };
+  /** Back into the session, everything as it was left. */
+  const keepGoing = () => {
+    unfinish();
+    router.replace("/workout/active");
   };
   const viewSession = () => {
     const id = session?.id;
@@ -79,25 +87,45 @@ export default function Summary() {
       <Txt variant="labelS" tone="tertiary" align="center">
         {t("Shared posts go to your followers. Undo within 60 seconds.")}
       </Txt>
-      <Button label={t("Not done yet, keep going")} variant="tertiary" size="S" onPress={() => { unfinish(); router.replace("/workout/active"); }} />
     </>
   );
 
   return (
-    <Screen bottom={214} footer={footer}>
+    <Screen bottom={170} footer={footer}>
       <Header left={<IconButton name="close" onPress={savePrivately} accessibilityLabel={t("Close")} />} title={t("Session complete")} subtitle={session ? `${session.planName}, ${longDate(session.startedAt)}` : t("Session")} />
+
+      {/* Finish takes you straight here, so the way back is the first thing on the page: pressed by mistake, or not done after all, one tap and the session goes on. It says what is still open. */}
+      <Card padding={14} gap={0} onPress={keepGoing} accessibilityLabel={t("Continue session")}>
+        <Row gap={12}>
+          <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent.soft }}>
+            <Icon name="play" size={16} color={colors.accent.ember} strokeWidth={2} />
+          </View>
+          <View style={{ flex: 1, gap: 1 }}>
+            <Txt variant="labelL">{t("Not finished yet?")}</Txt>
+            <Txt variant="labelS" tone="secondary">
+              {openSets > 0 ? plural(openSets, "{n} set is still open. Go on where you left off.", "{n} sets are still open. Go on where you left off.") : t("Go on where you left off, everything is as you left it.")}
+            </Txt>
+          </View>
+          <Row gap={2}>
+            <Txt variant="labelM" tone="ember">
+              {t("Continue")}
+            </Txt>
+            <Icon name="chevronRight" size={14} color={colors.accent.ember} strokeWidth={2.2} />
+          </Row>
+        </Row>
+      </Card>
 
       <View style={{ gap: 12, paddingTop: 8 }}>
         {record ? (
           <>
             <Chip label={recs.length > 1 ? t("{n} new personal records", { n: recs.length }) : t("New personal record")} icon="trophy" tone="gold" size="S" style={{ alignSelf: "flex-start" }} />
             <Txt variant="displayXL">
-              {record.name} {record.kg} kg
+              {record.name} {fmtLoad(record.kg, isBodyweight(record.exerciseId))}
             </Txt>
             <Txt variant="bodyM" tone="secondary">
-              {t("{reps} reps at {kg} kg", { reps: record.reps, kg: record.kg })}
+              {t("{reps} reps at {kg} kg", { reps: record.reps, kg: loadFigure(record.kg, isBodyweight(record.exerciseId)) })}
               {record.previous ? t(", up {kg} kg on your previous best.", { kg: Math.round((record.kg - record.previous) * 10) / 10 }) : t(", your first logged best for this lift.")}
-              {recs.length > 1 ? ` ${t("Also {list}.", { list: recs.slice(1).map((r) => `${r.name.toLowerCase()} ${r.kg} kg`).join(", ") })}` : ""}
+              {recs.length > 1 ? ` ${t("Also {list}.", { list: recs.slice(1).map((r) => `${r.name.toLowerCase()} ${fmtLoad(r.kg, isBodyweight(r.exerciseId))}`).join(", ") })}` : ""}
             </Txt>
           </>
         ) : (

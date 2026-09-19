@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { View } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
+import { fmtSet, isBodyweight } from "@/load";
 import type { SetType } from "@/db/types";
 import { useT, usePlural } from "@/i18n";
 import { SUPERSET_INK, supersetColor } from "@/superset";
@@ -104,7 +105,7 @@ export function SessionBreakdown({ exercises }: { exercises: BreakdownExercise[]
                             </Txt>
                             {/* The figures stay at reading size. This is a page you scan, not a scoreboard. */}
                             <Txt variant="labelL" tabular tone={warm ? "tertiary" : "primary"} style={{ width: 104 }} numberOfLines={1}>
-                              {s.kg ? `${s.kg} kg × ${s.reps}` : t("{n} reps", { n: s.reps })}
+                              {s.kg || isBodyweight(e.exerciseId) ? fmtSet(s.kg, s.reps, isBodyweight(e.exerciseId)) : t("{n} reps", { n: s.reps })}
                             </Txt>
                             <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: colors.border.subtle, overflow: "hidden" }}>
                               <View

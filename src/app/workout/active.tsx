@@ -2,11 +2,13 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "rea
 import { Pressable, ScrollView, TextInput, View, useWindowDimensions, type LayoutChangeEvent } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { Extrapolation, LayoutAnimationConfig, interpolate, runOnJS, useAnimatedProps, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming, type SharedValue } from "react-native-reanimated";
-import { delay, distance, gesture, layouts, opacity, pressScale, project, rubberband, scroll, springs, timings, useReducedMotion } from "@/motion";
+import { delay, distance, gesture, layouts, opacity, pressScale, project, rubberband, scroll, springs, timing, timings, useReducedMotion } from "@/motion";
 import { useNav } from "@/nav";
 import { shareText } from "@/share";
 import { useHeld } from "@/typing";
 import { useSteady } from "@/steady";
+import { BW, fmtSet, isBodyweight } from "@/load";
+import { RecordNote, type RecordMoment } from "@/components/RecordNote";
 import Svg, { Circle } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -42,7 +44,7 @@ const REST_CHOICES = Array.from({ length: 20 }, (_, i) => (i + 1) * 15);
 
 const setLabel = (s: SetEntry, workingIndex: number) => (s.type === "warmup" ? "W" : s.type === "drop" ? "D" : s.type === "failure" ? "F" : String(workingIndex));
 
-type Sheet = null | { kind: "finish" } | { kind: "discard" } | { kind: "invite" } | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry } | { kind: "superset"; ex: ExerciseEntry };
+type Sheet = null | { kind: "discard" } | { kind: "invite" } | { kind: "exercise"; ex: ExerciseEntry } | { kind: "set"; ex: ExerciseEntry; set: SetEntry; index: number } | { kind: "rest"; ex: ExerciseEntry } | { kind: "superset"; ex: ExerciseEntry };
 type Slot = { id: string; y: number; h: number };
 
 
@@ -60,8 +62,8 @@ export default function ActiveWorkout() {
   const w = useWorkout();
   const { db } = useDb();
   const { session, rest } = w;
-  /** When Finish was pressed, for the one place the screen itself needs the time: the sheet that says how long it took. */
-  const [finishAt, setFinishAt] = useState(0);
+  /** A record that was just set, while its note is on the screen. */
+  const [recordMoment, setRecordMoment] = useState<RecordMoment | null>(null);
   const [sheet, setSheet] = useState<Sheet>(null);
   const [blocked, setBlocked] = useState<{ id: string; msg: string } | null>(null);
   const [open, setOpen] = useState<string[] | null>(null);
@@ -155,7 +157,7 @@ export default function ActiveWorkout() {
     );
   }
 
-  const stats = sessionStats(session, finishAt || session.startedAt);
+  const stats = sessionStats(session, session.startedAt);
   const leave = () => router.back();
   if (!current) {
     return (
@@ -170,7 +172,6 @@ export default function ActiveWorkout() {
     );
   }
 
-  const openSets = stats.setsTotal - stats.setsDone;
   const isOpen = (id: string) => (open ?? []).includes(id);
   /** Every exercise this one alternates with, or just itself. */
   const groupOf = (id: string) => {
@@ -218,7 +219,9 @@ export default function ActiveWorkout() {
     scroller.current?.scrollTo({ y: Math.max(0, top - insets.top - 12), animated: true });
   };
 
+  // Straight to the overview. Whether every set was done is said there, next to the way back into the session, instead of in a question on the way.
   const finish = () => {
+    feel("workoutFinished");
     w.finish();
     router.replace("/workout/summary");
   };
@@ -242,6 +245,14 @@ export default function ActiveWorkout() {
     const top = Math.max(before, ...ex.sets.filter((x) => x.done && x.type !== "warmup").map((x) => x.kg));
     const record = !s.done && s.type !== "warmup" && before > 0 && s.kg > top;
     feel(s.done ? "setUndone" : record ? "record" : "setDone");
+    if (record) {
+      const moment: RecordMoment = { id: s.id, name: ex.name, kg: s.kg, reps: s.reps, gain: s.kg - before, bodyweight: isBodyweight(ex.exerciseId) };
+      setRecordMoment(moment);
+      setTimeout(() => setRecordMoment((m) => (m?.id === moment.id ? null : m)), delay.recordHold);
+    } else if (s.done) {
+      // The set that carried the note was unticked: the note goes with it.
+      setRecordMoment((m) => (m?.id === s.id ? null : m));
+    }
     w.completeSet(ex.id, s.id);
     // The set that finishes an exercise folds it away and opens the next one that
     // still has sets, after a beat so the tick lands before anything moves.
@@ -343,7 +354,6 @@ export default function ActiveWorkout() {
     slots.current[id] = { id, y, h: height };
   };
   const dragFrom = drop ? session.exercises.findIndex((e) => e.id === drop.dragging) : -1;
-  const openFinish = () => setSheet({ kind: "finish" });
   const handlers: CardActions = {
     toggle: (ex) => { if (!isOpen(ex.id)) feel("select"); toggle(ex.id); },
     focus: (index) => w.setCurrent(index),
@@ -384,7 +394,7 @@ export default function ActiveWorkout() {
                 ) : null}
               </View>
               <IconButton name="close" size={34} iconSize={18} tone="danger" onPress={() => setSheet({ kind: "discard" })} accessibilityLabel={t("Stop and discard session")} />
-              <Button label={t("Finish")} variant="inverse" size="S" full={false} onPress={() => { setFinishAt(Date.now()); openFinish(); }} />
+              <Button label={t("Finish")} variant="inverse" size="S" full={false} onPress={finish} />
             </Row>
           }
         />
@@ -427,7 +437,7 @@ export default function ActiveWorkout() {
         </LayoutAnimationConfig>
       </Screen>
 
-      <CompactBar scrollY={scrollY} session={session} finishLabel={t("Finish")} onFinish={() => { setFinishAt(Date.now()); openFinish(); }} />
+      <CompactBar scrollY={scrollY} session={session} finishLabel={t("Finish")} onFinish={finish} />
 
       {rest ? (
         <Animated.View entering={layouts.rise} exiting={layouts.sink} style={{ position: "absolute", left: 16, right: 16, bottom: Math.max(insets.bottom, 16) + 8 }}>
@@ -444,7 +454,7 @@ export default function ActiveWorkout() {
                 </Txt>
               </Row>
               <Txt variant="bodyS" tone="tertiary" numberOfLines={1}>
-                {rest.next ? (rest.next.kg ? t("Set {n}, {kg} kg × {reps}", { n: rest.next.set, kg: rest.next.kg, reps: rest.next.reps }) : t("Set {n}, {reps} reps", { n: rest.next.set, reps: rest.next.reps })) : t("Next exercise")}
+                {rest.next ? (rest.next.kg || isBodyweight(rest.next.exerciseId) ? t("Set {n}, {set}", { n: rest.next.set, set: fmtSet(rest.next.kg, rest.next.reps, isBodyweight(rest.next.exerciseId)) }) : t("Set {n}, {reps} reps", { n: rest.next.set, reps: rest.next.reps })) : t("Next exercise")}
               </Txt>
             </View>
             <Pill label="−15" accessibilityLabel={t("15 seconds less")} onPress={() => w.adjustRest(-15)} />
@@ -492,7 +502,7 @@ export default function ActiveWorkout() {
         </SheetGroup>
       </BottomSheet>
 
-      <BottomSheet visible={sheet?.kind === "set"} onClose={() => setSheet(null)} title={sheet?.kind === "set" ? t("Set {n}", { n: sheet.index + 1 }) : ""} subtitle={sheet?.kind === "set" ? `${sheet.ex.name}, ${sheet.set.kg} kg × ${sheet.set.reps}` : undefined}>
+      <BottomSheet visible={sheet?.kind === "set"} onClose={() => setSheet(null)} title={sheet?.kind === "set" ? t("Set {n}", { n: sheet.index + 1 }) : ""} subtitle={sheet?.kind === "set" ? `${sheet.ex.name}, ${fmtSet(sheet.set.kg, sheet.set.reps, isBodyweight(sheet.ex.exerciseId))}` : undefined}>
         {sheet?.kind === "set" ? (
           <>
             <SheetGroup>
@@ -512,12 +522,6 @@ export default function ActiveWorkout() {
             </SheetGroup>
           </>
         ) : null}
-      </BottomSheet>
-
-      <BottomSheet visible={sheet?.kind === "finish"} onClose={() => setSheet(null)} title={t("Finish this session?")} subtitle={openSets > 0 ? t("{a} of {b} sets done, {c} still open. Open sets are not counted.", { a: stats.setsDone, b: stats.setsTotal, c: openSets }) : t("All {n} sets done in {time}.", { n: stats.setsTotal, time: stats.elapsed })}>
-        <SheetGroup>
-          <SheetOption icon="circleCheck" label={t("Finish session")} onPress={() => { setSheet(null); feel("workoutFinished"); finish(); }} />
-        </SheetGroup>
       </BottomSheet>
 
       <BottomSheet
@@ -545,6 +549,8 @@ export default function ActiveWorkout() {
       </BottomSheet>
 
       <MoveViewer exercise={watching ? findExercise(watching) ?? null : null} onClose={() => setWatching(null)} />
+
+      {recordMoment ? <RecordNote key={recordMoment.id} moment={recordMoment} /> : null}
 
       <BottomSheet
         visible={sheet?.kind === "rest"}
@@ -748,6 +754,7 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
   const t = useT();
   const { drag, style } = useDrag(onDragStart, onDragMove, onDragEnd);
   // What a set row can ask, as one object that stays the same, so a row whose set did not change is not redrawn when its neighbour is ticked.
+  const body = isBodyweight(ex.exerciseId);
   const rowActions = useSteady({
     type: (s: SetEntry, i: number) => onSetType(s, i),
     change: (s: SetEntry, patch: Partial<Pick<SetEntry, "kg" | "reps">>) => onChange(s, patch),
@@ -892,7 +899,7 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
                 {t("Previous")}
               </Txt>
               <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} align="center">
-                kg
+                {body ? `${BW} + kg` : "kg"}
               </Txt>
               <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} align="center">
                 {t("Reps")}
@@ -907,7 +914,7 @@ function ExerciseCard({ ex, index, isCurrent, expanded, highlighted, groupColor,
                   const current = isCurrent && !s.done && ex.sets.findIndex((x) => !x.done) === i;
                   return (
                     <AnimatedListItem key={s.id}>
-                      <SteadySetRow set={s} index={i} label={rows[i].label} isCurrent={current} record={rows[i].record} error={blocked?.id === s.id ? blocked.msg : undefined} actions={rowActions} />
+                      <SteadySetRow set={s} index={i} bodyweight={body} label={rows[i].label} isCurrent={current} record={rows[i].record} error={blocked?.id === s.id ? blocked.msg : undefined} actions={rowActions} />
                     </AnimatedListItem>
                   );
                 })}
@@ -1004,7 +1011,7 @@ function Strip({ label, value, count, format, unit }: { label: string; value?: s
 type RowActions = { type: (s: SetEntry, i: number) => void; change: (s: SetEntry, patch: Partial<Pick<SetEntry, "kg" | "reps">>) => void; done: (s: SetEntry, i: number) => void; remove: (s: SetEntry) => void };
 
 /** A set row compared on what it shows. On a tick two rows change, the one ticked and the one that becomes current; the rest of the table stays as it is. */
-const SteadySetRow = memo(function SteadySetRow({ set, index, actions, ...shown }: { set: SetEntry; index: number; label: string; isCurrent: boolean; record: boolean; error?: string; actions: RowActions }) {
+const SteadySetRow = memo(function SteadySetRow({ set, index, actions, ...shown }: { set: SetEntry; index: number; label: string; isCurrent: boolean; record: boolean; bodyweight: boolean; error?: string; actions: RowActions }) {
   const on = useSteady({
     type: () => actions.type(set, index),
     change: (patch: Partial<Pick<SetEntry, "kg" | "reps">>) => actions.change(set, patch),
@@ -1014,13 +1021,13 @@ const SteadySetRow = memo(function SteadySetRow({ set, index, actions, ...shown 
   return <SetRow set={set} {...shown} onType={on.type} onChange={on.change} onDone={on.done} onRemove={on.remove} />;
 });
 
-function SetRow({ set, label, isCurrent, record, error, onType, onChange, onDone, onRemove }: { set: SetEntry; label: string; isCurrent: boolean; /** A done set heavier than anything before it. */ record: boolean; error?: string; onType: () => void; onChange: (p: Partial<Pick<SetEntry, "kg" | "reps">>) => void; onDone: () => void; onRemove: () => void }) {
+function SetRow({ set, label, isCurrent, record, bodyweight, error, onType, onChange, onDone, onRemove }: { set: SetEntry; label: string; isCurrent: boolean; /** A done set heavier than anything before it. */ record: boolean; /** The movement is done with the body's own weight, so the figure is what was added to it. */ bodyweight: boolean; error?: string; onType: () => void; onChange: (p: Partial<Pick<SetEntry, "kg" | "reps">>) => void; onDone: () => void; onRemove: () => void }) {
   const { colors, radius } = useTheme();
   const t = useT();
   const reduced = useReducedMotion();
   const boxBg = isCurrent ? colors.bg.ground : colors.bg.raised;
   const hasPrev = set.prevKg !== null;
-  const prev = hasPrev ? `${set.prevKg || "BW"} × ${set.prevReps}` : "–";
+  const prev = hasPrev ? (bodyweight ? `${set.prevKg ? `+${set.prevKg}` : BW} × ${set.prevReps}` : `${set.prevKg || BW} × ${set.prevReps}`) : "–";
   const quiet = !set.done && !isCurrent;
   const inputStyle = { width: "100%" as const, textAlign: "center" as const, color: quiet ? colors.text.tertiary : colors.text.primary, fontFamily: fontFamily.displaySemi, fontSize: 20, paddingVertical: 0 };
   // While a box has focus the typed text is the truth. Reading the number back
@@ -1037,6 +1044,19 @@ function SetRow({ set, label, isCurrent, record, error, onType, onChange, onDone
   const nudge = useSharedValue(0);
   const tx = useSharedValue(0);
   const startX = useSharedValue(0);
+  // A record, the moment it is ticked: gold washes over the row and fades, and the trophy lands with one small bounce. Only on the tick itself, never for a row that was already a record when it was drawn.
+  const wash = useSharedValue(0);
+  const land = useSharedValue(1);
+  const celebrated = useRef(record && set.done);
+  useEffect(() => {
+    const now = record && set.done;
+    if (now && !celebrated.current && !reduced) {
+      wash.set(withSequence(withTiming(0.3, timings.fast), withTiming(0, timing(900))));
+      land.set(0.4);
+      land.set(withSpring(1, springs.thrown));
+    }
+    celebrated.current = now;
+  }, [record, set.done, reduced, wash, land]);
   useEffect(() => {
     focus.set(withTiming(isCurrent ? 1 : 0, timings.fast));
   }, [isCurrent, focus]);
@@ -1075,7 +1095,8 @@ function SetRow({ set, label, isCurrent, record, error, onType, onChange, onDone
   const tickGive = useAnimatedStyle(() => (reduced ? { opacity: 1 - (1 - pressDim) * down.get() } : { transform: [{ scale: 1 - (1 - give) * down.get() }] }));
   const emberFill = useAnimatedStyle(() => ({ opacity: focus.get() * (1 - ticked.get()) }));
   const doneFill = useAnimatedStyle(() => ({ opacity: ticked.get() }));
-  const tickMark = useAnimatedStyle(() => ({ opacity: Math.max(focus.get(), ticked.get()) }));
+  const tickMark = useAnimatedStyle(() => ({ opacity: Math.max(focus.get(), ticked.get()), transform: [{ scale: land.get() }] }));
+  const goldWash = useAnimatedStyle(() => ({ opacity: wash.get() }));
   const close = () => {
     tx.set(withSpring(0, springs.base));
   };
@@ -1092,6 +1113,7 @@ function SetRow({ set, label, isCurrent, record, error, onType, onChange, onDone
         <GestureDetector gesture={pan}>
           <Animated.View style={[{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4, paddingHorizontal: 8, borderRadius: radius.setRow, backgroundColor: colors.bg.surface }, rowAnim]}>
             <Animated.View pointerEvents="none" style={[cover, { borderRadius: radius.setRow, backgroundColor: colors.accent.soft }, focusFill]} />
+            <Animated.View pointerEvents="none" style={[cover, { borderRadius: radius.setRow, backgroundColor: colors.pr.gold }, goldWash]} />
             {error ? <View pointerEvents="none" style={[cover, { borderRadius: radius.setRow, borderWidth: 1.5, borderColor: colors.status.danger }]} /> : null}
             <Pressable accessibilityRole="button" onPress={onType} hitSlop={6} style={{ width: 28 }} accessibilityLabel={t("Set type")}>
               <Txt variant="labelL" tone={isCurrent ? "ember" : set.type === "warmup" ? "tertiary" : "primary"}>

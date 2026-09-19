@@ -1,3 +1,4 @@
+import { fmtLoad, isBodyweight } from "@/load";
 import type { Db, Exercise, ExerciseEntry, Plan, PlanExercise, PlannedSet, Session, SetEntry, SetType } from "./types";
 import { uid } from "./storage";
 
@@ -188,7 +189,7 @@ export function compareToLast(session: Session, sessions: Session[]): { previous
   const rows: Comparison[] = session.exercises.map((e) => {
     const top = bestSet(session, e.exerciseId);
     const working = e.sets.filter(isWorking);
-    const detail = top ? `${working.length} × ${top.reps}${top.kg ? `, ${top.kg} kg` : ""}` : "not done";
+    const detail = top ? `${working.length} × ${top.reps}${top.kg || isBodyweight(e.exerciseId) ? `, ${fmtLoad(top.kg, isBodyweight(e.exerciseId))}` : ""}` : "not done";
     if (!top) return { exerciseId: e.exerciseId, name: e.name, detail, delta: "skipped", tone: "neutral" };
     if (!previous) return { exerciseId: e.exerciseId, name: e.name, detail, delta: "first time", tone: "neutral" };
     const prevTop = bestSet(previous, e.exerciseId);
@@ -420,7 +421,7 @@ export function sessionRows(session: Session) {
       if (!done.length) return null;
       const top = done.reduce((a, b) => (b.kg > a.kg ? b : a), done[0]);
       const reps = done.every((s) => s.reps === done[0].reps) ? String(done[0].reps) : `${Math.min(...done.map((s) => s.reps))}–${Math.max(...done.map((s) => s.reps))}`;
-      return { exerciseId: e.exerciseId, name: e.name, count: done.length, detail: `${done.length} × ${reps}${top.kg ? `, ${top.kg} kg` : ""}` };
+      return { exerciseId: e.exerciseId, name: e.name, count: done.length, detail: `${done.length} × ${reps}${top.kg || isBodyweight(e.exerciseId) ? `, ${fmtLoad(top.kg, isBodyweight(e.exerciseId))}` : ""}` };
     })
     .filter((r): r is { exerciseId: string; name: string; count: number; detail: string } => !!r);
 }

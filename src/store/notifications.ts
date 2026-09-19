@@ -7,6 +7,7 @@ import { useSplit } from "@/store/split";
 import { useNow } from "@/clock";
 import { finished, newRecords, startOfDay, startOfWeek } from "@/db/derive";
 import type { IconName } from "@/components/ui/Icon";
+import { isBodyweight, loadFigure } from "@/load";
 
 export type Note = {
   id: string;
@@ -49,7 +50,7 @@ export function useNotes() {
           icon: "trophy",
           gold: true,
           title: "New record, {name} {kg} kg",
-          vars: { name: r.name, kg: r.kg },
+          vars: { name: r.name, kg: loadFigure(r.kg, isBodyweight(r.exerciseId)) },
           body: r.previous ? "Up {kg} kg on your previous best." : "Your first logged best for this lift.",
           bodyVars: { kg: Math.round((r.kg - (r.previous ?? 0)) * 10) / 10 },
           at: s.startedAt,

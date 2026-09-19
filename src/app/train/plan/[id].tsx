@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { HeldField } from "@/components/ui/Field";
 import { NumberInput } from "@/components/ui/NumberInput";
+import { BW, isBodyweight } from "@/load";
 import { Button } from "@/components/ui/Button";
 import { BottomSheet, SheetGroup, SheetOption } from "@/components/ui/BottomSheet";
 import { fontFamily } from "../../../../constants/theme";
@@ -141,7 +142,7 @@ export default function PlanEditor() {
                       {t("Set")}
                     </Txt>
                     <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} align="center">
-                      kg
+                      {isBodyweight(e.exerciseId) ? `${BW} + kg` : "kg"}
                     </Txt>
                     <Txt variant="labelS" tone="tertiary" style={{ flex: 1 }} align="center">
                       {t("Reps")}

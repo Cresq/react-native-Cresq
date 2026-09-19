@@ -2,6 +2,7 @@ import type { ImageSourcePropType } from "react-native";
 import type { Profile, Session } from "@/db/types";
 import { fmtKg, newRecords, relativeDay, sessionRows, sessionStats } from "@/db/derive";
 import type { Post } from "@/components/PostCard";
+import { isBodyweight, loadFigure } from "@/load";
 
 type T = (s: string, vars?: Record<string, string | number>) => string;
 
@@ -24,7 +25,7 @@ export function postFromSession(s: Session, ctx: { profile: Profile; sessions: S
     avatar: photo,
     photo: s.photo ? { uri: s.photo } : undefined,
     exercises: s.share?.exercises === false ? [] : sessionRows(s).map((r) => ({ exerciseId: r.exerciseId, name: r.name, detail: t(r.count === 1 ? "{n} set" : "{n} sets", { n: r.count }) })),
-    record: rec && s.share?.records !== false ? t("New record, {name} {kg} kg", { name: rec.name, kg: rec.kg }) : undefined,
+    record: rec && s.share?.records !== false ? t("New record, {name} {kg} kg", { name: rec.name, kg: loadFigure(rec.kg, isBodyweight(rec.exerciseId)) }) : undefined,
     caption: s.caption || t("{plan} done. Every set counted.", { plan: s.planName }),
     stats: s.share?.stats === false ? [] : [
       { value: String(stats.minutes), unit: "min" },

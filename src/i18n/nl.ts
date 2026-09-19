@@ -217,10 +217,6 @@ export const nl: Record<string, string> = {
   "{name}, shown under the name, and next time you do it": "{name}, staat onder de naam, ook de volgende keer",
   "Feet planted, pause on the chest": "Voeten plat, pauze op de borst",
   "Save note": "Notitie opslaan",
-  "Finish this session?": "Deze sessie afronden?",
-  "{a} of {b} sets done, {c} still open. Open sets are not counted.": "{a} van {b} sets gedaan, {c} nog open. Open sets tellen niet mee.",
-  "All {n} sets done in {time}.": "Alle {n} sets gedaan in {time}.",
-  "Finish session": "Sessie afronden",
   "After each set of {name}": "Na elke set van {name}",
   "Session discarded": "Sessie weggegooid",
   "{plan}, nothing was saved": "{plan}, niets opgeslagen",
@@ -691,7 +687,6 @@ export const nl: Record<string, string> = {
   "Something in the app stopped. Your workout and your log are saved, nothing is lost.": "Er is iets in de app gestopt. Je workout en je logboek zijn opgeslagen, er is niets kwijt.",
   "Try again": "Opnieuw proberen",
   "Cannot save to this phone. Free up some space; your session is still here in the meantime.": "Opslaan op deze telefoon lukt niet. Maak ruimte vrij; je sessie staat er intussen gewoon nog.",
-  "Set {n}, {kg} kg × {reps}": "Set {n}, {kg} kg × {reps}",
   "Set {n}, {reps} reps": "Set {n}, {reps} herh.",
   "Next exercise": "Volgende oefening",
   "{n} exercise": "{n} oefening",
@@ -988,7 +983,6 @@ export const nl: Record<string, string> = {
 
   /* A workout taken up again, and the post on the session's own page. */
   "Not done yet? Keep going": "Toch nog niet klaar? Ga verder",
-  "Not done yet, keep going": "Toch nog niet klaar, ga verder",
   "On your feed": "Op je feed",
   "Continue this workout": "Ga verder met deze workout",
   "Back into the session, everything as you left it": "Terug de sessie in, alles zoals je het achterliet",
@@ -1169,4 +1163,13 @@ export const nl: Record<string, string> = {
   "It joins your meals on the Food page. Taking it away later moves what was in it to snacks.": "Hij komt bij je maaltijden op de voedingspagina. Haal je hem later weg, dan verhuist wat erin stond naar tussendoor.",
   "Snacks after dinner": "Snacks na het avondeten",
   "Name of the meal": "Naam van de maaltijd",
+
+  /* Finishing without a question, a record said on the screen, and loads on top of body weight. */
+  "New record": "Nieuw record",
+  "{kg} kg more than ever before": "{kg} kg meer dan ooit",
+  "Set {n}, {set}": "Set {n}, {set}",
+  "Not finished yet?": "Nog niet klaar?",
+  "{n} set is still open. Go on where you left off.": "Er staat nog {n} set open. Ga verder waar je was.",
+  "{n} sets are still open. Go on where you left off.": "Er staan nog {n} sets open. Ga verder waar je was.",
+  "Go on where you left off, everything is as you left it.": "Ga verder waar je was, alles staat er nog zoals je het achterliet.",
 };
