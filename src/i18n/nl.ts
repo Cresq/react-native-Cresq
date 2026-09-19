@@ -937,7 +937,6 @@ export const nl: Record<string, string> = {
   /* Food: the need worked out properly, targets that move together, meals with a workout in them, and Home. */
   "Pre-workout": "Pre-workout",
   "Post-workout": "Post-workout",
-  "What a day should add up to. The four figures move together.": "Waar een dag op uit moet komen. De vier getallen bewegen samen.",
   "Answer the questions again": "Beantwoord de vragen opnieuw",
   "Eaten": "Gegeten",
   "To go": "Nog te gaan",
@@ -1024,9 +1023,7 @@ export const nl: Record<string, string> = {
   "kcal left": "kcal over",
   "Burned": "Verbrand",
   "Scan a barcode": "Scan een barcode",
-  "Hold the pack up": "Pak de verpakking erbij",
   "Search a product": "Zoek een product",
-  "Type a name or brand": "Typ een naam of merk",
   "Estimate from your session": "Schatting op basis van je sessie",
   "Entered by you": "Door jou ingevuld",
   "Add {meal}": "{meal} toevoegen",
@@ -1138,4 +1135,12 @@ export const nl: Record<string, string> = {
   "Places from OpenStreetMap": "Plaatsen uit OpenStreetMap",
   "Now {level}": "Nu {level}",
   "Usually {level}": "Meestal {level}",
+
+  /* Sheets with a header, tracking from a bar, and a weigh-in for a day that was missed. */
+  "Your need is worked out afresh from your figures": "Je behoefte wordt opnieuw berekend uit je gegevens",
+  "Track": "Tracken",
+  "An earlier day": "Een eerdere dag",
+  "Fill in a day you missed": "Vul een gemiste dag in",
+  "Weight on an earlier day": "Gewicht op een eerdere dag",
+  "Log {kg} kg for {day}": "Log {kg} kg voor {day}",
 };

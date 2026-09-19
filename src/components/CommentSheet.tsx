@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, TextInput
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, { Easing, FadeIn, FadeInDown, FadeOut, LinearTransition, SlideInDown, ZoomIn, ZoomOut, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
-import { project, rubberband, spring, springs } from "@/motion";
+import { gesture, project, rubberband, spring, springs } from "@/motion";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useT, usePlural } from "@/i18n";
 import { haptic } from "@/haptics";
@@ -136,7 +136,8 @@ export function CommentSheet({
     })
     .onUpdate((e) => {
       const raw = dragStart.value + e.translationY;
-      y.value = raw < 0 ? rubberband(raw, sheetH, 0.3) : raw;
+      // Upwards it gives a share of its height and no more, like every sheet.
+      y.value = raw < 0 ? rubberband(raw, sheetH * gesture.sheetLift, 0.55) : raw;
     })
     .onEnd((e) => {
       const projected = y.value + project(e.velocityY);

@@ -210,7 +210,7 @@ function Product({ food, toLog, wantedMeal }: { food: Food; toLog: boolean; want
               {t("Amount")}
             </Txt>
             <IconButton name="minus" size={34} iconSize={16} tone="raised" onPress={() => step(-STEP)} accessibilityLabel={t("{n} {unit} less", { n: STEP, unit })} />
-            <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "center", gap: 4, minWidth: 92, height: 40, paddingHorizontal: 10, borderRadius: radius.input, backgroundColor: colors.bg.raised }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, minWidth: 96, height: 40, paddingHorizontal: 12, borderRadius: radius.input, backgroundColor: colors.bg.raised }}>
               <TextInput
                 value={amount}
                 onChangeText={(v) => setAmount(v.replace(/[^0-9.,]/g, ""))}
@@ -219,11 +219,10 @@ function Product({ food, toLog, wantedMeal }: { food: Food; toLog: boolean; want
                 selectTextOnFocus
                 selectionColor={colors.fuel.sage}
                 accessibilityLabel={unit === "g" ? t("Amount (g)") : t("Amount (ml)")}
-                style={{ minWidth: 44, height: 40, textAlign: "right", color: colors.text.primary, fontFamily: fontFamily.displaySemi, fontSize: 18, paddingVertical: 0 }}
+                // As wide as its digits and no wider: a browser gives a bare input a width of its own, which pushed the unit to the far edge.
+                style={{ width: Math.max(2, amount.length) * 11 + 4, height: 40, textAlign: "right", color: colors.text.primary, fontFamily: fontFamily.displaySemi, fontSize: 18, paddingVertical: 0 }}
               />
-              <Txt variant="labelM" tone="secondary">
-                {unit}
-              </Txt>
+              <Txt style={{ fontFamily: fontFamily.regular, fontSize: 18, lineHeight: 24, color: colors.text.secondary }}>{unit}</Txt>
             </View>
             <IconButton name="addPlus" size={34} iconSize={16} tone="raised" onPress={() => step(STEP)} accessibilityLabel={t("{n} {unit} more", { n: STEP, unit })} />
           </Row>

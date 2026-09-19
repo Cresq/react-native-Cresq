@@ -89,6 +89,8 @@ export const gesture = {
   dismiss: 56,
   /** A sheet past this share of its height, or moving this fast, closes. */
   sheetClose: 0.45,
+  /** The most a sheet can be lifted above where it rests, as a share of its height, however far the finger goes. */
+  sheetLift: 0.15,
   flick: 900,
 } as const;
 

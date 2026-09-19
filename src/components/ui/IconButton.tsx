@@ -15,35 +15,41 @@ export function IconButton({
   style,
   accessibilityLabel,
   feedback,
+  disabled,
 }: {
   name: IconName;
   onPress?: () => void;
   size?: number;
   iconSize?: number;
-  tone?: "surface" | "raised" | "ember" | "danger" | "sage";
+  tone?: "surface" | "raised" | "ember" | "danger" | "sage" | "sageSolid";
   badge?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
   /** The moment this press is, if it earns a haptic. */
   feedback?: Moment;
+  disabled?: boolean;
 }) {
   const { colors } = useTheme();
-  const bg = tone === "ember" ? colors.accent.ember : tone === "sage" ? colors.fuel.soft : tone === "raised" || tone === "danger" ? colors.bg.raised : colors.bg.surface;
-  const fg = tone === "ember" ? colors.accent.on : tone === "sage" ? colors.fuel.sage : tone === "danger" ? colors.status.danger : colors.icon.strong;
+  const solid = tone === "ember" || tone === "sageSolid";
+  const bg = tone === "ember" ? colors.accent.ember : tone === "sageSolid" ? colors.fuel.sage : tone === "sage" ? colors.fuel.soft : tone === "raised" || tone === "danger" ? colors.bg.raised : colors.bg.surface;
+  const fg = tone === "ember" ? colors.accent.on : tone === "sageSolid" ? colors.fuel.on : tone === "sage" ? colors.fuel.sage : tone === "danger" ? colors.status.danger : colors.icon.strong;
   return (
     <Press
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? name}
       onPress={onPress}
+      disabled={disabled}
+      accessibilityState={{ disabled: !!disabled }}
       feedback={feedback}
       scaleTo={pressScale.icon}
-      wrapperStyle={style}
+      wrapperStyle={[{ opacity: disabled ? 0.4 : 1 }, style]}
       style={({ pressed }) => ({
         width: size,
         height: size,
         borderRadius: size / 2,
-        backgroundColor: pressed ? colors.bg.raised : bg,
-        borderWidth: tone === "ember" || tone === "sage" ? 0 : 1,
+        backgroundColor: pressed && !solid ? colors.bg.raised : bg,
+        opacity: pressed && solid ? 0.85 : 1,
+        borderWidth: solid || tone === "sage" ? 0 : 1,
         borderColor: colors.border.subtle,
         alignItems: "center",
         justifyContent: "center",

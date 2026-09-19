@@ -20,6 +20,8 @@ import { LineChart } from "@/components/LineChart";
 
 const KILOS = Array.from({ length: 221 }, (_, i) => i + 30);
 const TENTHS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+/** How far back a missed day can still be filled in: yesterday to two months ago. */
+const DAYS_BACK = Array.from({ length: 60 }, (_, i) => i + 1);
 const DAY = 86_400_000;
 /** How far back the line looks, in days. */
 const RANGES: Record<string, number> = { "1w": 7, "1m": 30, "3m": 91, "1y": 365, all: 100_000 };
@@ -48,6 +50,7 @@ export default function Weight() {
   const [picked, setPicked] = useState<WeightEntry | null>(null);
   const [kilo, setKilo] = useState(75);
   const [tenth, setTenth] = useState(0);
+  const [ago, setAgo] = useState(1);
 
   const f = (kg: number) => kg.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const decimal = (1.1).toLocaleString(locale).charAt(1);
@@ -60,6 +63,9 @@ export default function Weight() {
     setTenth(tenths % 10);
   };
   const draft = kilo + tenth / 10;
+  // An earlier day is filed at its noon, so it sorts inside its own day whatever the clock says now.
+  const noonOf = (daysAgo: number) => startOfDay(now) - daysAgo * DAY + DAY / 2;
+  const dayName = (daysAgo: number) => (daysAgo === 1 ? t("Yesterday") : new Date(noonOf(daysAgo)).toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short" }).replace(/\./g, ""));
 
   // The period on the chart, and where the weight went within it, first weigh-in to last.
   const shown = entries.filter((w) => w.at >= now - RANGES[range] * DAY);
@@ -103,6 +109,34 @@ export default function Weight() {
             {t("Last logged, {when}", { when: relativeDay(latest.at) })}: {f(latest.kg)} kg
           </Txt>
         ) : null}
+        {/* A day that was missed: the same wheels, with the day beside them. Logging a day that already has a figure corrects it. */}
+        <WheelField
+          label={t("An earlier day")}
+          placeholder={t("Fill in a day you missed")}
+          title={t("Weight on an earlier day")}
+          confirm={t("Log {kg} kg for {day}", { kg: f(draft), day: dayName(ago) })}
+          accent="sage"
+          onOpen={() => {
+            openWheels();
+            setAgo(1);
+          }}
+          onConfirm={() => {
+            log(draft, noonOf(ago));
+            haptic("done");
+          }}
+        >
+          <Row gap={10}>
+            <View style={{ flex: 1.5 }}>
+              <WheelPicker values={DAYS_BACK} value={ago} onChange={setAgo} format={dayName} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <WheelPicker values={KILOS} value={kilo} onChange={setKilo} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <WheelPicker values={TENTHS} value={tenth} onChange={setTenth} format={(v) => `${decimal}${v} kg`} />
+            </View>
+          </Row>
+        </WheelField>
       </View>
 
       <View style={{ gap: 12 }}>

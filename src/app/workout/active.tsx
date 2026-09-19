@@ -544,11 +544,16 @@ export default function ActiveWorkout() {
 
       <MoveViewer exercise={watching ? findExercise(watching) ?? null : null} onClose={() => setWatching(null)} />
 
-      <BottomSheet visible={sheet?.kind === "rest"} onClose={() => setSheet(null)} title={t("Rest timer")} subtitle={sheet?.kind === "rest" ? t("After each set of {name}", { name: sheet.ex.name }) : undefined}>
+      <BottomSheet
+        visible={sheet?.kind === "rest"}
+        onClose={() => setSheet(null)}
+        title={t("Rest timer")}
+        subtitle={sheet?.kind === "rest" ? t("After each set of {name}", { name: sheet.ex.name }) : undefined}
+        confirm={sheet?.kind === "rest" ? { label: t("Use {time}", { time: fmtTime(restValue) }), onPress: () => { w.setRestSeconds(sheet.ex.id, restValue); setSheet(null); } } : undefined}
+      >
         {sheet?.kind === "rest" ? (
-          <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
+          <View style={{ paddingHorizontal: 8, paddingBottom: 8 }}>
             <WheelPicker values={REST_CHOICES} value={restValue} onChange={setRestValue} format={fmtTime} />
-            <Button label={t("Use {time}", { time: fmtTime(restValue) })} onPress={() => { w.setRestSeconds(sheet.ex.id, restValue); setSheet(null); }} />
           </View>
         ) : null}
       </BottomSheet>

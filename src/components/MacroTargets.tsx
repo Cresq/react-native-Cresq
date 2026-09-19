@@ -1,11 +1,10 @@
 import { useRef, useState } from "react";
 import { View } from "react-native";
+import { useTheme } from "@/theme/ThemeProvider";
 import { useT } from "@/i18n";
 import { kcalOf } from "@/nutrition/derive";
 import type { NutritionTargets } from "@/db/types";
-import { Row } from "./ui/Screen";
-import { Txt } from "./ui/Text";
-import { Field } from "./ui/Field";
+import { SheetGroup, SheetInputRow } from "./ui/BottomSheet";
 
 const num = (s: string) => {
   const n = Number(s.replace(",", ".").trim());
@@ -20,8 +19,13 @@ const txt = (n: number) => (n > 0 ? String(Math.round(n)) : "");
  * macros in the proportion they were in. The split is remembered from the
  * last time a macro was touched, so typing a new energy figure digit by digit
  * never collapses the macros to nothing on the way.
+ *
+ * Drawn as two quiet groups of rows, energy on its own and the three macros
+ * together, each with its name on the left and the figure on the right, so a
+ * long word like "Koolhydraten" has the whole row and never breaks.
  */
 export function MacroTargets({ initial, onChange, autoFocus }: { initial: NutritionTargets; onChange: (t: NutritionTargets) => void; autoFocus?: boolean }) {
+  const { colors } = useTheme();
   const t = useT();
   const [kcal, setKcal] = useState(txt(initial.kcal));
   const [protein, setProtein] = useState(txt(initial.protein));
@@ -60,18 +64,21 @@ export function MacroTargets({ initial, onChange, autoFocus }: { initial: Nutrit
   const pct = (part: number) => (k > 0 ? Math.round((part / k) * 100) : 0);
 
   return (
-    <View style={{ gap: 10 }}>
-      <Field label={t("Energy (kcal)")} value={kcal} onChangeText={onKcal} placeholder="2400" keyboardType="number-pad" inputMode="numeric" autoFocus={autoFocus} selectTextOnFocus />
-      <Row gap={10} align="flex-start">
-        <View style={{ flex: 1 }}><Field label={t("Protein (g)")} value={protein} onChangeText={(v) => onMacro("p", v)} placeholder="160" keyboardType="number-pad" inputMode="numeric" selectTextOnFocus /></View>
-        <View style={{ flex: 1 }}><Field label={t("Carbohydrates (g)")} value={carbs} onChangeText={(v) => onMacro("c", v)} placeholder="260" keyboardType="number-pad" inputMode="numeric" selectTextOnFocus /></View>
-        <View style={{ flex: 1 }}><Field label={t("Fat (g)")} value={fat} onChangeText={(v) => onMacro("f", v)} placeholder="80" keyboardType="number-pad" inputMode="numeric" selectTextOnFocus /></View>
-      </Row>
-      <Txt variant="labelS" tone="tertiary">
-        {k > 0
-          ? t("{p}% protein, {c}% carbohydrates, {f}% fat. Change a macro and the energy follows; change the energy and the three scale with it.", { p: pct(num(protein) * 4), c: pct(num(carbs) * 4), f: pct(num(fat) * 9) })
-          : t("Four calories a gram of protein or carbohydrate, nine a gram of fat. The four figures stay in step with each other.")}
-      </Txt>
+    <View>
+      <SheetGroup>
+        <SheetInputRow label={t("Energy")} unit="kcal" value={kcal} onChangeText={onKcal} placeholder="2400" keyboardType="number-pad" inputMode="numeric" autoFocus={autoFocus} last />
+      </SheetGroup>
+      <SheetGroup
+        caption={
+          k > 0
+            ? t("{p}% protein, {c}% carbohydrates, {f}% fat. Change a macro and the energy follows; change the energy and the three scale with it.", { p: pct(num(protein) * 4), c: pct(num(carbs) * 4), f: pct(num(fat) * 9) })
+            : t("Four calories a gram of protein or carbohydrate, nine a gram of fat. The four figures stay in step with each other.")
+        }
+      >
+        <SheetInputRow label={t("Protein")} unit="g" dot={colors.macro.protein} value={protein} onChangeText={(v) => onMacro("p", v)} placeholder="160" keyboardType="number-pad" inputMode="numeric" />
+        <SheetInputRow label={t("Carbohydrates")} unit="g" dot={colors.macro.carbs} value={carbs} onChangeText={(v) => onMacro("c", v)} placeholder="260" keyboardType="number-pad" inputMode="numeric" />
+        <SheetInputRow label={t("Fat")} unit="g" dot={colors.macro.fat} value={fat} onChangeText={(v) => onMacro("f", v)} placeholder="80" keyboardType="number-pad" inputMode="numeric" last />
+      </SheetGroup>
     </View>
   );
 }

@@ -5,21 +5,20 @@ import { useT } from "@/i18n";
 import { haptic } from "@/haptics";
 import { Txt } from "./Text";
 import { Icon } from "./Icon";
-import { Button } from "./Button";
 import { BottomSheet } from "./BottomSheet";
 import { WheelPicker } from "./WheelPicker";
 
 /**
  * A field for a figure you pick rather than type. It looks like every other
  * field, the label inside and the value under it; pressing it brings the wheel
- * up in a sheet. The value changes only when the sheet's button is pressed, so
+ * up in a sheet. The value changes only when the sheet's tick is pressed, so
  * a wheel brushed on the way past changes nothing, and the page itself stays
  * as quiet as a form.
  *
  * The wheels are the children, and they are built when the sheet opens, so
  * they always start from the figure the field is showing.
  */
-export function WheelField({ label, text, placeholder, title, subtitle, confirm, accent = "ember", onOpen, onConfirm, children }: { label: string; /** The value as the field shows it; absent shows the placeholder. */ text?: string; placeholder?: string; /** The sheet's title; the label when absent. */ title?: string; subtitle?: string; /** What the sheet's button says. */ confirm: string; accent?: "ember" | "sage"; onOpen?: () => void; onConfirm: () => void; children: ReactNode }) {
+export function WheelField({ label, text, placeholder, title, subtitle, confirm, accent = "ember", onOpen, onConfirm, children }: { label: string; /** The value as the field shows it; absent shows the placeholder. */ text?: string; placeholder?: string; /** The sheet's title; the label when absent. */ title?: string; subtitle?: string; /** What the tick in the sheet's header says to a screen reader. */ confirm: string; accent?: "ember" | "sage"; onOpen?: () => void; onConfirm: () => void; children: ReactNode }) {
   const { colors, radius } = useTheme();
   const [open, setOpen] = useState(false);
   return (
@@ -45,18 +44,8 @@ export function WheelField({ label, text, placeholder, title, subtitle, confirm,
         </View>
       </Pressable>
 
-      <BottomSheet visible={open} onClose={() => setOpen(false)} title={title ?? label} subtitle={subtitle}>
-        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
-          {open ? children : null}
-          <Button
-            label={confirm}
-            variant={accent === "sage" ? "sage" : "primary"}
-            onPress={() => {
-              onConfirm();
-              setOpen(false);
-            }}
-          />
-        </View>
+      <BottomSheet visible={open} onClose={() => setOpen(false)} title={title ?? label} subtitle={subtitle} confirm={{ label: confirm, accent, onPress: () => { onConfirm(); setOpen(false); } }}>
+        <View style={{ paddingHorizontal: 8, paddingBottom: 8, gap: 12 }}>{open ? children : null}</View>
       </BottomSheet>
     </>
   );

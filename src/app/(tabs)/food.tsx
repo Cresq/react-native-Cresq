@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
 import { useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useT, useLanguage, localeOf } from "@/i18n";
@@ -10,20 +11,21 @@ import { opacity } from "@/motion";
 import { longDate, startOfDay } from "@/db/derive";
 import { useFood } from "@/store/food";
 import { useHealth } from "@/store/health";
+import { useRunningSession } from "@/store/workout";
 import { KIND_NAME } from "@/health/types";
 import { MEALS, MEAL_NAME, burnsOn, entriesOn, estimateSessionBurn, fmtG, fmtKcal, portion, totals } from "@/nutrition/derive";
 import type { Burn, FoodEntry, Meal, NutritionTargets } from "@/db/types";
 import { Screen, Row } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
-import { AnimatedCard, Card, Divider } from "@/components/ui/Card";
+import { Card, Divider } from "@/components/ui/Card";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { Chip } from "@/components/ui/Chip";
-import { Icon, type IconName } from "@/components/ui/Icon";
+import { Icon } from "@/components/ui/Icon";
 import { Field } from "@/components/ui/Field";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { FoodWelcome } from "@/components/FoodWelcome";
-import { FoodMark } from "@/components/FoodMark";
 import { MacroLegend, MacroRing } from "@/components/MacroRing";
 import { MacroTargets } from "@/components/MacroTargets";
 import { useDb } from "@/db/DbProvider";
@@ -32,17 +34,26 @@ import { useDb } from "@/db/DbProvider";
 const MAIN: Meal[] = ["breakfast", "lunch", "dinner", "snack"];
 /** Without a weight on file the session estimate assumes this, and says so. */
 const ASSUMED_KG = 75;
+/** The bar that stays at the foot of the page, and the room the list leaves for it. */
+const TRACK_HEIGHT = 50;
+const TRACK_ROOM = TRACK_HEIGHT + 20;
+/** What a running session's strip adds above the tab bar. */
+const RUNNING_STRIP = 68;
 
 /**
- * Food, in three blocks: the day as a ring, with what was burned as a small
- * chip inside it; the two ways to a product; and the meals, each a heading
- * with its share of the day and its own way in, and under it what was eaten.
+ * Food, in two blocks and a bar: the day as a ring, with what was burned as a
+ * small chip inside it, and the meals, each a heading with its share of the
+ * day and its own way in, and under it what was eaten as thin rows. Tracking
+ * something is one bar that stays at the foot of the page however far the
+ * list is scrolled, with the scanner as the square beside it.
  *
  * Sage is this world's colour, as the theme always intended; ember stays with
  * training, which is why the one ember thing here is the energy you burned.
  */
 export default function FoodTab() {
-  const { colors } = useTheme();
+  const { colors, layout, radius, shadow } = useTheme();
+  const insets = useSafeAreaInsets();
+  const running = useRunningSession();
   const router = useNav();
   const t = useT();
   const locale = localeOf(useLanguage());
@@ -139,8 +150,12 @@ export default function FoodTab() {
   const burnName = (b: Burn) => (b.source === "health" ? t(KIND_NAME[b.kind ?? "other"]) : (b.label ?? t("Burned")));
   const burnSub = (b: Burn) => (b.source === "health" ? [t(store.name), b.via].filter(Boolean).join(", ") : b.sessionId ? t("Estimate from your session") : t("Entered by you"));
 
+  // Just clear of the floating tab bar, and of a running session's strip when there is one.
+  const trackBottom = Math.max(insets.bottom - 8, 10) + layout.tabBarHeight + 10 + (running ? RUNNING_STRIP : 0);
+
   return (
-    <Screen tabs>
+    <View style={{ flex: 1 }}>
+    <Screen tabs bottom={TRACK_ROOM}>
       <View style={{ gap: 2 }}>
         <Txt variant="labelM" tone="tertiary">
           {longDate(now)}
@@ -181,12 +196,6 @@ export default function FoodTab() {
         </Row>
       </Card>
 
-      {/* The two ways to a product, side by side. */}
-      <Row gap={10} align="stretch">
-        <Tile icon="camera" title={t("Scan a barcode")} sub={t("Hold the pack up")} onPress={scan} />
-        <Tile icon="search" title={t("Search a product")} sub={t("Type a name or brand")} onPress={() => search()} />
-      </Row>
-
       {/* The meals: a heading with its share of the day and its own way in, and under it what was eaten. An empty meal is only its heading. */}
       {MEALS.filter((m) => MAIN.includes(m) || byMeal[m].length).map((m) => {
         const entries = byMeal[m];
@@ -205,35 +214,23 @@ export default function FoodTab() {
               <IconButton name="addPlus" size={34} iconSize={16} tone="sage" onPress={() => search(m)} accessibilityLabel={t("Add {meal}", { meal: name.toLowerCase() })} />
             </Row>
             {entries.length ? (
-              <Card padding={14} gap={0}>
+              <Card padding={0} gap={0} style={{ paddingHorizontal: 14, paddingVertical: 2 }}>
                 {entries.map((e, i) => {
                   const f = byId.get(e.foodId);
                   const p = f ? portion(f, e.amount) : null;
                   return (
                     <View key={e.id}>
                       {i > 0 ? <Divider /> : null}
-                      <Pressable accessibilityRole="button" accessibilityLabel={f?.name ?? t("Removed product")} onPress={() => setPicked(e)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8, opacity: pressed ? opacity.pressed : 1 })}>
-                        <FoodMark photo={f?.photo} size={40} />
-                        <View style={{ flex: 1, gap: 2 }}>
-                          <Row gap={8} align="baseline">
-                            <Txt variant="labelL" numberOfLines={1} style={{ flexShrink: 1 }}>
-                              {f?.name ?? t("Removed product")}
-                            </Txt>
-                            {f?.brand ? (
-                              <Txt variant="bodyS" tone="tertiary" numberOfLines={1}>
-                                {f.brand}
-                              </Txt>
-                            ) : null}
-                          </Row>
-                          <Row gap={10} align="baseline">
-                            <Txt variant="labelM" tone="sage" tabular>
-                              {p ? `${fmtKcal(p.kcal)} kcal` : ""}
-                            </Txt>
-                            <Txt variant="bodyS" tone="secondary">
-                              {`${fmtG(e.amount)} ${f?.unit ?? "g"}`}
-                            </Txt>
-                          </Row>
-                        </View>
+                      <Pressable accessibilityRole="button" accessibilityLabel={f?.name ?? t("Removed product")} onPress={() => setPicked(e)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, opacity: pressed ? opacity.pressed : 1 })}>
+                        <Txt variant="labelM" numberOfLines={1} style={{ flexShrink: 1 }}>
+                          {f?.name ?? t("Removed product")}
+                        </Txt>
+                        <Txt variant="labelS" tone="tertiary" numberOfLines={1} style={{ flex: 1 }}>
+                          {`${fmtG(e.amount)} ${f?.unit ?? "g"}`}
+                        </Txt>
+                        <Txt variant="labelM" tone="secondary" tabular>
+                          {p ? `${fmtKcal(p.kcal)} kcal` : ""}
+                        </Txt>
                       </Pressable>
                     </View>
                   );
@@ -330,15 +327,26 @@ export default function FoodTab() {
         </View>
       </BottomSheet>
 
-      <BottomSheet visible={editingTargets} onClose={() => setEditingTargets(false)} title={t("Daily targets")} subtitle={t("What a day should add up to. The four figures move together.")}>
-        <View style={{ gap: 10, paddingHorizontal: 8, paddingVertical: 8 }}>
-          {editingTargets ? <MacroTargets initial={draftTargets} onChange={setDraftTargets} /> : null}
-          <Button label={t("Save targets")} variant="sage" onPress={saveTargets} disabled={!targetsReady} style={{ marginTop: 4 }} />
-          <Button label={t("Answer the questions again")} variant="tertiary" size="M" onPress={askAgain} />
-          {targets ? <Button label={t("Clear targets")} variant="tertiary" size="M" onPress={() => { setTargets(undefined); setEditingTargets(false); }} /> : null}
-        </View>
+      <BottomSheet visible={editingTargets} onClose={() => setEditingTargets(false)} title={t("Daily targets")} confirm={{ label: t("Save targets"), onPress: saveTargets, disabled: !targetsReady, accent: "sage" }}>
+        {editingTargets ? <MacroTargets initial={draftTargets} onChange={setDraftTargets} /> : null}
+        <SheetOption icon="reload" label={t("Answer the questions again")} sub={t("Your need is worked out afresh from your figures")} onPress={askAgain} />
+        {targets ? <SheetOption icon="trash" label={t("Clear targets")} danger onPress={() => { setTargets(undefined); setEditingTargets(false); }} /> : null}
       </BottomSheet>
     </Screen>
+
+      {/* Tracking something, always in reach: the bar opens the search, the square beside it the scanner. */}
+      <View pointerEvents="box-none" style={{ position: "absolute", left: layout.screenInset, right: layout.screenInset, bottom: trackBottom, flexDirection: "row", gap: 8 }}>
+        <AnimatedPressable accessibilityRole="button" accessibilityLabel={t("Track")} onPress={() => search()} wrapperStyle={[{ flex: 1, borderRadius: radius.button }, shadow.floating]} style={({ pressed }) => ({ height: TRACK_HEIGHT, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: radius.button, backgroundColor: pressed ? colors.fuel.pressed : colors.fuel.sage })}>
+          <Icon name="addPlus" size={18} color={colors.fuel.on} strokeWidth={2.2} />
+          <Txt variant="buttonL" style={{ color: colors.fuel.on }}>
+            {t("Track")}
+          </Txt>
+        </AnimatedPressable>
+        <AnimatedPressable accessibilityRole="button" accessibilityLabel={t("Scan a barcode")} onPress={scan} wrapperStyle={[{ borderRadius: radius.button }, shadow.floating]} style={({ pressed }) => ({ width: TRACK_HEIGHT, height: TRACK_HEIGHT, alignItems: "center", justifyContent: "center", borderRadius: radius.button, backgroundColor: pressed ? colors.border.strong : colors.bg.raised })}>
+          <Icon name="camera" size={20} color={colors.fuel.sage} strokeWidth={2} />
+        </AnimatedPressable>
+      </View>
+    </View>
   );
 }
 
@@ -353,28 +361,5 @@ function Figure({ label, value }: { label: string; value: string }) {
         {value}
       </Txt>
     </View>
-  );
-}
-
-/**
- * One of the two ways to a product. A surface like every other card, with a
- * hairline so it holds its edge on both themes: the raised tone it used to
- * wear is for things that sit on a card, and straight on the ground it all
- * but disappears in the light theme.
- */
-function Tile({ icon, title, sub, onPress }: { icon: IconName; title: string; sub: string; onPress: () => void }) {
-  const { colors } = useTheme();
-  return (
-    <AnimatedCard onPress={onPress} accessibilityLabel={title} padding={14} gap={10} bordered wrapperStyle={{ flex: 1 }} style={{ flex: 1 }}>
-      <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.fuel.soft, alignItems: "center", justifyContent: "center" }}>
-        <Icon name={icon} size={18} color={colors.fuel.sage} strokeWidth={2} />
-      </View>
-      <View style={{ gap: 2 }}>
-        <Txt variant="labelL">{title}</Txt>
-        <Txt variant="bodyS" tone="tertiary">
-          {sub}
-        </Txt>
-      </View>
-    </AnimatedCard>
   );
 }

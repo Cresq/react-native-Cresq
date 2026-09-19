@@ -7,8 +7,7 @@ import { springs } from "@/motion";
 import { haptic } from "@/haptics";
 import { Card } from "./ui/Card";
 import { Txt } from "./ui/Text";
-import { ExerciseMark, findExercise } from "./ExerciseMark";
-import { MoveViewer } from "./MoveViewer";
+import { ExerciseMark } from "./ExerciseMark";
 import { Icon } from "./ui/Icon";
 import { Avatar, PhotoSlot } from "./ui/PhotoSlot";
 import { Chip } from "./ui/Chip";
@@ -56,7 +55,6 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
   const t = useT();
   const [liked, setLiked] = useState(!!post.liked);
   const [zoom, setZoom] = useState(false);
-  const [watching, setWatching] = useState<{ exerciseId?: string; name: string } | null>(null);
   const likes = post.likes + (liked && !post.liked ? 1 : !liked && post.liked ? -1 : 0);
   const { toggleLike, heartStyle, ringStyle } = useLikeMotion(liked, setLiked);
   return (
@@ -121,19 +119,17 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
         </Pressable>
 
         {!post.photo && (post.exercises ?? []).length ? (
-          <View style={{ gap: 0 }}>
-            {/* Three exercises at most. The rest is one tap away, on the post's own page. */}
+          <Pressable accessibilityRole={onPress ? "button" : undefined} accessibilityLabel={t("Open this workout")} disabled={!onPress} onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+            {/* Three exercises at most, and the whole block is one way in: any row, the space between them, and the "+3 more" all open the workout's own page. */}
             {(post.exercises ?? []).slice(0, 3).map((e, i) => (
               <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4 }}>
-                <ExerciseMark exerciseId={e.exerciseId} name={e.name} size={34} onPress={() => setWatching({ exerciseId: e.exerciseId, name: e.name })} />
-                <Pressable accessibilityRole={onPress ? "button" : undefined} accessibilityLabel={t("Open this workout")} disabled={!onPress} onPress={onPress} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: 10, opacity: pressed ? 0.7 : 1 })}>
-                  <Txt variant="labelM" style={{ flex: 1 }} numberOfLines={1}>
-                    {e.name}
-                  </Txt>
-                  <Txt variant="labelS" tone="tertiary" tabular>
-                    {e.detail}
-                  </Txt>
-                </Pressable>
+                <ExerciseMark exerciseId={e.exerciseId} name={e.name} size={34} />
+                <Txt variant="labelM" style={{ flex: 1 }} numberOfLines={1}>
+                  {e.name}
+                </Txt>
+                <Txt variant="labelS" tone="tertiary" tabular>
+                  {e.detail}
+                </Txt>
               </View>
             ))}
             {(post.exercises ?? []).length > 3 ? (
@@ -141,7 +137,7 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
                 {t("+{n} more", { n: (post.exercises ?? []).length - 3 })}
               </Txt>
             ) : null}
-          </View>
+          </Pressable>
         ) : null}
         {preview ? (
           <Txt variant="labelS" tone="tertiary">
@@ -197,7 +193,6 @@ export function PostCard({ post, preview, onPress, onMore, onComment }: { post: 
         ) : null}
       </View>
       <PhotoViewer source={post.photo} visible={zoom} onClose={() => setZoom(false)} />
-      {watching ? <MoveViewer exercise={findExercise(watching.exerciseId, watching.name) ?? null} onClose={() => setWatching(null)} /> : null}
     </Card>
   );
 }
