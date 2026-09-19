@@ -35,9 +35,6 @@ export const levelOf = (share: number): Level => (share < 0.4 ? 1 : share < 0.7 
 /** A reported level (1 to 3, averaged) as a share of capacity, so reports and the typical pattern can sit on one strip. */
 export const shareOf = (level: number) => Math.max(0, Math.min(1, (level - 1) / 2));
 
-/** The same gym typed twice should be the same gym: case and stray spaces do not count. */
-export const gymKey = (name: string) => name.trim().toLowerCase().replace(/\s+/g, " ");
-
 /** How many reports an hour needs before it speaks for the gym instead of the typical pattern. */
 export const ENOUGH = 3;
 

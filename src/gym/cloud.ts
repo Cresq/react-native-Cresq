@@ -1,8 +1,10 @@
-import { gymKey, type Level, type Reported } from "./busyness";
+import type { GymPlace } from "@/db/types";
+import type { Level, Reported } from "./busyness";
+import { gymLabel } from "./places";
 
 /**
- * Busyness reports, shared through Supabase: a gym's name, a level from one
- * to three, and when. No account, no device id, nothing about the person. The
+ * Busyness reports, shared through Supabase: the gym's place id and name, a
+ * level from one to three, and when. No account, no device id, nothing about the person. The
  * server stamps the time itself, so a report cannot be backdated to paint a
  * pattern that was never there.
  *
@@ -24,10 +26,10 @@ export type Busyness = {
   hours: Reported[];
 };
 
-export async function fetchBusyness(name: string, signal?: AbortSignal): Promise<Busyness | null> {
+export async function fetchBusyness(placeId: string, signal?: AbortSignal): Promise<Busyness | null> {
   if (!gymCloudConfigured()) return null;
   try {
-    const res = await fetch(`${url}/rest/v1/rpc/gym_busyness`, { method: "POST", headers: headers(), body: JSON.stringify({ p_gym_key: gymKey(name) }), signal });
+    const res = await fetch(`${url}/rest/v1/rpc/gym_busyness`, { method: "POST", headers: headers(), body: JSON.stringify({ p_gym_key: placeId }), signal });
     if (!res.ok) return null;
     const data = (await res.json()) as Partial<Busyness> | null;
     if (!data) return null;
@@ -39,10 +41,10 @@ export async function fetchBusyness(name: string, signal?: AbortSignal): Promise
   }
 }
 
-export async function sendReport(name: string, level: Level): Promise<boolean> {
+export async function sendReport(place: GymPlace, level: Level): Promise<boolean> {
   if (!gymCloudConfigured()) return false;
   try {
-    const res = await fetch(`${url}/rest/v1/gym_reports`, { method: "POST", headers: { ...headers(), Prefer: "return=minimal" }, body: JSON.stringify({ gym_key: gymKey(name), gym_name: name.trim().slice(0, 120), level }) });
+    const res = await fetch(`${url}/rest/v1/gym_reports`, { method: "POST", headers: { ...headers(), Prefer: "return=minimal" }, body: JSON.stringify({ gym_key: place.id, gym_name: gymLabel(place).slice(0, 120), level }) });
     return res.ok;
   } catch {
     return false;

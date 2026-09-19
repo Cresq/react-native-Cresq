@@ -73,7 +73,7 @@ export function MacroLegend({ eaten, targets, short }: { eaten: Eaten; targets?:
   return (
     <View style={{ gap: short ? 4 : 8 }}>
       {rows.map(([hue, name, value, target]) => (
-        <View key={name} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <View key={name} style={{ flexDirection: "row", alignItems: "center", gap: short ? 6 : 8 }}>
           <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: hue }} />
           <Txt variant="labelS" tone="secondary" numberOfLines={1} style={{ flex: 1 }}>
             {name}

@@ -116,6 +116,9 @@ export default function Home() {
         <IconButton name="bell" badge={unread > 0} onPress={() => router.push("/notifications")} accessibilityLabel={t("Notifications")} />
       </Row>
 
+      {/* Where you train, and how busy it is there: the first thing on the page. */}
+      <GymCard />
+
       <View style={{ gap: 20 }}>
         <WeekStrip days={week} onPress={(d) => d.sessionId && router.push(`/workout/${d.sessionId}`)} />
 
@@ -162,64 +165,58 @@ export default function Home() {
             </Pressable>
           ) : null}
 
-      {/* Food and weight, side by side: the day as a ring, and the last weigh-in with its line. Each opens its own page. */}
+      {/* Food and weight in one row, not as equals: food carries a ring and its key and takes the room, weight is one figure and takes what is left. */}
       <Row gap={12} align="stretch">
-        <Card padding={16} gap={12} onPress={() => router.push("/(tabs)/food")} accessibilityLabel={t("Food")} style={{ flex: 1 }}>
+        <Card padding={14} gap={10} onPress={() => router.push("/(tabs)/food")} accessibilityLabel={t("Food")} style={{ flex: 1.9 }}>
           <Txt variant="labelM" tone="secondary">
             {t("Food")}
           </Txt>
           {db.profile.food ? (
-            <>
-              <View style={{ alignItems: "center" }}>
-                <MacroRing size={104} stroke={10} eaten={eaten} budget={db.profile.targets ? db.profile.targets.kcal + burned : undefined}>
-                  <Txt variant="numberM" tabular>
-                    {Math.abs(Math.round(db.profile.targets ? db.profile.targets.kcal + burned - eaten.kcal : eaten.kcal)).toLocaleString(locale)}
-                  </Txt>
-                  <Txt variant="labelS" tone="secondary">
-                    {!db.profile.targets ? t("kcal eaten") : db.profile.targets.kcal + burned - eaten.kcal >= 0 ? t("kcal left") : t("kcal over")}
-                  </Txt>
-                </MacroRing>
+            <Row gap={10}>
+              <MacroRing size={72} stroke={8} eaten={eaten} budget={db.profile.targets ? db.profile.targets.kcal + burned : undefined}>
+                <Txt variant="labelL" tabular>
+                  {Math.abs(Math.round(db.profile.targets ? db.profile.targets.kcal + burned - eaten.kcal : eaten.kcal)).toLocaleString(locale)}
+                </Txt>
+                <Txt variant="labelS" tone="secondary">
+                  {!db.profile.targets ? t("kcal eaten") : db.profile.targets.kcal + burned - eaten.kcal >= 0 ? t("kcal left") : t("kcal over")}
+                </Txt>
+              </MacroRing>
+              <View style={{ flex: 1 }}>
+                <MacroLegend eaten={eaten} short />
               </View>
-              <MacroLegend eaten={eaten} short />
-            </>
+            </Row>
           ) : (
-            <View style={{ gap: 4 }}>
-              <Txt variant="labelL">{t("Food, the same way you log a set")}</Txt>
-              <Txt variant="bodyS" tone="secondary">
-                {t("A few questions and your need is worked out.")}
-              </Txt>
-            </View>
+            <Txt variant="bodyS" tone="secondary">
+              {t("A few questions and your need is worked out.")}
+            </Txt>
           )}
         </Card>
 
-        <Card padding={16} gap={12} onPress={() => router.push("/weight")} accessibilityLabel={t("Weight")} style={{ flex: 1 }}>
+        <Card padding={14} gap={6} onPress={() => router.push("/weight")} accessibilityLabel={t("Weight")} style={{ flex: 1 }}>
           <Txt variant="labelM" tone="secondary">
             {t("Weight")}
           </Txt>
-          <View style={{ gap: 2 }}>
-            <Row gap={4} align="baseline">
-              <Txt variant="numberL" tabular>
+          <View style={{ flex: 1, justifyContent: "center", gap: 2 }}>
+            <Row gap={3} align="baseline">
+              <Txt variant="numberM" tabular>
                 {weight.latest ? weight.latest.kg.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : "–"}
               </Txt>
-              <Txt variant="labelM" tone="secondary">
+              <Txt variant="labelS" tone="secondary">
                 kg
               </Txt>
             </Row>
-            <Txt variant="labelS" tone="tertiary">
-              {weighedToday ? t("Today") : weight.latest ? t("Last logged, {when}", { when: relativeDay(weight.latest.at) }) : t("Not logged yet")}
+            <Txt variant="labelS" tone="tertiary" numberOfLines={2}>
+              {weighedToday ? t("Today") : weight.latest ? relativeDay(weight.latest.at) : t("Not logged yet")}
             </Txt>
           </View>
-          <View style={{ flex: 1, justifyContent: "flex-end", gap: 10 }}>
-            {weight.entries.length >= 2 ? <LineChart points={weight.entries.slice(-14).map((w) => ({ value: w.kg }))} height={48} still /> : null}
-            {weighedToday ? null : (
-              <Row gap={2}>
-                <Txt variant="labelM" tone="sage">
-                  {t("Log today")}
-                </Txt>
-                <Icon name="chevronRight" size={13} color={colors.fuel.sage} strokeWidth={2.2} />
-              </Row>
-            )}
-          </View>
+          {weighedToday ? null : (
+            <Row gap={2}>
+              <Txt variant="labelS" tone="sage">
+                {t("Log today")}
+              </Txt>
+              <Icon name="chevronRight" size={12} color={colors.fuel.sage} strokeWidth={2.2} />
+            </Row>
+          )}
         </Card>
       </Row>
 
@@ -272,9 +269,6 @@ export default function Home() {
           </Row>
         </Card>
       </Section>
-
-      {/* Where you train, and how busy it is there. */}
-      <GymCard />
 
       <BottomSheet visible={choosing} onClose={() => setChoosing(false)} title={t("Today's workout")} subtitle={t("Your split says {name}. Pick something else for today; the split keeps its order.", { name: nextDay?.rest ? t("Rest day") : (nextDay?.name ?? "") })}>
         {db.plans.map((p) => (

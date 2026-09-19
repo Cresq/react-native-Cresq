@@ -47,7 +47,8 @@ function migrate(stored: Db): Db {
     exercises,
     // An account minted before accounts existed: give it its id now, once.
     auth: { ...auth, account: auth.account ?? (auth.signedIn ? { id: uid(), email: "", createdAt: stored.createdAt ?? Date.now() } : undefined) },
-    profile: { ...fresh.profile, ...stored.profile },
+    // A home gym saved as a bare name, before gyms were real places, cannot be checked against anything and is let go.
+    profile: { ...fresh.profile, ...stored.profile, homeGym: typeof stored.profile?.homeGym === "object" ? stored.profile.homeGym : undefined },
     consent: { ...fresh.consent, ...(stored.consent ?? {}) },
     plans: stored.plans ?? fresh.plans,
     sessions: stored.sessions ?? [],

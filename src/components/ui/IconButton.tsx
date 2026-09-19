@@ -20,7 +20,7 @@ export function IconButton({
   onPress?: () => void;
   size?: number;
   iconSize?: number;
-  tone?: "surface" | "raised" | "ember" | "danger";
+  tone?: "surface" | "raised" | "ember" | "danger" | "sage";
   badge?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
@@ -28,8 +28,8 @@ export function IconButton({
   feedback?: Moment;
 }) {
   const { colors } = useTheme();
-  const bg = tone === "ember" ? colors.accent.ember : tone === "raised" || tone === "danger" ? colors.bg.raised : colors.bg.surface;
-  const fg = tone === "ember" ? colors.accent.on : tone === "danger" ? colors.status.danger : colors.icon.strong;
+  const bg = tone === "ember" ? colors.accent.ember : tone === "sage" ? colors.fuel.soft : tone === "raised" || tone === "danger" ? colors.bg.raised : colors.bg.surface;
+  const fg = tone === "ember" ? colors.accent.on : tone === "sage" ? colors.fuel.sage : tone === "danger" ? colors.status.danger : colors.icon.strong;
   return (
     <Press
       accessibilityRole="button"
@@ -43,7 +43,7 @@ export function IconButton({
         height: size,
         borderRadius: size / 2,
         backgroundColor: pressed ? colors.bg.raised : bg,
-        borderWidth: tone === "ember" ? 0 : 1,
+        borderWidth: tone === "ember" || tone === "sage" ? 0 : 1,
         borderColor: colors.border.subtle,
         alignItems: "center",
         justifyContent: "center",

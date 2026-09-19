@@ -89,7 +89,7 @@ export type Profile = {
   /** Gyms you have trained at, most recent first, offered when a session asks where you were. */
   gyms?: string[];
   /** The gym the person usually trains at: offered first after a session, and the one whose busyness Home shows. */
-  homeGym?: string;
+  homeGym?: GymPlace;
   /** When the feed was last opened; Home lists what followed people did since. */
   lastFeedSeen?: number;
   /** When the notifications screen was last opened; anything newer carries a dot. */
@@ -132,6 +132,13 @@ export type Account = {
 
 /** The phone's health store, once the person has connected it. Apple never says whether reading was allowed, so this is "asked", not "granted". */
 export type HealthLink = { connectedAt: number };
+
+/**
+ * A gym that exists: picked from a place search, never typed. The id is the
+ * place's own (OpenStreetMap's), so everybody who links this gym links the
+ * same one, and what they report about it lands in one place.
+ */
+export type GymPlace = { id: string; name: string; street?: string; city?: string; lat?: number; lon?: number };
 
 /** Where the figures on a food came from. */
 export type FoodSource = "openfoodfacts" | "label" | "manual";
@@ -264,7 +271,7 @@ export type Db = {
   burns: Burn[];
   /** Body weight, one figure a day. */
   weights: WeightEntry[];
-  /** Busyness reports this phone sent, by gym key: enough to know when it last did. The shared copy carries no name. */
+  /** Busyness reports this phone sent, by the gym's place id: enough to know when it last did. The shared copy carries no name. */
   gymReports?: { gym: string; level: 1 | 2 | 3; at: number }[];
   /**
    * Comments this device has written, by post id. Only the words and the time:

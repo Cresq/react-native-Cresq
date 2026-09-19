@@ -6,17 +6,19 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { useT, useLanguage, localeOf } from "@/i18n";
 import { useNow } from "@/clock";
 import { haptic } from "@/haptics";
+import { opacity } from "@/motion";
 import { longDate, startOfDay } from "@/db/derive";
 import { useFood } from "@/store/food";
 import { useHealth } from "@/store/health";
 import { KIND_NAME } from "@/health/types";
 import { MEALS, MEAL_NAME, burnsOn, entriesOn, estimateSessionBurn, fmtG, fmtKcal, portion, totals } from "@/nutrition/derive";
 import type { Burn, FoodEntry, Meal, NutritionTargets } from "@/db/types";
-import { Screen, Row, Section } from "@/components/ui/Screen";
+import { Screen, Row } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { AnimatedCard, Card, Divider } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
+import { Chip } from "@/components/ui/Chip";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Field } from "@/components/ui/Field";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
@@ -32,12 +34,12 @@ const MAIN: Meal[] = ["breakfast", "lunch", "dinner", "snack"];
 const ASSUMED_KG = 75;
 
 /**
- * Food, in four blocks and no more: the day as a ring (press it to change the
- * targets), the two ways to a product, the meals in one list, and what was
- * burned, which the phone's health store fills in once it is connected.
+ * Food, in three blocks: the day as a ring, with what was burned as a small
+ * chip inside it; the two ways to a product; and the meals, each a heading
+ * with its share of the day and its own way in, and under it what was eaten.
  *
  * Sage is this world's colour, as the theme always intended; ember stays with
- * training.
+ * training, which is why the one ember thing here is the energy you burned.
  */
 export default function FoodTab() {
   const { colors } = useTheme();
@@ -49,7 +51,6 @@ export default function FoodTab() {
   const { foods, log, byId, targets, removeEntry, setTargets, burns, addBurn, removeBurn } = useFood();
   const store = useHealth();
   const [picked, setPicked] = useState<FoodEntry | null>(null);
-  const [pickedBurn, setPickedBurn] = useState<Burn | null>(null);
   const [burnSheet, setBurnSheet] = useState(false);
   const [burnKcal, setBurnKcal] = useState("");
   const [burnLabel, setBurnLabel] = useState("");
@@ -94,7 +95,8 @@ export default function FoodTab() {
     if (!burnOk) return;
     addBurn({ kcal: burnN, label: burnLabel.trim() || undefined });
     haptic("done");
-    setBurnSheet(false);
+    setBurnKcal("");
+    setBurnLabel("");
   };
   const connect = async () => {
     setConnecting(true);
@@ -146,33 +148,38 @@ export default function FoodTab() {
         <Txt variant="displayXL">{t("Food")}</Txt>
       </View>
 
-      {/* The day. Pressing it is how its targets, and the questions behind them, are changed. */}
-      <AnimatedCard onPress={openTargets} accessibilityLabel={t("Daily targets")} padding={20} gap={16} style={{ backgroundColor: colors.fuel.soft }}>
-        <Row gap={20}>
-          <MacroRing size={124} stroke={12} eaten={sum} budget={targets ? targets.kcal + burned : undefined} track={colors.fuel.sage} trackOpacity={0.16}>
-            <Txt variant="numberM" tabular>
-              {n(left === null ? sum.kcal : Math.abs(left))}
-            </Txt>
+      {/* The day. Pressing the figures is how the targets, and the questions behind them, are changed; what was burned is the small chip under them. */}
+      <Card padding={20} gap={14} style={{ backgroundColor: colors.fuel.soft }}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t("Daily targets")} onPress={openTargets} style={({ pressed }) => ({ gap: 14, opacity: pressed ? opacity.pressed : 1 })}>
+          <Row gap={20}>
+            <MacroRing size={124} stroke={12} eaten={sum} budget={targets ? targets.kcal + burned : undefined} track={colors.fuel.sage} trackOpacity={0.16}>
+              <Txt variant="numberM" tabular>
+                {n(left === null ? sum.kcal : Math.abs(left))}
+              </Txt>
+              <Txt variant="labelS" tone="secondary">
+                {left === null ? t("kcal eaten") : left >= 0 ? t("kcal left") : t("kcal over")}
+              </Txt>
+            </MacroRing>
+            <View style={{ flex: 1 }}>
+              <MacroLegend eaten={sum} targets={targets} />
+            </View>
+          </Row>
+          <Row gap={16}>
+            <Figure label={t("Eaten")} value={n(sum.kcal)} />
+            <Figure label={t("Burned")} value={burned ? `+${n(burned)}` : "0"} />
+            <Figure label={t("Target")} value={targets ? n(targets.kcal) : t("none")} />
+          </Row>
+        </Pressable>
+        <Row gap={8} justify="space-between">
+          <Chip label={burned ? t("+{n} kcal burned", { n: n(burned) }) : t("Add burned calories")} icon="flame" tone="ember" size="S" onPress={openBurn} />
+          <Pressable accessibilityRole="button" onPress={openTargets} hitSlop={8} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, opacity: pressed ? opacity.pressed : 1 })}>
             <Txt variant="labelS" tone="secondary">
-              {left === null ? t("kcal eaten") : left >= 0 ? t("kcal left") : t("kcal over")}
+              {targets ? t("Change targets") : t("Set daily targets")}
             </Txt>
-          </MacroRing>
-          <View style={{ flex: 1 }}>
-            <MacroLegend eaten={sum} targets={targets} />
-          </View>
+            <Icon name="chevronRight" size={12} color={colors.text.secondary} strokeWidth={2.2} />
+          </Pressable>
         </Row>
-        <Row gap={16}>
-          <Figure label={t("Eaten")} value={n(sum.kcal)} />
-          <Figure label={t("Burned")} value={burned ? `+${n(burned)}` : "0"} />
-          <Figure label={t("Target")} value={targets ? n(targets.kcal) : t("none")} />
-        </Row>
-        <Row gap={2} justify="flex-end">
-          <Txt variant="labelS" tone="secondary">
-            {targets ? t("Change targets") : t("Set daily targets")}
-          </Txt>
-          <Icon name="chevronRight" size={12} color={colors.text.secondary} strokeWidth={2.2} />
-        </Row>
-      </AnimatedCard>
+      </Card>
 
       {/* The two ways to a product, side by side. */}
       <Row gap={10} align="stretch">
@@ -180,108 +187,62 @@ export default function FoodTab() {
         <Tile icon="search" title={t("Search a product")} sub={t("Type a name or brand")} onPress={() => search()} />
       </Row>
 
-      {/* The meals, in one list: each with what it holds and its own way in. */}
-      <Section title={t("Meals")}>
-        <Card padding={16} gap={0}>
-          {MEALS.filter((m) => MAIN.includes(m) || byMeal[m].length).map((m, at) => {
-            const entries = byMeal[m];
-            const mealSum = totals(entries, foods);
-            const name = t(MEAL_NAME[m]);
-            return (
-              <View key={m}>
-                {at > 0 ? <Divider /> : null}
-                <Row gap={12} style={{ paddingVertical: 8 }}>
-                  <Pressable accessibilityRole="button" accessibilityLabel={t("Add {meal}", { meal: name.toLowerCase() })} onPress={() => search(m)} style={({ pressed }) => ({ flex: 1, gap: 1, opacity: pressed ? 0.7 : 1 })}>
-                    <Txt variant="labelL">{name}</Txt>
-                    <Txt variant="bodyS" tone="tertiary">
-                      {entries.length ? `${n(mealSum.kcal)} kcal` : t("Nothing yet")}
-                    </Txt>
-                  </Pressable>
-                  <IconButton name="addPlus" size={34} iconSize={16} tone="raised" onPress={() => search(m)} accessibilityLabel={t("Add {meal}", { meal: name.toLowerCase() })} />
-                </Row>
-                {entries.map((e) => {
+      {/* The meals: a heading with its share of the day and its own way in, and under it what was eaten. An empty meal is only its heading. */}
+      {MEALS.filter((m) => MAIN.includes(m) || byMeal[m].length).map((m) => {
+        const entries = byMeal[m];
+        const mealSum = totals(entries, foods);
+        const name = t(MEAL_NAME[m]);
+        const share = targets && targets.kcal > 0 ? Math.round((mealSum.kcal / targets.kcal) * 100) : null;
+        return (
+          <View key={m} style={{ gap: 10 }}>
+            <Row gap={12}>
+              <View style={{ flex: 1, gap: 1 }}>
+                <Txt variant="displayS">{name}</Txt>
+                <Txt variant="labelM" tone={entries.length ? "sage" : "tertiary"}>
+                  {!entries.length ? t("Nothing yet") : share === null ? `${n(mealSum.kcal)} kcal` : t("{n} kcal, {p}% of your target", { n: n(mealSum.kcal), p: share })}
+                </Txt>
+              </View>
+              <IconButton name="addPlus" size={34} iconSize={16} tone="sage" onPress={() => search(m)} accessibilityLabel={t("Add {meal}", { meal: name.toLowerCase() })} />
+            </Row>
+            {entries.length ? (
+              <Card padding={14} gap={0}>
+                {entries.map((e, i) => {
                   const f = byId.get(e.foodId);
                   const p = f ? portion(f, e.amount) : null;
                   return (
-                    <Pressable key={e.id} accessibilityRole="button" accessibilityLabel={f?.name ?? t("Removed product")} onPress={() => setPicked(e)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingBottom: 10, opacity: pressed ? 0.7 : 1 })}>
-                      <FoodMark photo={f?.photo} size={32} />
-                      <View style={{ flex: 1, gap: 1 }}>
-                        <Txt variant="labelM" numberOfLines={1}>
-                          {f?.name ?? t("Removed product")}
-                        </Txt>
-                        <Txt variant="labelS" tone="tertiary" numberOfLines={1}>
-                          {[f?.brand, `${fmtG(e.amount)} ${f?.unit ?? "g"}`].filter(Boolean).join(", ")}
-                        </Txt>
-                      </View>
-                      <Txt variant="labelM" tone="secondary" tabular>
-                        {p ? `${fmtKcal(p.kcal)} kcal` : ""}
-                      </Txt>
-                    </Pressable>
+                    <View key={e.id}>
+                      {i > 0 ? <Divider /> : null}
+                      <Pressable accessibilityRole="button" accessibilityLabel={f?.name ?? t("Removed product")} onPress={() => setPicked(e)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8, opacity: pressed ? opacity.pressed : 1 })}>
+                        <FoodMark photo={f?.photo} size={40} />
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <Row gap={8} align="baseline">
+                            <Txt variant="labelL" numberOfLines={1} style={{ flexShrink: 1 }}>
+                              {f?.name ?? t("Removed product")}
+                            </Txt>
+                            {f?.brand ? (
+                              <Txt variant="bodyS" tone="tertiary" numberOfLines={1}>
+                                {f.brand}
+                              </Txt>
+                            ) : null}
+                          </Row>
+                          <Row gap={10} align="baseline">
+                            <Txt variant="labelM" tone="sage" tabular>
+                              {p ? `${fmtKcal(p.kcal)} kcal` : ""}
+                            </Txt>
+                            <Txt variant="bodyS" tone="secondary">
+                              {`${fmtG(e.amount)} ${f?.unit ?? "g"}`}
+                            </Txt>
+                          </Row>
+                        </View>
+                      </Pressable>
+                    </View>
                   );
                 })}
-              </View>
-            );
-          })}
-        </Card>
-      </Section>
-
-      {/* What was burned: the health store fills it in once connected; by hand is always there. */}
-      <Section title={t("Burned")} meta={burned ? `+${n(burned)} kcal` : undefined}>
-        <Card padding={16} gap={0}>
-          <Row gap={12} style={{ paddingVertical: 8 }}>
-            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.fuel.soft, alignItems: "center", justifyContent: "center" }}>
-              <Icon name="heart" size={16} color={colors.fuel.sage} strokeWidth={2} />
-            </View>
-            <View style={{ flex: 1, gap: 1 }}>
-              <Txt variant="labelL">{t(store.name)}</Txt>
-              <Txt variant="bodyS" tone="tertiary">
-                {storeLine}
-              </Txt>
-            </View>
-            {!store.unavailable && !store.connected ? <Button label={t("Connect")} variant="sage" size="S" full={false} loading={connecting} onPress={connect} /> : null}
-          </Row>
-          {burnedToday.map((b) => {
-            const row = (
-              <>
-                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.bg.raised, alignItems: "center", justifyContent: "center" }}>
-                  <Icon name={b.source === "health" || b.sessionId ? "dumbbell" : "flame"} size={15} color={colors.text.secondary} strokeWidth={2} />
-                </View>
-                <View style={{ flex: 1, gap: 1 }}>
-                  <Txt variant="labelM" numberOfLines={1}>
-                    {burnName(b)}
-                  </Txt>
-                  <Txt variant="labelS" tone="tertiary" numberOfLines={1}>
-                    {burnSub(b)}
-                  </Txt>
-                </View>
-                <Txt variant="labelM" tone="secondary" tabular>
-                  +{n(b.kcal)} kcal
-                </Txt>
-              </>
-            );
-            // What the health store reported mirrors the store; only what was entered here can be taken away here.
-            return (
-              <View key={b.id}>
-                <Divider />
-                {b.source === "health" ? (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 }}>{row}</View>
-                ) : (
-                  <Pressable accessibilityRole="button" accessibilityLabel={burnName(b)} onPress={() => setPickedBurn(b)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, opacity: pressed ? 0.7 : 1 })}>
-                    {row}
-                  </Pressable>
-                )}
-              </View>
-            );
-          })}
-          <Divider />
-          <Pressable accessibilityRole="button" accessibilityLabel={t("Add it yourself")} onPress={openBurn} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingTop: 12, paddingBottom: 4, opacity: pressed ? 0.7 : 1 })}>
-            <Icon name="addPlus" size={16} color={colors.text.secondary} strokeWidth={2.2} />
-            <Txt variant="labelM" tone="secondary" style={{ flex: 1 }}>
-              {t("Add it yourself")}
-            </Txt>
-          </Pressable>
-        </Card>
-      </Section>
+              </Card>
+            ) : null}
+          </View>
+        );
+      })}
 
       <BottomSheet
         visible={!!picked}
@@ -296,45 +257,75 @@ export default function FoodTab() {
         </View>
       </BottomSheet>
 
-      <BottomSheet visible={!!pickedBurn} onClose={() => setPickedBurn(null)} title={pickedBurn ? burnName(pickedBurn) : ""} subtitle={pickedBurn ? `+${n(pickedBurn.kcal)} kcal` : undefined}>
-        <SheetOption icon="trash" label={t("Remove from today")} danger onPress={() => { if (pickedBurn) removeBurn(pickedBurn.id); haptic("tap"); setPickedBurn(null); }} />
-      </BottomSheet>
-
-      <BottomSheet visible={burnSheet} onClose={() => setBurnSheet(false)} title={t("Calories burned")} subtitle={t("Added to what the day may hold. A session offers an estimate; anything else you enter yourself.")}>
+      {/* What was burned, all in one sheet: where it comes from, what counts today, and adding to it by hand. */}
+      <BottomSheet visible={burnSheet} onClose={() => setBurnSheet(false)} title={t("Calories burned")} subtitle={t("Added to what the day may hold.")}>
         <View style={{ gap: 4 }}>
+          <Row gap={12} style={{ paddingHorizontal: 8, paddingVertical: 8 }}>
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.fuel.soft, alignItems: "center", justifyContent: "center" }}>
+              <Icon name="heart" size={16} color={colors.fuel.sage} strokeWidth={2} />
+            </View>
+            <View style={{ flex: 1, gap: 1 }}>
+              <Txt variant="labelL">{t(store.name)}</Txt>
+              <Txt variant="bodyS" tone="tertiary">
+                {storeLine}
+              </Txt>
+            </View>
+            {!store.unavailable && !store.connected ? <Button label={t("Connect")} variant="sage" size="S" full={false} loading={connecting} onPress={connect} /> : null}
+          </Row>
+
+          {burnedToday.map((b) => (
+            <Row key={b.id} gap={12} style={{ paddingHorizontal: 8, paddingVertical: 6 }}>
+              <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.bg.raised, alignItems: "center", justifyContent: "center" }}>
+                <Icon name={b.source === "health" || b.sessionId ? "dumbbell" : "flame"} size={15} color={colors.text.secondary} strokeWidth={2} />
+              </View>
+              <View style={{ flex: 1, gap: 1 }}>
+                <Txt variant="labelM" numberOfLines={1}>
+                  {burnName(b)}
+                </Txt>
+                <Txt variant="labelS" tone="tertiary" numberOfLines={1}>
+                  {burnSub(b)}
+                </Txt>
+              </View>
+              <Txt variant="labelM" tone="secondary" tabular>
+                +{n(b.kcal)} kcal
+              </Txt>
+              {/* What the health store reported mirrors the store; only what was entered here can be taken away here. */}
+              {b.source === "health" ? <View style={{ width: 30 }} /> : <IconButton name="trash" size={30} iconSize={15} tone="raised" onPress={() => { removeBurn(b.id); haptic("tap"); }} accessibilityLabel={t("Remove from today")} />}
+            </Row>
+          ))}
+
           {sessionsToday.map((s) => {
             const end = s.finishedAt ?? s.startedAt;
             // A workout from the health store that covers this session already counts it, measured rather than estimated.
             if (burnedToday.some((b) => b.source === "health" && (b.from ?? 0) < end && (b.to ?? 0) > s.startedAt)) return null;
+            if (burnedToday.some((b) => b.sessionId === s.id)) return null;
             const minutes = Math.max(1, Math.round((end - s.startedAt) / 60_000));
             const kg = weightKg ?? ASSUMED_KG;
             const est = estimateSessionBurn(minutes, kg);
-            const added = burnedToday.some((b) => b.sessionId === s.id);
             return (
               <SheetOption
                 key={s.id}
                 icon="dumbbell"
                 label={t("Your session today, {plan}", { plan: s.planName })}
-                sub={added ? t("Already added") : t("About {n} kcal, from {min} min at {kg} kg", { n: n(est), min: minutes, kg })}
-                selected={added}
+                sub={weightKg ? t("About {n} kcal, from {min} min at {kg} kg", { n: n(est), min: minutes, kg }) : t("About {n} kcal, from {min} min at an assumed {kg} kg", { n: n(est), min: minutes, kg })}
                 onPress={() => {
-                  if (added) return;
                   addBurn({ at: s.finishedAt, kcal: est, label: s.planName, sessionId: s.id });
                   haptic("done");
-                  setBurnSheet(false);
                 }}
               />
             );
           })}
-          {sessionsToday.length ? (
-            <Txt variant="labelS" tone="tertiary" style={{ paddingHorizontal: 12, paddingBottom: 4 }}>
-              {weightKg ? t("An estimate from your weight and the session's length, not a measurement.") : t("Weight unknown, {kg} kg assumed. Set yours under Your figures.", { kg: ASSUMED_KG })}
-            </Txt>
-          ) : null}
-          <View style={{ paddingHorizontal: 8, paddingTop: 8, gap: 10 }}>
-            <Field label={t("Calories burned")} value={burnKcal} onChangeText={setBurnKcal} keyboardType="number-pad" inputMode="numeric" placeholder="300" />
-            <Field label={t("What was it?")} value={burnLabel} onChangeText={setBurnLabel} placeholder={t("Running, cycling, a walk")} autoCapitalize="sentences" />
-            <Button label={burnOk ? t("Add {n} kcal", { n: n(burnN) }) : t("Enter the calories")} variant="sage" disabled={!burnOk} onPress={saveBurn} />
+
+          <Row gap={10} align="flex-start" style={{ paddingHorizontal: 8, paddingTop: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Field label="kcal" value={burnKcal} onChangeText={setBurnKcal} keyboardType="number-pad" inputMode="numeric" placeholder="300" />
+            </View>
+            <View style={{ flex: 1.7 }}>
+              <Field label={t("What was it?")} value={burnLabel} onChangeText={setBurnLabel} placeholder={t("Running, cycling")} autoCapitalize="sentences" />
+            </View>
+          </Row>
+          <View style={{ paddingHorizontal: 8, paddingTop: 4 }}>
+            <Button label={burnOk ? t("Add {n} kcal", { n: n(burnN) }) : t("Enter the calories")} variant="sage" size="M" disabled={!burnOk} onPress={saveBurn} />
           </View>
         </View>
       </BottomSheet>
