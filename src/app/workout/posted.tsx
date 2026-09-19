@@ -30,7 +30,7 @@ export default function Posted() {
   const { followers } = useSocial();
   const { db, update } = useDb();
   const me = useMe();
-  const { session, file, setCaption } = useWorkout();
+  const { session, file, resume, setCaption } = useWorkout();
   // The session moves out of the store as soon as it is filed, so hold on to it.
   const [snap, setSnap] = useState(session);
   const [left, setLeft] = useState(60);
@@ -131,6 +131,15 @@ export default function Posted() {
           <Icon name="noteEdit" size={14} color={colors.text.secondary} strokeWidth={1.7} />
           <Txt variant="labelM" tone="secondary">
             {t("Edit caption")}
+          </Txt>
+        </Row>
+      </Pressable>
+
+      <Pressable accessibilityRole="button" hitSlop={8} onPress={() => { if (!snap) return; resume(snap.id); router.replace("/workout/active"); }} style={{ alignSelf: "center" }}>
+        <Row gap={8}>
+          <Icon name="play" size={14} color={colors.text.tertiary} strokeWidth={1.7} />
+          <Txt variant="labelM" tone="tertiary">
+            {t("Not done yet? Keep going")}
           </Txt>
         </Row>
       </Pressable>

@@ -155,8 +155,17 @@ export default function ActiveWorkout() {
     // The set that finishes an exercise folds it away and opens the next one that
     // still has sets, after a beat so the tick lands before anything moves.
     const wasLast = !s.done && ex.sets.filter((x) => !x.done).length === 1;
-    if (!wasLast) return;
     const order = session.exercises;
+    // In a superset you alternate, so after a set the highlight goes to the
+    // partner that still has sets, and after theirs it comes back.
+    if (!wasLast && !s.done && ex.supersetGroup) {
+      const group = order.filter((e) => e.supersetGroup === ex.supersetGroup);
+      const at = group.findIndex((e) => e.id === ex.id);
+      const partner = [...group.slice(at + 1), ...group.slice(0, at)].find((e) => e.sets.some((x) => !x.done));
+      if (partner) setTimeout(() => w.setCurrent(order.findIndex((e) => e.id === partner.id)), 120);
+      return;
+    }
+    if (!wasLast) return;
     const unfinished = (id: string) => order.find((e) => e.id === id)?.sets.some((x) => !x.done);
     const from = order.findIndex((e) => e.id === ex.id);
     const next = order.slice(from + 1).find((e) => e.sets.some((x) => !x.done));

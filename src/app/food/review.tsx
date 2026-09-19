@@ -8,6 +8,7 @@ import { useT } from "@/i18n";
 import { haptic } from "@/haptics";
 import { useFood } from "@/store/food";
 import { getDraft, setDraft } from "@/nutrition/draft";
+import { publishProduct } from "@/nutrition/cloud";
 import type { Food } from "@/db/types";
 import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
@@ -85,6 +86,8 @@ export default function Review() {
     };
     haptic("done");
     setDraft(null);
+    // Checked against the pack and carrying a barcode: onto the shared shelf, for the next person who scans it.
+    publishProduct(food);
     if (from === "edit" && existing) {
       updateFood(existing.id, food);
       router.back();

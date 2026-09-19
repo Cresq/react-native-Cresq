@@ -8,6 +8,7 @@ import { useT } from "@/i18n";
 import { haptic } from "@/haptics";
 import { useFood } from "@/store/food";
 import { lookupBarcode, LookupFailed } from "@/nutrition/openfoodfacts";
+import { fetchProduct } from "@/nutrition/cloud";
 import { setDraft } from "@/nutrition/draft";
 import { Screen, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
@@ -49,7 +50,8 @@ export default function Scan() {
     setCode(data);
     setStatus("looking");
     try {
-      const found = await lookupBarcode(data);
+      // The shelf first: a pack somebody already checked is the better answer. Then the open database.
+      const found = (await fetchProduct(data).catch(() => null)) ?? (await lookupBarcode(data));
       if (found) {
         const id = remember(found);
         haptic("done");

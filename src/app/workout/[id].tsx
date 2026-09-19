@@ -6,8 +6,8 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
 import { finished, fmtKg, longDate, newRecords, sessionStats } from "@/db/derive";
 import { otherPosts } from "@/data/mock";
-import { person } from "@/data/people";
-import { Screen, Row, Header } from "@/components/ui/Screen";
+import { person, personByName } from "@/data/people";
+import { Screen, Row, Section, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/Icon";
@@ -20,6 +20,13 @@ import { useT, usePlural } from "@/i18n";
 import { PhotoViewer } from "@/components/PhotoViewer";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
+import { PostCard } from "@/components/PostCard";
+import { CommentSheet, type Comment } from "@/components/CommentSheet";
+import { useComments } from "@/store/comments";
+import { useMe } from "@/store/me";
+import { useWorkout } from "@/store/workout";
+import { useNow } from "@/clock";
+import { postFromSession } from "@/social/posts";
 
 /**
  * One workout, or a row of them.
@@ -77,9 +84,24 @@ function Page({ id, at }: { id: string; at?: { index: number; count: number } })
   const { db, update } = useDb();
   const [menu, setMenu] = useState<"menu" | "delete" | null>(null);
   const [zoom, setZoom] = useState(false);
+  const [commenting, setCommenting] = useState(false);
+  const me = useMe();
+  const now = useNow();
+  const { resume } = useWorkout();
+  const { commentsOf, add: addComment, actionsFor } = useComments();
   const session = db.sessions.find((s) => s.id === id) ?? (db.activeSession?.id === id ? db.activeSession : undefined);
   const post = session ? undefined : otherPosts.find((p) => p.id === id);
   const recs = useMemo(() => (session ? newRecords(session, db.sessions.filter((x) => x.startedAt < session.startedAt)) : []), [session, db.sessions]);
+  // Your own session as the post it makes, the same card the feed shows, so the two never disagree.
+  const myPost = useMemo(() => (session ? postFromSession(session, { profile: db.profile, sessions: db.sessions, photo: me.photo, comments: (db.comments?.[session.id] ?? []).length, t }) : null), [session, db.profile, db.sessions, db.comments, me.photo, t]);
+  const openWriter = (c: Comment) => {
+    const who = personByName(c.name);
+    setCommenting(false);
+    if (who) router.push(`/user/${who.id}`);
+    else if (c.name === db.profile.name) router.push("/(tabs)/profile");
+  };
+  // Taking a session up again makes sense the same day, not next week.
+  const resumable = !!session?.finishedAt && !db.activeSession && now - session.finishedAt < 12 * 3_600_000;
   const position = at ? t("{a} of {b}", { a: at.index + 1, b: at.count }) : "";
   const back = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)"));
 
@@ -155,6 +177,24 @@ function Page({ id, at }: { id: string; at?: { index: number; count: number } })
 
       {s.caption ? <Txt variant="bodyL">{s.caption}</Txt> : null}
 
+      {s.shared && myPost ? (
+        <Section title={t("On your feed")}>
+          <PostCard post={myPost} onComment={() => setCommenting(true)} />
+        </Section>
+      ) : null}
+      {myPost ? (
+        <CommentSheet
+          visible={commenting}
+          onClose={() => setCommenting(false)}
+          title={[myPost.name, myPost.title].filter(Boolean).join(", ")}
+          comments={commentsOf(myPost)}
+          me={{ initial: me.initial, name: db.profile.name, photo: me.photo }}
+          onSend={(text, replyTo) => addComment(myPost.id, text, replyTo)}
+          onOpenProfile={openWriter}
+          actionsFor={(c) => actionsFor(myPost, c)}
+        />
+      ) : null}
+
       <Card padding={16} gap={0}>
         <Row gap={12} align="stretch">
           <Stat label={t("Duration")} value={String(stats.minutes)} unit="min" />
@@ -187,6 +227,7 @@ function Page({ id, at }: { id: string; at?: { index: number; count: number } })
       <BottomSheet visible={!!menu} onClose={() => setMenu(null)} title={menu === "delete" ? t("Delete this workout?") : s.planName} subtitle={menu === "delete" ? t("It disappears from the feed and from your log. Records from it are recalculated. This cannot be undone.") : longDate(s.startedAt)}>
         {menu === "menu" ? (
           <>
+            {resumable ? <SheetOption icon="play" label={t("Continue this workout")} sub={t("Back into the session, everything as you left it")} onPress={() => { setMenu(null); resume(s.id); router.replace("/workout/active"); }} /> : null}
             <SheetOption icon="sliders" label={t("Edit workout")} sub={t("Caption, sets, weights, duration, exercises")} onPress={() => { setMenu(null); router.push(`/workout/edit/${s.id}`); }} />
             {s.shared ? (
               <SheetOption icon="lock" label={t("Make private")} sub={t("Removes it from the feed, keeps it in your log")} onPress={() => { setMenu(null); update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, shared: false } : x)) })); }} />

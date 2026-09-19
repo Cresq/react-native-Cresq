@@ -33,7 +33,7 @@ export default function Summary() {
   const router = useNav();
   const t = useT();
   const { db } = useDb();
-  const { session, file, setPhoto, setCaption, setShare, setGym, setDuration } = useWorkout();
+  const { session, file, unfinish, setPhoto, setCaption, setShare, setGym, setDuration } = useWorkout();
   const [durationSheet, setDurationSheet] = useState(false);
   const [minutesText, setMinutesText] = useState("");
   const [gymSheet, setGymSheet] = useState(false);
@@ -73,11 +73,12 @@ export default function Summary() {
       <Txt variant="labelS" tone="tertiary" align="center">
         {t("Shared posts go to your followers. Undo within 60 seconds.")}
       </Txt>
+      <Button label={t("Not done yet, keep going")} variant="tertiary" size="S" onPress={() => { unfinish(); router.replace("/workout/active"); }} />
     </>
   );
 
   return (
-    <Screen bottom={170} footer={footer}>
+    <Screen bottom={214} footer={footer}>
       <Header left={<IconButton name="close" onPress={savePrivately} accessibilityLabel={t("Close")} />} title={t("Session complete")} subtitle={`${session?.planName ?? t("Session")}, ${longDate(session?.startedAt ?? Date.now())}`} />
 
       <View style={{ gap: 12, paddingTop: 8 }}>

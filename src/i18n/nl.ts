@@ -996,4 +996,11 @@ export const nl: Record<string, string> = {
   "Height, weight, activity, goal, targets": "Lengte, gewicht, activiteit, doel, doelen",
   "Refreshed": "Ververst",
   "Hold to refresh": "Houd vast om te verversen",
+
+  /* A workout taken up again, and the post on the session's own page. */
+  "Not done yet? Keep going": "Toch nog niet klaar? Ga verder",
+  "Not done yet, keep going": "Toch nog niet klaar, ga verder",
+  "On your feed": "Op je feed",
+  "Continue this workout": "Ga verder met deze workout",
+  "Back into the session, everything as you left it": "Terug de sessie in, alles zoals je het achterliet",
 };

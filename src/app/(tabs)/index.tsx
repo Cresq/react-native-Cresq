@@ -11,7 +11,7 @@ import { useSplit } from "@/store/split";
 import { finished, fmtKg, liftTrend, locale, startOfWeek, weekDays, weeklyVolume } from "@/db/derive";
 import { estimateMinutes } from "@/db/seed";
 import { DEFAULT_FAVOURITES } from "@/db/types";
-import { useLanguage, useT, usePlural } from "@/i18n";
+import { useT, usePlural } from "@/i18n";
 import { Screen, Row, Section } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { Icon } from "@/components/ui/Icon";
@@ -55,7 +55,6 @@ export default function Home() {
   const router = useNav();
   const t = useT();
   const plural = usePlural();
-  const lang = useLanguage();
   const { db } = useDb();
   const me = useMe();
   const now = useNow();
@@ -94,10 +93,6 @@ export default function Home() {
     if (!running) start(plan?.id, plan?.name ?? nextDay?.name);
     router.push("/workout/active");
   };
-  const names = (running ? session!.exercises.map((e) => e.name) : plan ? plan.exercises.map((pe) => db.exercises.find((e) => e.id === pe.exerciseId)?.name ?? "") : []).map((n) => n.toLowerCase());
-  const three = names.slice(0, 3).join(", ");
-  const more = (n: number) => (lang === "nl" ? `+${n} meer` : `+${n} more`);
-  const exerciseLine = names.length === 0 ? (nextDay?.focus ?? "") : three.length <= 44 ? (names.length > 3 ? `${three} ${more(names.length - 3)}` : three) : `${names.slice(0, 2).join(", ")} ${more(names.length - 2)}`;
 
   return (
     <Screen tabs>
@@ -119,20 +114,15 @@ export default function Home() {
       <View style={{ gap: 20 }}>
         <WeekStrip days={week} onPress={(d) => d.sessionId && router.push(`/workout/${d.sessionId}`)} />
 
-        <Card padding={20} gap={12}>
+        <Card padding={16} gap={8}>
           <Txt variant="labelM" tone={running ? "ember" : "tertiary"}>
             {running ? t("Session running") : t("Today")}
           </Txt>
               <Pressable accessibilityRole="button" accessibilityLabel={t("Choose another workout")} disabled={running} onPress={() => setChoosing(true)} style={({ pressed }) => ({ gap: 4, opacity: pressed ? 0.7 : 1 })}>
                 <Row gap={8}>
-                  <Txt variant="displayL">{running ? session?.planName : plan ? plan.name : (nextDay?.rest ? t("Rest day") : nextDay?.name) ?? t("Quick session")}</Txt>
+                  <Txt variant="displayM">{running ? session?.planName : plan ? plan.name : (nextDay?.rest ? t("Rest day") : nextDay?.name) ?? t("Quick session")}</Txt>
                   {!running ? <Icon name="chevronDown" size={18} color={colors.text.tertiary} strokeWidth={2} /> : null}
                 </Row>
-                {exerciseLine ? (
-                  <Txt variant="bodyM" tone="secondary">
-                    {exerciseLine.charAt(0).toUpperCase() + exerciseLine.slice(1)}
-                  </Txt>
-                ) : null}
                 {override && !running ? (
                   <Txt variant="labelS" tone="tertiary">
                     {t("Instead of {name} from your split", { name: nextDay?.name ?? "" })}
@@ -144,7 +134,7 @@ export default function Home() {
               {plural(plan.exercises.length, "{n} exercise", "{n} exercises")}, {t("{n} min", { n: estimateMinutes(plan) })}
             </Txt>
           ) : null}
-          <Button label={running ? t("Continue session") : nextDay?.rest ? t("Rest day, start anyway") : t("Start session")} iconRight="arrowRight" onPress={startSession} style={{ marginTop: 4 }} />
+          <Button label={running ? t("Continue session") : nextDay?.rest ? t("Rest day, start anyway") : t("Start session")} size="M" iconRight="arrowRight" onPress={startSession} style={{ marginTop: 4 }} />
         </Card>
       </View>
 

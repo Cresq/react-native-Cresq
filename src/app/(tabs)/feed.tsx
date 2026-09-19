@@ -7,7 +7,9 @@ import { useNotes } from "@/store/notifications";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useSocial } from "@/store/social";
 import { liveProgress, personByName } from "@/data/people";
-import { finished, fmtKg, newRecords, relativeDay, sessionRows, sessionStats } from "@/db/derive";
+import { finished } from "@/db/derive";
+import { postFromSession } from "@/social/posts";
+import { useComments } from "@/store/comments";
 import { otherPosts } from "@/data/mock";
 import { useT, useLanguage, possessive } from "@/i18n";
 import { Screen, Row } from "@/components/ui/Screen";
@@ -29,7 +31,7 @@ export default function Feed() {
   const me = useMe();
   const { unread } = useNotes();
   const lang = useLanguage();
-  const { isFollowing, people, block } = useSocial();
+  const { isFollowing, people } = useSocial();
   const live = people.filter((p) => p.live && isFollowing(p.id) && !liveProgress(p.live).finished);
   const [filter, setFilter] = useState("following");
   const [more, setMore] = useState<Post | null>(null);
@@ -40,46 +42,9 @@ export default function Feed() {
   const closeMore = () => { setMore(null); setReported(false); setMoreView("menu"); };
   const [commentsFor, setCommentsFor] = useState<Post | null>(null);
 
-  /**
-   * What a post already came with, plus anything written on this device. The
-   * seeded ones never had ids, so they get one from their position: stable for
-   * as long as the list is, which is as long as an answer needs it to be.
-   */
-  const commentsOf = (p: Post): Comment[] => {
-    const hidden = new Set(db.hiddenComments ?? []);
-    const byBlocked = (c: Comment) => {
-      const who = personByName(c.name);
-      return !!who && db.blocked.includes(who.id);
-    };
-    return [
-      ...(p.commentList ?? []).map((c, i) => ({ ...c, id: `seed-${i}` })),
-      ...(db.comments?.[p.id] ?? []).map((c) => ({ id: String(c.at), name: db.profile.name, text: c.text, at: c.at, replyTo: c.replyTo, avatar: me.photo })),
-    ].filter((c) => !hidden.has(`${p.id}:${c.id}`) && !byBlocked(c));
-  };
-  /** Your own words, gone for good; anything answering them goes with them. */
-  const deleteComment = (postId: string, id: string) =>
-    update((d) => ({ ...d, comments: { ...(d.comments ?? {}), [postId]: (d.comments?.[postId] ?? []).filter((c) => String(c.at) !== id && c.replyTo !== id) } }));
-  /** Somebody else's words, off your screen. */
-  const hideComment = (postId: string, id: string) => update((d) => ({ ...d, hiddenComments: [...(d.hiddenComments ?? []), `${postId}:${id}`] }));
-  /**
-   * What holding a comment offers. Your own: delete. Under your own post:
-   * delete anything. Somebody else's, anywhere: report it, block them.
-   */
-  const actionsFor = (c: Comment): CommentActions => {
-    const post = commentsFor;
-    if (!post) return {};
-    const mine = c.name === db.profile.name && !c.id.startsWith("seed-");
-    const myPost = !post.userId;
-    const who = personByName(c.name);
-    return {
-      delete: mine ? () => deleteComment(post.id, c.id) : myPost ? () => hideComment(post.id, c.id) : undefined,
-      report: mine ? undefined : () => hideComment(post.id, c.id),
-      block: !mine && who ? { name: who.name.split(" ")[0], run: () => block(who.id) } : undefined,
-    };
-  };
+  const { commentsOf, countOf, add: addComment, actionsFor: actionsOn } = useComments();
+  const actionsFor = (c: Comment): CommentActions => (commentsFor ? actionsOn(commentsFor, c) : {});
 
-  const addComment = (postId: string, text: string, replyTo?: string) =>
-    update((d) => ({ ...d, comments: { ...(d.comments ?? {}), [postId]: [...(d.comments?.[postId] ?? []), { text, at: Date.now(), replyTo }] } }));
 
   /** A name is all a comment carries, so it is the way back to whoever wrote it. */
   const openWriter = (c: Comment) => {
@@ -96,38 +61,8 @@ export default function Feed() {
   }, [update]);
 
   const mine = useMemo<Post[]>(
-    () =>
-      [...finished(db.sessions)]
-        .reverse()
-        .filter((s) => s.shared)
-        .slice(0, 3)
-        .map((s) => {
-          const stats = sessionStats(s);
-          const rec = newRecords(s, db.sessions.filter((x) => x.startedAt < s.startedAt)).sort((a, b) => b.kg - a.kg)[0];
-          return {
-            id: s.id,
-            name: db.profile.name,
-            title: s.planName,
-            meta: relativeDay(s.startedAt),
-            place: s.gym ?? (db.profile.showCity === false ? undefined : db.profile.city || undefined),
-            avatar: me.photo,
-            photo: s.photo ? { uri: s.photo } : undefined,
-            exercises: s.share?.exercises === false ? [] : sessionRows(s).map((r) => ({ name: r.name, detail: t(r.count === 1 ? "{n} set" : "{n} sets", { n: r.count }) })),
-            record: rec && s.share?.records !== false ? t("New record, {name} {kg} kg", { name: rec.name, kg: rec.kg }) : undefined,
-            caption: s.caption || t("{plan} done. Every set counted.", { plan: s.planName }),
-            stats: s.share?.stats === false ? [] : [
-              { value: String(stats.minutes), unit: "min" },
-              { value: fmtKg(stats.volume), unit: "kg" },
-              { value: String(stats.setsDone), unit: t("sets") },
-            ],
-            // Nobody has liked this. Inventing a number on a person's own post is
-            // the sort of thing that makes an app feel like a demo, and it is a lie.
-            likes: 0,
-            liked: false,
-            comments: 0,
-          };
-        }),
-    [db.sessions, db.profile, me.photo, t],
+    () => [...finished(db.sessions)].reverse().filter((s) => s.shared).slice(0, 3).map((s) => postFromSession(s, { profile: db.profile, sessions: db.sessions, photo: me.photo, comments: (db.comments?.[s.id] ?? []).length, t })),
+    [db.sessions, db.profile, db.comments, me.photo, t],
   );
   const visible = (filter === "following" ? [...mine, ...otherPosts.filter((p) => p.userId && isFollowing(p.userId))] : otherPosts.filter((p) => !p.userId || !isFollowing(p.userId))).filter((p) => !hidden.includes(p.id));
   const open = (p: Post) => router.push(`/workout/${p.id}`);
@@ -176,7 +111,7 @@ export default function Feed() {
 
       <View style={{ gap: 20 }}>
         {visible.map((p) => (
-          <PostCard key={p.id} post={p} onPress={() => open(p)} onMore={() => openMore(p)} onComment={() => setCommentsFor(p)} />
+          <PostCard key={p.id} post={{ ...p, comments: countOf(p) }} onPress={() => open(p)} onMore={() => openMore(p)} onComment={() => setCommentsFor(p)} />
         ))}
         {visible.length === 0 ? (
           <Txt variant="bodyM" tone="secondary">

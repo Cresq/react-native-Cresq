@@ -62,6 +62,10 @@ type WorkoutState = {
   /** Start from a plan id, or a quick empty session with a name. */
   start: (planId?: string, name?: string) => void;
   finish: () => void;
+  /** Not finished after all: the clock picks up where it was. */
+  unfinish: () => void;
+  /** A filed session back into the active slot, finish cleared, everything else as it was. Refused while another runs. */
+  resume: (id: string) => void;
   discard: () => void;
   /** Mark the finished session as shared to the feed (or not) and file it. */
   file: (shared: boolean) => void;
@@ -148,6 +152,17 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
     setRest(null);
     mutate((s) => ({ ...s, finishedAt: Date.now() }));
   }, [mutate]);
+  const unfinish = useCallback(() => mutate((s) => ({ ...s, finishedAt: undefined })), [mutate]);
+  const resume = useCallback(
+    (id: string) =>
+      update((d) => {
+        if (d.activeSession) return d;
+        const s = d.sessions.find((x) => x.id === id);
+        if (!s) return d;
+        return { ...d, sessions: d.sessions.filter((x) => x.id !== id), activeSession: { ...s, finishedAt: undefined } };
+      }),
+    [update],
+  );
   const [lastDiscarded, setLastDiscarded] = useState<Session | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Stops the session at once. It is kept for a few seconds so a slip can be undone. */
@@ -325,8 +340,8 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
   const skipRest = useCallback(() => setRest(null), []);
 
   const value = useMemo<WorkoutState>(
-    () => ({ session, rest, lastDiscarded, undoDiscard, dismissDiscarded, start, finish, discard, file, setCurrent, setDuration, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, setShare, setGym, adjustRest, skipRest }),
-    [session, rest, lastDiscarded, undoDiscard, dismissDiscarded, start, finish, discard, file, setCurrent, setDuration, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, setShare, setGym, adjustRest, skipRest],
+    () => ({ session, rest, lastDiscarded, undoDiscard, dismissDiscarded, start, finish, unfinish, resume, discard, file, setCurrent, setDuration, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, setShare, setGym, adjustRest, skipRest }),
+    [session, rest, lastDiscarded, undoDiscard, dismissDiscarded, start, finish, unfinish, resume, discard, file, setCurrent, setDuration, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, setShare, setGym, adjustRest, skipRest],
   );
   return <WorkoutContext.Provider value={value}>{children}</WorkoutContext.Provider>;
 }
