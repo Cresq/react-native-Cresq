@@ -115,6 +115,7 @@ function Routes() {
             <Stack.Screen name="compare/[id]" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="progress/[lift]" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="workout/[id]" options={{ animation: "slide_from_right" }} />
+            <Stack.Screen name="workout/edit/[id]" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="user/[id]" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="live/[id]" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="search" options={{ animation: "slide_from_right" }} />

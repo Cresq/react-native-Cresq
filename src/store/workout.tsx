@@ -66,6 +66,7 @@ type WorkoutState = {
   /** Mark the finished session as shared to the feed (or not) and file it. */
   file: (shared: boolean) => void;
   setCurrent: (index: number) => void;
+  setDuration: (minutes: number) => void;
   updateSet: (exerciseId: string, setId: string, patch: Partial<Pick<SetEntry, "kg" | "reps">>) => void;
   completeSet: (exerciseId: string, setId: string) => void;
   setSetType: (exerciseId: string, setId: string, type: SetType) => void;
@@ -188,6 +189,8 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
     [update],
   );
   const setCurrent = useCallback((index: number) => mutate((s) => ({ ...s, currentIndex: Math.max(0, Math.min(index, s.exercises.length - 1)) })), [mutate]);
+  /** How long it took, as the person says it did: the finish is moved, the start stays where it was. */
+  const setDuration = useCallback((minutes: number) => mutate((s) => ({ ...s, finishedAt: s.startedAt + Math.max(1, Math.round(minutes)) * 60_000 })), [mutate]);
   const updateSet = useCallback((exerciseId: string, setId: string, patch: Partial<Pick<SetEntry, "kg" | "reps">>) => mutate((s) => mapEx(s, exerciseId, (e) => ({ ...e, sets: e.sets.map((x) => (x.id === setId ? { ...x, ...patch } : x)) }))), [mutate]);
   const completeSet = useCallback(
     (exerciseId: string, setId: string) => {
@@ -322,8 +325,8 @@ export function WorkoutProvider({ children }: PropsWithChildren) {
   const skipRest = useCallback(() => setRest(null), []);
 
   const value = useMemo<WorkoutState>(
-    () => ({ session, rest, lastDiscarded, undoDiscard, dismissDiscarded, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, setShare, setGym, adjustRest, skipRest }),
-    [session, rest, lastDiscarded, undoDiscard, dismissDiscarded, start, finish, discard, file, setCurrent, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, setShare, setGym, adjustRest, skipRest],
+    () => ({ session, rest, lastDiscarded, undoDiscard, dismissDiscarded, start, finish, discard, file, setCurrent, setDuration, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, setShare, setGym, adjustRest, skipRest }),
+    [session, rest, lastDiscarded, undoDiscard, dismissDiscarded, start, finish, discard, file, setCurrent, setDuration, updateSet, completeSet, setSetType, removeSet, addSet, addExercise, removeExercise, moveExercise, setRestSeconds, setNote, setCaption, setPhoto, swapExercise, toggleSuperset, groupExercises, setShare, setGym, adjustRest, skipRest],
   );
   return <WorkoutContext.Provider value={value}>{children}</WorkoutContext.Provider>;
 }

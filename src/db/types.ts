@@ -193,6 +193,12 @@ export type Db = {
    * change of either does not leave old comments signed by somebody else.
    */
   comments?: Record<string, { text: string; at: number; replyTo?: string }[]>;
+  /**
+   * Comments this person took off their screen, as "postId:commentId": ones
+   * they reported, and ones under their own posts they removed. Reports reach
+   * us once accounts sync; until then this is the whole of it.
+   */
+  hiddenComments?: string[];
 };
 
 /**

@@ -9,7 +9,7 @@ import { useSocial } from "@/store/social";
 import { liveProgress, personByName } from "@/data/people";
 import { finished, fmtKg, newRecords, relativeDay, sessionRows, sessionStats } from "@/db/derive";
 import { otherPosts } from "@/data/mock";
-import { useT } from "@/i18n";
+import { useT, useLanguage, possessive } from "@/i18n";
 import { Screen, Row } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { IconButton } from "@/components/ui/IconButton";
@@ -18,7 +18,7 @@ import { Chip } from "@/components/ui/Chip";
 import { Avatar } from "@/components/ui/PhotoSlot";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { PostCard, type Post } from "@/components/PostCard";
-import { CommentSheet, type Comment } from "@/components/CommentSheet";
+import { CommentSheet, type Comment, type CommentActions } from "@/components/CommentSheet";
 import { Field } from "@/components/ui/Field";
 
 /** Feed. Your own shared sessions come from the database; other people's posts are placeholders until there is a server. */
@@ -29,7 +29,8 @@ export default function Feed() {
   const { db, update } = useDb();
   const me = useMe();
   const { unread } = useNotes();
-  const { isFollowing, people } = useSocial();
+  const lang = useLanguage();
+  const { isFollowing, people, block } = useSocial();
   const live = people.filter((p) => p.live && isFollowing(p.id) && !liveProgress(p.live).finished);
   const [filter, setFilter] = useState("following");
   const [more, setMore] = useState<Post | null>(null);
@@ -47,10 +48,38 @@ export default function Feed() {
    * seeded ones never had ids, so they get one from their position: stable for
    * as long as the list is, which is as long as an answer needs it to be.
    */
-  const commentsOf = (p: Post): Comment[] => [
-    ...(p.commentList ?? []).map((c, i) => ({ ...c, id: `seed-${i}` })),
-    ...(db.comments?.[p.id] ?? []).map((c) => ({ id: String(c.at), name: db.profile.name, text: c.text, at: c.at, replyTo: c.replyTo, avatar: me.photo })),
-  ];
+  const commentsOf = (p: Post): Comment[] => {
+    const hidden = new Set(db.hiddenComments ?? []);
+    const byBlocked = (c: Comment) => {
+      const who = personByName(c.name);
+      return !!who && db.blocked.includes(who.id);
+    };
+    return [
+      ...(p.commentList ?? []).map((c, i) => ({ ...c, id: `seed-${i}` })),
+      ...(db.comments?.[p.id] ?? []).map((c) => ({ id: String(c.at), name: db.profile.name, text: c.text, at: c.at, replyTo: c.replyTo, avatar: me.photo })),
+    ].filter((c) => !hidden.has(`${p.id}:${c.id}`) && !byBlocked(c));
+  };
+  /** Your own words, gone for good; anything answering them goes with them. */
+  const deleteComment = (postId: string, id: string) =>
+    update((d) => ({ ...d, comments: { ...(d.comments ?? {}), [postId]: (d.comments?.[postId] ?? []).filter((c) => String(c.at) !== id && c.replyTo !== id) } }));
+  /** Somebody else's words, off your screen. */
+  const hideComment = (postId: string, id: string) => update((d) => ({ ...d, hiddenComments: [...(d.hiddenComments ?? []), `${postId}:${id}`] }));
+  /**
+   * What holding a comment offers. Your own: delete. Under your own post:
+   * delete anything. Somebody else's, anywhere: report it, block them.
+   */
+  const actionsFor = (c: Comment): CommentActions => {
+    const post = commentsFor;
+    if (!post) return {};
+    const mine = c.name === db.profile.name && !c.id.startsWith("seed-");
+    const myPost = !post.userId;
+    const who = personByName(c.name);
+    return {
+      delete: mine ? () => deleteComment(post.id, c.id) : myPost ? () => hideComment(post.id, c.id) : undefined,
+      report: mine ? undefined : () => hideComment(post.id, c.id),
+      block: !mine && who ? { name: who.name.split(" ")[0], run: () => block(who.id) } : undefined,
+    };
+  };
 
   const addComment = (postId: string, text: string, replyTo?: string) =>
     update((d) => ({ ...d, comments: { ...(d.comments ?? {}), [postId]: [...(d.comments?.[postId] ?? []), { text, at: Date.now(), replyTo }] } }));
@@ -164,15 +193,16 @@ export default function Feed() {
         onClose={() => setCommentsFor(null)}
         title={commentsFor ? [commentsFor.name, commentsFor.title].filter(Boolean).join(", ") : undefined}
         comments={commentsFor ? commentsOf(commentsFor) : []}
-        me={{ initial: me.initial, photo: me.photo }}
+        me={{ initial: me.initial, name: db.profile.name, photo: me.photo }}
         onSend={(text, replyTo) => commentsFor && addComment(commentsFor.id, text, replyTo)}
         onOpenProfile={openWriter}
+        actionsFor={actionsFor}
       />
 
       <BottomSheet
         visible={!!more}
         onClose={closeMore}
-        title={reported ? t("Hidden and noted") : moreView === "caption" ? t("Caption") : moreView === "delete" ? t("Delete this workout?") : (more?.name ?? "")}
+        title={reported ? t("Hidden and noted") : moreView === "caption" ? t("Caption") : moreView === "delete" ? t("Delete this workout?") : more ? t("{whose} workout", { whose: possessive(lang, more.name) }) : ""}
         subtitle={reported ? t("The post is hidden from your feed. Reports reach us once accounts sync; until then nothing leaves this phone.") : moreView === "delete" ? t("It disappears from the feed and from your log. Records from it are recalculated. This cannot be undone.") : moreView === "caption" ? (more?.title ?? undefined) : undefined}
       >
         {!reported && more && moreView === "caption" ? (

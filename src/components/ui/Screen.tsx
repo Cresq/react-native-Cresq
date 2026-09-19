@@ -1,4 +1,5 @@
-import type { PropsWithChildren } from "react";
+import { useRef, type PropsWithChildren, type RefObject } from "react";
+import { useScrollToTop } from "expo-router";
 import { ScrollView, View, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -20,10 +21,12 @@ export function Screen({ children, tabs, bottom = 0, scroll = true, footer, styl
   const running = useRunningSession();
   const paddingBottom = (tabs ? layout.tabBarClearance + (running ? 56 : 0) : 40) + bottom;
   const content: ViewStyle = { paddingTop: insets.top + 12, paddingHorizontal: layout.screenInset, paddingBottom, gap: layout.sectionGap };
+  const scroller = useRef<ScrollView>(null);
   return (
     <View {...dismissesKeyboard} style={[{ flex: 1, backgroundColor: colors.bg.ground }, style]}>
       {scroll ? (
-        <ScrollView contentContainerStyle={[content, contentStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+        <ScrollView ref={scroller} contentContainerStyle={[content, contentStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+          {tabs ? <BackToTopOnTabPress target={scroller} /> : null}
           {children}
         </ScrollView>
       ) : (
@@ -36,6 +39,16 @@ export function Screen({ children, tabs, bottom = 0, scroll = true, footer, styl
       ) : null}
     </View>
   );
+}
+
+/**
+ * Pressing the tab you are already on scrolls its screen back to the top, the
+ * way every phone does it. Only a tab screen mounts this, so a stacked screen
+ * never listens for a press that cannot come.
+ */
+function BackToTopOnTabPress({ target }: { target: RefObject<ScrollView | null> }) {
+  useScrollToTop(target);
+  return null;
 }
 
 export function Row({ children, gap = 12, align = "center", justify, style }: PropsWithChildren<{ gap?: number; align?: ViewStyle["alignItems"]; justify?: ViewStyle["justifyContent"]; style?: StyleProp<ViewStyle> }>) {

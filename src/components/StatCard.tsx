@@ -7,9 +7,9 @@ import { Icon, type IconName } from "./ui/Icon";
  * A figure with its label and change. Sits on the ground, no box: the number is the object.
  * Put several in a <Row> with a hairline between them.
  */
-export function Stat({ label, value, unit, delta, deltaTone = "ember", deltaIcon = "trendingUp", size = "L" }: { label: string; value: string; unit?: string; delta?: string; deltaTone?: "ember" | "sage" | "warning" | "tertiary"; deltaIcon?: IconName; size?: "L" | "M" }) {
+export function Stat({ label, value, unit, delta, deltaTone = "ember", deltaIcon = "trendingUp", size = "L" }: { label: string; value: string; unit?: string; delta?: string; deltaTone?: "ember" | "sage" | "success" | "warning" | "tertiary"; deltaIcon?: IconName; size?: "L" | "M" }) {
   const { colors } = useTheme();
-  const toneColor = { ember: colors.accent.ember, sage: colors.fuel.sage, warning: colors.status.warning, tertiary: colors.text.tertiary }[deltaTone];
+  const toneColor = { ember: colors.accent.ember, sage: colors.fuel.sage, success: colors.status.success, warning: colors.status.warning, tertiary: colors.text.tertiary }[deltaTone];
   return (
     <View style={{ flex: 1, gap: 4 }}>
       <Txt variant="labelS" tone="tertiary">

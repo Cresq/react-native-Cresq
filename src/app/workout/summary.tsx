@@ -33,7 +33,9 @@ export default function Summary() {
   const router = useNav();
   const t = useT();
   const { db } = useDb();
-  const { session, file, setPhoto, setCaption, setShare, setGym } = useWorkout();
+  const { session, file, setPhoto, setCaption, setShare, setGym, setDuration } = useWorkout();
+  const [durationSheet, setDurationSheet] = useState(false);
+  const [minutesText, setMinutesText] = useState("");
   const [gymSheet, setGymSheet] = useState(false);
   const [gymText, setGymText] = useState("");
   const gyms = db.profile.gyms ?? [];
@@ -109,7 +111,21 @@ export default function Summary() {
         <StatDivider />
         <Stat label={t("Sets")} value={String(stats.setsDone)} unit={t("of {n}", { n: stats.setsTotal })} />
       </Row>
+      {/* The clock ran while the phone sat in a locker as often as not; the person knows better than it does. */}
+      <Pressable accessibilityRole="button" accessibilityLabel={t("Adjust duration")} onPress={() => { setMinutesText(String(stats.minutes)); setDurationSheet(true); }} hitSlop={8} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", paddingTop: 10, opacity: pressed ? 0.6 : 1 })}>
+        <Icon name="noteEdit" size={13} color={colors.text.tertiary} strokeWidth={2} />
+        <Txt variant="labelS" tone="tertiary">
+          {t("Adjust duration")}
+        </Txt>
+      </Pressable>
       </View>
+
+      <BottomSheet visible={durationSheet} onClose={() => setDurationSheet(false)} title={t("Duration")} subtitle={t("How long the session really took. Everything else stays as it is.")}>
+        <View style={{ paddingHorizontal: 8, paddingVertical: 8, gap: 12 }}>
+          <Field label={t("Duration (min)")} value={minutesText} onChangeText={setMinutesText} keyboardType="number-pad" inputMode="numeric" placeholder="60" autoFocus selectTextOnFocus />
+          <Button label={t("Save duration")} disabled={!(Number(minutesText) > 0)} onPress={() => { setDuration(Number(minutesText)); setDurationSheet(false); }} />
+        </View>
+      </BottomSheet>
 
       <Section title={t("Your post")} gap={12}>
         {session?.photo ? (

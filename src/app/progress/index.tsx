@@ -68,7 +68,7 @@ export default function Data() {
           value={fmtKg(volume.current)}
           unit="kg"
           delta={volume.delta === null ? t("First week with a session") : t("{p}% on last week", { p: `${volume.delta >= 0 ? "+" : ""}${volume.delta}` })}
-          deltaTone={volume.delta === null ? "tertiary" : volume.delta >= 0 ? "ember" : "warning"}
+          deltaTone={volume.delta === null ? "tertiary" : volume.delta >= 0 ? "success" : "warning"}
           deltaIcon={volume.delta !== null && volume.delta < 0 ? "trendingDown" : "trendingUp"}
         />
         <StatDivider />

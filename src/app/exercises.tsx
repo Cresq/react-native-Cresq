@@ -32,14 +32,14 @@ export default function Exercises() {
   const tm = useTerms();
   const { db, update } = useDb();
   const { addExercise, swapExercise } = useWorkout();
-  const { plan: planId, session: forSession, favourite, swap } = useLocalSearchParams<{ plan?: string; session?: string; favourite?: string; swap?: string }>();
+  const { plan: planId, session: forSession, favourite, swap, edit: editId } = useLocalSearchParams<{ plan?: string; session?: string; favourite?: string; swap?: string; edit?: string }>();
   const [q, setQ] = useState("");
   const [creating, setCreating] = useState(false);
   const [watching, setWatching] = useState<Exercise | null>(null);
   const [name, setName] = useState("");
   const [muscles, setMuscles] = useState("");
 
-  const mode = planId ? "plan" : forSession ? "session" : swap ? "swap" : favourite ? "favourite" : "browse";
+  const mode = planId ? "plan" : forSession ? "session" : swap ? "swap" : favourite ? "favourite" : editId ? "edit" : "browse";
   const favourites = db.profile.favourites ?? DEFAULT_FAVOURITES;
   // Sorted once, and each exercise carries the one line every search reads.
   // Both languages are in it: somebody typing "borst" and somebody typing
@@ -74,6 +74,11 @@ export default function Exercises() {
     } else if (mode === "session") {
       addExercise(ex);
       router.back();
+    } else if (mode === "edit") {
+      // Into a workout already filed: three sets, ticked, so they count until the person says otherwise.
+      const entry = { id: uid(), exerciseId: ex.id, name: ex.name, restSeconds: 90, sets: Array.from({ length: 3 }, () => ({ id: uid(), type: "working" as const, prevKg: null, prevReps: null, kg: ex.bodyweight ? 0 : 20, reps: 10, done: true })) };
+      update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === editId ? { ...x, exercises: [...x.exercises, entry] } : x)) }));
+      router.back();
     } else if (mode === "swap") {
       swapExercise(swap!, ex);
       router.back();
@@ -92,7 +97,7 @@ export default function Exercises() {
     if (mode !== "browse") pick(id);
   };
 
-  const titles = { plan: t("Add to workout"), session: t("Add exercise"), swap: t("Swap exercise"), favourite: t("Favourite lifts"), browse: t("Exercises") };
+  const titles = { plan: t("Add to workout"), session: t("Add exercise"), swap: t("Swap exercise"), favourite: t("Favourite lifts"), edit: t("Add exercise"), browse: t("Exercises") };
   const subtitle = mode === "favourite" ? t("{n} on Home, tap to add or remove", { n: favourites.length }) : mode === "swap" ? t("Sets and numbers stay, the movement changes") : t("{n} in your library", { n: db.exercises.length });
 
   return (

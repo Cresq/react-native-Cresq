@@ -20,3 +20,24 @@ export function translate(lang: Language, source: string, vars?: Record<string, 
 
 /** Locale tag for dates and numbers. */
 export const localeOf = (lang: Language) => (lang === "nl" ? "nl-NL" : "en-GB");
+
+/**
+ * A name in the possessive, by the rules of the language.
+ *
+ * English adds 's to everything. Dutch adds a bare s (Bakkers, Jansens) except
+ * after a sibilant, where only the apostrophe is left (de Vries', Max'), and
+ * after a single long vowel, where the apostrophe keeps the vowel long
+ * (Sara's, Li's, Timo's). A vowel written with two letters is already long,
+ * so it takes the bare s (Sophies, Renees).
+ */
+export function possessive(lang: Language, name: string) {
+  const n = name.trim();
+  if (!n) return n;
+  if (lang === "en") return `${n}'s`;
+  const last = n.slice(-1).toLowerCase();
+  const tail = n.slice(-2).toLowerCase();
+  if ("sxz".includes(last)) return `${n}'`;
+  if (["ee", "ie", "oe", "ue", "au", "ou", "eu", "ui"].includes(tail)) return `${n}s`;
+  if ("aiouyé".includes(last)) return `${n}'s`;
+  return `${n}s`;
+}

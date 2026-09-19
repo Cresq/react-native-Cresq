@@ -12,6 +12,8 @@ import { fontFamily } from "../../constants/theme";
 import { Txt } from "./ui/Text";
 import { Icon } from "./ui/Icon";
 import { IconButton } from "./ui/IconButton";
+import { Button } from "./ui/Button";
+import { SheetOption } from "./ui/BottomSheet";
 import { Avatar } from "./ui/PhotoSlot";
 
 export type Comment = {
@@ -24,6 +26,17 @@ export type Comment = {
   at?: number;
   /** The comment this one answers, if it answers one. */
   replyTo?: string;
+};
+
+/**
+ * What a held comment offers. Absent means the row is not on the menu: you
+ * cannot report yourself, and only the writer or the post's owner can take a
+ * comment down.
+ */
+export type CommentActions = {
+  delete?: () => void;
+  report?: () => void;
+  block?: { name: string; run: () => void };
 };
 
 const shortAgo = (at: number, t: (s: string, v?: Record<string, string | number>) => string) => {
@@ -52,14 +65,17 @@ export function CommentSheet({
   me,
   onSend,
   onOpenProfile,
+  actionsFor,
 }: {
   visible: boolean;
   onClose: () => void;
   title?: string;
   comments: Comment[];
-  me: { initial: string; photo?: ImageSourcePropType };
+  me: { initial: string; name?: string; photo?: ImageSourcePropType };
   onSend: (text: string, replyTo?: string) => void;
   onOpenProfile: (comment: Comment) => void;
+  /** Hold a comment and this decides what the menu offers. Nothing offered, no menu. */
+  actionsFor?: (comment: Comment) => CommentActions;
 }) {
   const { colors, radius } = useTheme();
   const insets = useSafeAreaInsets();
@@ -68,6 +84,14 @@ export function CommentSheet({
   const plural = usePlural();
   const [draft, setDraft] = useState("");
   const [liked, setLiked] = useState<Record<string, boolean>>({});
+  /** The held comment and its menu, or what just happened to it. */
+  const [held, setHeld] = useState<{ comment: Comment; actions: CommentActions; done?: "reported" | "blocked" } | null>(null);
+  const hold = (c: Comment) => {
+    const actions = actionsFor?.(c) ?? {};
+    if (!actions.delete && !actions.report && !actions.block) return;
+    haptic("select");
+    setHeld({ comment: c, actions });
+  };
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const list = useRef<ScrollView>(null);
   const input = useRef<TextInput>(null);
@@ -128,6 +152,10 @@ export function CommentSheet({
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
   const scrimStyle = useAnimatedStyle(() => ({ opacity: 1 - Math.min(1, Math.max(0, y.value / sheetH)) }));
 
+  useEffect(() => {
+    if (!visible) setHeld(null);
+  }, [visible]);
+
   const send = () => {
     const text = draft.trim();
     if (!text) return;
@@ -160,7 +188,10 @@ export function CommentSheet({
           ) : null}
         </View>
 
-        <Txt variant="bodyM">{c.text}</Txt>
+        {/* Holding the words brings up what can be done with them. A tap does nothing, so a thumb resting here costs nothing. */}
+        <Pressable accessibilityRole="button" accessibilityLabel={t("Options for this comment")} accessibilityHint={t("Hold")} onLongPress={() => hold(c)} delayLongPress={350} style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>
+          <Txt variant="bodyM">{c.text}</Txt>
+        </Pressable>
 
         <Pressable accessibilityRole="button" accessibilityLabel={t("Reply to {name}", { name: c.name })} onPress={() => { keepKeyboard(); setReplyTo(c); input.current?.focus(); }} hitSlop={6} style={({ pressed }) => ({ alignSelf: "flex-start", paddingTop: 2, opacity: pressed ? 0.6 : 1 })}>
           <Txt variant="labelS" tone="tertiary">
@@ -266,6 +297,27 @@ export function CommentSheet({
                 </Pressable>
               ) : null}
             </View>
+            {held ? (
+              <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "flex-end" }}>
+                <Pressable accessibilityRole="button" accessibilityLabel={t("Cancel")} onPress={() => setHeld(null)} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.45)" }} />
+                <View style={{ backgroundColor: colors.bg.surface, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, paddingHorizontal: 12, paddingTop: 16, paddingBottom: Math.max(insets.bottom, 12) + 4, gap: 4 }}>
+                  <View style={{ gap: 2, paddingHorizontal: 8, paddingBottom: 10 }}>
+                    <Txt variant="labelL">{held.done === "reported" ? t("Hidden and noted") : held.done === "blocked" ? t("{name} is blocked", { name: held.comment.name }) : held.comment.name}</Txt>
+                    <Txt variant="bodyS" tone="tertiary" numberOfLines={2}>
+                      {held.done === "reported" ? t("The comment is off your screen. Reports reach us once accounts sync; until then nothing leaves this phone.") : held.done === "blocked" ? t("Their posts and comments are gone from your feed and lists.") : held.comment.text}
+                    </Txt>
+                  </View>
+                  {held.done ? null : (
+                    <>
+                      {held.actions.delete ? <SheetOption icon="trash" label={t("Delete comment")} sub={held.comment.name === me.name ? undefined : t("It disappears from under your post")} danger onPress={() => { held.actions.delete?.(); setHeld(null); }} /> : null}
+                      {held.actions.report ? <SheetOption icon="flag" label={t("Report comment")} sub={t("Spam or abuse")} onPress={() => { held.actions.report?.(); setHeld((h) => (h ? { ...h, done: "reported" } : h)); }} /> : null}
+                      {held.actions.block ? <SheetOption icon="lock" label={t("Block {name}", { name: held.actions.block.name })} sub={t("They disappear from your feed and lists")} danger onPress={() => { held.actions.block?.run(); setHeld((h) => (h ? { ...h, done: "blocked" } : h)); }} /> : null}
+                    </>
+                  )}
+                  <Button label={held.done ? t("Done") : t("Cancel")} variant="secondary" size="M" onPress={() => setHeld(null)} style={{ marginTop: 6 }} />
+                </View>
+              </View>
+            ) : null}
           </Animated.View>
         </KeyboardAvoidingView>
       </GestureHandlerRootView>

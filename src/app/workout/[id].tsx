@@ -152,6 +152,7 @@ export default function SessionDetail() {
           <>
             <SheetOption icon="share" label={t("Share")} sub={t("Send a summary to another app")} onPress={() => { setMenu(null); Share.share({ message: `${s.planName}, ${longDate(s.startedAt)}: ${plural(stats.setsDone, "{n} set", "{n} sets")}, ${fmtKg(stats.volume)} kg, ${stats.minutes} min. CresQ.` }); }} />
             <SheetOption icon="noteEdit" label={t("Edit caption")} onPress={() => { setCaptionText(s.caption ?? ""); setMenu("caption"); }} />
+            <SheetOption icon="sliders" label={t("Edit workout")} sub={t("Sets, weights, duration, exercises")} onPress={() => { const id = s.id; setMenu(null); router.push(`/workout/edit/${id}`); }} />
             {s.shared ? (
               <SheetOption icon="lock" label={t("Make private")} sub={t("Removes it from the feed, keeps it in your log")} onPress={() => { setMenu(null); update((d) => ({ ...d, sessions: d.sessions.map((x) => (x.id === s.id ? { ...x, shared: false } : x)) })); }} />
             ) : (

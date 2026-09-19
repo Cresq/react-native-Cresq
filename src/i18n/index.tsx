@@ -1,10 +1,10 @@
 import { useCallback, useEffect } from "react";
 import { setLocale } from "@/db/derive";
 import { useDb } from "@/db/DbProvider";
-import { translate, localeOf, type Language } from "./translate";
+import { translate, localeOf, possessive, type Language } from "./translate";
 import { terms } from "./terms";
 
-export { translate, localeOf, type Language };
+export { translate, localeOf, possessive, type Language };
 export { terms };
 
 export function useLanguage(): Language {
