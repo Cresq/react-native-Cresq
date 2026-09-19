@@ -101,7 +101,7 @@ export default function FoodDetail() {
       bottom={150}
       footer={
         <>
-          <Button label={grams ? t("Add {amount} {unit} to {meal}", { amount: fmtG(grams), unit, meal: t(MEAL_NAME[meal]).toLowerCase() }) : t("Enter an amount")} disabled={!grams} onPress={log} />
+          <Button label={grams ? t("Add {amount} {unit} to {meal}", { amount: fmtG(grams), unit, meal: t(MEAL_NAME[meal]).toLowerCase() }) : t("Enter an amount")} variant="sage" disabled={!grams} onPress={log} />
           <Button label={food.verified ? t("Correct the figures") : t("Check against the pack")} variant="tertiary" size="M" onPress={correct} />
         </>
       }

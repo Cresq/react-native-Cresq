@@ -12,7 +12,7 @@ import { Icon, type IconName } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Chip } from "@/components/ui/Chip";
-import { Field } from "@/components/ui/Field";
+import { WheelPicker } from "@/components/ui/WheelPicker";
 import { Toggle } from "@/components/ui/Toggle";
 import { Divider } from "@/components/ui/Card";
 import { useT } from "@/i18n";
@@ -26,7 +26,7 @@ const STEPS = [
   { key: "experience", title: "How long have you trained?", sub: "This decides how fast your plans progress." },
   { key: "days", title: "How many days a week?", sub: "Your split will match it. You can change it any time." },
   { key: "limits", title: "Anything to work around?", sub: "Plans and the AI builder avoid movements that load these." },
-  { key: "data", title: "What may we collect?", sub: "Both are off. Your log stays on your device either way. Change this any time in Account and privacy." },
+  { key: "data", title: "What may CresQ keep track of?", sub: "Two things, both off until you turn them on. Your sets, weights, photos and records are on your phone only; nothing here changes that. Change your mind any time under Account and privacy." },
 ] as const;
 
 const LIMITS = ["Shoulder", "Knee", "Lower back", "Wrist", "Elbow", "Hip"];
@@ -42,9 +42,10 @@ export default function Onboarding() {
   const { db, update } = useDb();
   const { edit } = useLocalSearchParams<{ edit?: string }>();
   const [i, setI] = useState(0);
-  const [a, setA] = useState<Answers>({ goal: db.profile.goal, experience: db.profile.experience, daysPerWeek: db.profile.daysPerWeek, limitations: db.profile.limitations ?? [], birthYear: db.profile.birthYear });
+  const thisYear = new Date().getFullYear();
+  // A wheel always shows a year, so it starts on one: a plausible one, not the youngest allowed.
+  const [a, setA] = useState<Answers>({ goal: db.profile.goal, experience: db.profile.experience, daysPerWeek: db.profile.daysPerWeek, limitations: db.profile.limitations ?? [], birthYear: db.profile.birthYear ?? thisYear - 25 });
   const [c, setC] = useState<Choices>({ analytics: db.consent.analytics, ageStats: db.consent.ageStats });
-  const [yearText, setYearText] = useState(db.profile.birthYear ? String(db.profile.birthYear) : "");
   const step = STEPS[i];
   const stepTitle = t(step.title);
   const stepSub = t(step.sub, { n: MIN_AGE });
@@ -55,7 +56,7 @@ export default function Onboarding() {
   const finish = () => {
     update((d) => ({ ...d, profile: { ...d.profile, ...a, onboarded: true }, consent: { ...d.consent, ...c, ageStats: c.ageStats && !!a.birthYear } }));
     if (edit) router.back();
-    else router.replace("/(tabs)");
+    else router.replace("/done?kind=account");
   };
   const next = () => (i < STEPS.length - 1 ? setI(i + 1) : finish());
 
@@ -73,7 +74,7 @@ export default function Onboarding() {
 
       {step.key === "birth" ? (
         <View style={{ gap: 12 }}>
-          <Field label={t("Year of birth")} value={yearText} onChangeText={(t) => { const v = t.replace(/\D/g, "").slice(0, 4); setYearText(v); setA({ ...a, birthYear: v.length === 4 ? Number(v) : undefined }); }} keyboardType="number-pad" maxLength={4} placeholder="1998" autoFocus />
+          <WheelPicker values={Array.from({ length: 100 - MIN_AGE + 1 }, (_, k) => thisYear - 100 + k)} value={a.birthYear ?? thisYear - 25} onChange={(v) => setA({ ...a, birthYear: v })} />
           {tooYoung ? (
             <Row gap={8} align="flex-start">
               <Icon name="info" size={16} color={colors.status.warning} strokeWidth={2} />
@@ -124,7 +125,7 @@ export default function Onboarding() {
             <View style={{ flex: 1, gap: 2 }}>
               <Txt variant="labelL">{t("Anonymous usage statistics")}</Txt>
               <Txt variant="bodyS" tone="tertiary">
-                {t("Which screens are used and how often. No names, no log data.")}
+                {t("Which screens are opened and how often, sent without your name, your email or anything from your log. It shows us what people use and what they skip.")}
               </Txt>
             </View>
             <Toggle value={c.analytics} onChange={(v) => setC({ ...c, analytics: v })} />
@@ -134,7 +135,7 @@ export default function Onboarding() {
             <View style={{ flex: 1, gap: 2 }}>
               <Txt variant="labelL">{t("Age statistics")}</Txt>
               <Txt variant="bodyS" tone="tertiary">
-                {t("Your age as a band, such as 25 to 34, to see who CresQ serves.")}
+                {t("Only your age as a band, such as 25 to 34, so we can see who CresQ serves. Never the year itself, never with your name.")}
               </Txt>
             </View>
             <Toggle value={c.ageStats} onChange={(v) => setC({ ...c, ageStats: v })} />

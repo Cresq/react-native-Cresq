@@ -29,6 +29,7 @@ export default function Settings() {
     { icon: "user", label: t("Account and privacy"), sub: t("Profile, what we may collect, your data"), onPress: () => router.push("/settings/account") },
     { icon: "watch", label: t("Connected devices"), sub: t("Apple Health, Apple Watch, Garmin"), onPress: () => router.push("/settings/devices") },
     { icon: "flag", label: t("Goals and limitations"), sub: t("Answers from onboarding"), onPress: () => router.push("/onboarding?edit=1") },
+    { icon: "pulse", label: t("Your figures"), sub: t("Height, weight, activity, goal, targets"), onPress: () => router.push("/settings/body") },
     { icon: "bell", label: t("Notifications"), sub: t("Reminders, records, reactions"), onPress: () => router.push("/notifications") },
   ];
 

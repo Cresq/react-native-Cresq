@@ -87,9 +87,9 @@ export default function FoodTab() {
         <IconButton name="sliders" onPress={openTargets} accessibilityLabel={t("Daily targets")} />
       </Row>
 
-      <Card padding={20} gap={16}>
+      <Card padding={20} gap={16} style={{ backgroundColor: colors.fuel.soft }}>
         <Row gap={10} align="baseline">
-          <Txt variant="numberL" tabular>
+          <Txt variant="numberL" tabular style={{ color: colors.fuel.sage }}>
             {n(sum.kcal)}
           </Txt>
           <Txt variant="labelM" tone="secondary">
@@ -109,7 +109,7 @@ export default function FoodTab() {
       </Card>
 
       <Row gap={10}>
-        <View style={{ flex: 1 }}><Button label={t("Log food")} icon="addPlus" size="M" onPress={() => router.push("/food/log")} /></View>
+        <View style={{ flex: 1 }}><Button label={t("Log food")} icon="addPlus" size="M" variant="sage" onPress={() => router.push("/food/log")} /></View>
         <IconButton name="camera" size={48} iconSize={20} onPress={scan} accessibilityLabel={t("Scan a pack")} />
       </Row>
 
@@ -184,7 +184,7 @@ export default function FoodTab() {
       <BottomSheet visible={editingTargets} onClose={() => setEditingTargets(false)} title={t("Daily targets")} subtitle={t("What a day should add up to. The four figures move together.")}>
         <View style={{ gap: 10, paddingHorizontal: 8, paddingVertical: 8 }}>
           {editingTargets ? <MacroTargets initial={draftTargets} onChange={setDraftTargets} /> : null}
-          <Button label={t("Save targets")} onPress={saveTargets} disabled={!targetsReady} style={{ marginTop: 4 }} />
+          <Button label={t("Save targets")} variant="sage" onPress={saveTargets} disabled={!targetsReady} style={{ marginTop: 4 }} />
           <Button label={t("Answer the questions again")} variant="tertiary" size="M" onPress={askAgain} />
           {targets ? <Button label={t("Clear targets")} variant="tertiary" size="M" onPress={() => { setTargets(undefined); setEditingTargets(false); }} /> : null}
         </View>

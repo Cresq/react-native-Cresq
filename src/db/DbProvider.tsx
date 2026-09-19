@@ -15,6 +15,8 @@ type DbState = {
   reset: () => Promise<void>;
   /** Replace everything with a document from a backup file. */
   restore: (data: Partial<Db>) => void;
+  /** Write out what is pending and recompute every screen from the document. What pull-to-refresh does until there is a server to ask. */
+  refresh: () => void;
 };
 
 const DbContext = createContext<DbState | null>(null);
@@ -126,7 +128,12 @@ export function DbProvider({ children }: PropsWithChildren) {
     });
   }, []);
 
-  const value = useMemo(() => ({ db, ready, saveFailed, update, reset, restore }), [db, ready, saveFailed, update, reset, restore]);
+  const refresh = useCallback(() => {
+    flushDb();
+    setDb((d) => ({ ...d }));
+  }, []);
+
+  const value = useMemo(() => ({ db, ready, saveFailed, update, reset, restore, refresh }), [db, ready, saveFailed, update, reset, restore, refresh]);
   return <DbContext.Provider value={value}>{children}</DbContext.Provider>;
 }
 

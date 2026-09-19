@@ -8,6 +8,8 @@ import { Icon } from "./Icon";
 import { Pressable } from "react-native";
 import { useRunningSession } from "@/store/workout";
 import { dismissesKeyboard } from "@/keyboard";
+import { GestureDetector } from "react-native-gesture-handler";
+import { useHoldToRefresh } from "../HoldToRefresh";
 import type { IconName } from "./Icon";
 
 /**
@@ -22,16 +24,20 @@ export function Screen({ children, tabs, bottom = 0, scroll = true, footer, styl
   const paddingBottom = (tabs ? layout.tabBarClearance + (running ? 56 : 0) : 40) + bottom;
   const content: ViewStyle = { paddingTop: insets.top + 12, paddingHorizontal: layout.screenInset, paddingBottom, gap: layout.sectionGap };
   const scroller = useRef<ScrollView>(null);
+  const pull = useHoldToRefresh(!!tabs && scroll);
   return (
     <View {...dismissesKeyboard} style={[{ flex: 1, backgroundColor: colors.bg.ground }, style]}>
       {scroll ? (
-        <ScrollView ref={scroller} contentContainerStyle={[content, contentStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
-          {tabs ? <BackToTopOnTabPress target={scroller} /> : null}
-          {children}
-        </ScrollView>
+        <GestureDetector gesture={pull.gesture}>
+          <ScrollView ref={scroller} contentContainerStyle={[content, contentStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" onScroll={pull.onScroll} scrollEventThrottle={16}>
+            {tabs ? <BackToTopOnTabPress target={scroller} /> : null}
+            {children}
+          </ScrollView>
+        </GestureDetector>
       ) : (
         <View style={[{ flex: 1 }, content, contentStyle]}>{children}</View>
       )}
+      {pull.bar}
       {footer ? (
         <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: layout.screenInset, paddingTop: 16, paddingBottom: Math.max(insets.bottom, 16) + 8, gap: 12, backgroundColor: colors.bg.ground }}>
           {footer}

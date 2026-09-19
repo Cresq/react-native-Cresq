@@ -124,6 +124,8 @@ function Routes() {
             <Stack.Screen name="legal/[doc]" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="settings/index" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="settings/devices" options={{ animation: "slide_from_right" }} />
+            <Stack.Screen name="settings/body" options={{ animation: "slide_from_right" }} />
+            <Stack.Screen name="done" options={{ animation: "fade", animationDuration: 260 }} />
             <Stack.Screen name="food/scan" options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }} />
             <Stack.Screen name="food/label" options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }} />
             <Stack.Screen name="food/review" options={{ animation: "slide_from_right" }} />

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { ScrollView, View, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { haptic } from "@/haptics";
@@ -18,12 +18,15 @@ export function WheelPicker({ values, value, onChange, format }: { values: numbe
   const [index, setIndex] = useState(Math.max(0, values.indexOf(value)));
   const pad = (ITEM * (VISIBLE - 1)) / 2;
 
-  useEffect(() => {
+  // The rows have to exist before the wheel can be turned to one of them; a
+  // timer can fire before they do, and a scroll into nothing lands on the top.
+  const placed = useRef(false);
+  const place = () => {
+    if (placed.current) return;
+    placed.current = true;
     const i = Math.max(0, values.indexOf(value));
-    const timer = setTimeout(() => ref.current?.scrollTo({ y: i * ITEM, animated: false }), 0);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    ref.current?.scrollTo({ y: i * ITEM, animated: false });
+  };
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const i = Math.max(0, Math.min(values.length - 1, Math.round(e.nativeEvent.contentOffset.y / ITEM)));
@@ -43,6 +46,7 @@ export function WheelPicker({ values, value, onChange, format }: { values: numbe
       <View pointerEvents="none" style={{ position: "absolute", left: 12, right: 12, top: pad, height: ITEM, borderRadius: 12, backgroundColor: colors.bg.surface }} />
       <ScrollView
         ref={ref}
+        onContentSizeChange={place}
         showsVerticalScrollIndicator={false}
         snapToInterval={ITEM}
         decelerationRate="fast"

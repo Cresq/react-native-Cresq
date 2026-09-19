@@ -99,7 +99,7 @@ export default function Review() {
   const per = unit === "g" ? t("per 100 g") : t("per 100 ml");
 
   return (
-    <Screen bottom={90} footer={<Button label={from === "edit" ? t("Save changes") : t("Save and use")} onPress={save} disabled={!ready} />}>
+    <Screen bottom={90} footer={<Button label={from === "edit" ? t("Save changes") : t("Save and use")} variant="sage" onPress={save} disabled={!ready} />}>
       <Header left={<IconButton name={from === "edit" ? "chevronLeft" : "close"} onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)/food"))} accessibilityLabel={from === "edit" ? t("Back") : t("Close")} />} title={title} />
 
       <View style={{ gap: 6 }}>

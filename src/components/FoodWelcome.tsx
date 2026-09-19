@@ -3,6 +3,7 @@ import { Pressable, View } from "react-native";
 import Animated, { FadeInDown, FadeOut } from "react-native-reanimated";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
+import { useNav } from "@/nav";
 import { useT, useLanguage, localeOf } from "@/i18n";
 import { haptic } from "@/haptics";
 import { maintenanceOf, proposeTargets, type NeedsInput } from "@/nutrition/derive";
@@ -11,6 +12,7 @@ import { Screen, Row } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
+import { WheelPicker } from "@/components/ui/WheelPicker";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { Icon, type IconName } from "@/components/ui/Icon";
@@ -34,12 +36,14 @@ const num = (s: string) => {
 export function FoodWelcome() {
   const { colors } = useTheme();
   const { db, update } = useDb();
+  const router = useNav();
   const t = useT();
   const locale = localeOf(useLanguage());
   const [step, setStep] = useState(0);
   const [sex, setSex] = useState<Sex | null>(null);
-  const [height, setHeight] = useState("");
-  const [weight, setWeight] = useState("");
+  // Wheels always show a value, so they start on a plausible one rather than on nothing.
+  const [height, setHeight] = useState(175);
+  const [weight, setWeight] = useState(75);
   const [birthYear, setBirthYear] = useState(db.profile.birthYear ? String(db.profile.birthYear) : "");
   const [activity, setActivity] = useState<Activity | null>(null);
   const [goal, setGoal] = useState<Goal | null>(null);
@@ -49,8 +53,8 @@ export function FoodWelcome() {
 
   const year = new Date().getFullYear();
   const age = num(birthYear) ? Math.max(16, year - num(birthYear)) : 0;
-  const bodyReady = !!sex && num(height) > 0 && num(weight) > 0 && age > 0;
-  const input = (): NeedsInput => ({ weightKg: num(weight), heightCm: num(height), age, sex: sex ?? "x", activity: activity ?? "moderate", goal: goal ?? "maintain" });
+  const bodyReady = !!sex && height > 0 && weight > 0 && age > 0;
+  const input = (): NeedsInput => ({ weightKg: weight, heightCm: height, age, sex: sex ?? "x", activity: activity ?? "moderate", goal: goal ?? "maintain" });
 
   const propose = () => {
     const p = proposeTargets(input());
@@ -66,10 +70,11 @@ export function FoodWelcome() {
       profile: {
         ...d.profile,
         birthYear: d.profile.birthYear ?? (num(birthYear) || undefined),
-        food: { weightKg: num(weight) || undefined, heightCm: num(height) || undefined, sex: sex ?? undefined, activity: activity ?? undefined, goal: goal ?? "maintain", onboardedAt: Date.now() },
+        food: { weightKg: weight, heightCm: height, sex: sex ?? undefined, activity: activity ?? undefined, goal: goal ?? "maintain", onboardedAt: Date.now() },
         targets: withTargets && draft ? draft : d.profile.targets,
       },
     }));
+    router.push("/done?kind=food");
   };
   const skip = () => {
     haptic("tap");
@@ -139,7 +144,7 @@ export function FoodWelcome() {
             ))}
           </View>
           <View style={{ gap: 8 }}>
-            <Button label={t("A few questions, then we start")} iconRight="arrowRight" onPress={() => setStep(1)} />
+            <Button label={t("A few questions, then we start")} variant="sage" iconRight="arrowRight" onPress={() => setStep(1)} />
             <Button label={t("Skip, I will set targets later")} variant="tertiary" size="M" onPress={skip} />
           </View>
         </Animated.View>
@@ -162,8 +167,18 @@ export function FoodWelcome() {
             <Chip label={t("Rather not say")} selected={sex === "x"} onPress={() => setSex("x")} />
           </Row>
           <Row gap={10} align="flex-start">
-            <View style={{ flex: 1 }}><Field label={t("Height (cm)")} value={height} onChangeText={setHeight} keyboardType="number-pad" inputMode="numeric" placeholder="180" /></View>
-            <View style={{ flex: 1 }}><Field label={t("Body weight (kg)")} value={weight} onChangeText={setWeight} keyboardType="decimal-pad" inputMode="decimal" placeholder="80" /></View>
+            <View style={{ flex: 1, gap: 6 }}>
+              <Txt variant="labelS" tone="tertiary">
+                {t("Height (cm)")}
+              </Txt>
+              <WheelPicker values={Array.from({ length: 81 }, (_, k) => 140 + k)} value={height} onChange={setHeight} format={(v) => `${v} cm`} />
+            </View>
+            <View style={{ flex: 1, gap: 6 }}>
+              <Txt variant="labelS" tone="tertiary">
+                {t("Body weight (kg)")}
+              </Txt>
+              <WheelPicker values={Array.from({ length: 161 }, (_, k) => 40 + k)} value={weight} onChange={setWeight} format={(v) => `${v} kg`} />
+            </View>
           </Row>
           {db.profile.birthYear ? (
             <Txt variant="labelS" tone="tertiary">
@@ -172,7 +187,7 @@ export function FoodWelcome() {
           ) : (
             <Field label={t("Year of birth")} value={birthYear} onChangeText={(v) => setBirthYear(v.replace(/\D/g, "").slice(0, 4))} keyboardType="number-pad" inputMode="numeric" placeholder="1998" maxLength={4} />
           )}
-          <Button label={t("Continue")} iconRight="arrowRight" disabled={!bodyReady} onPress={() => setStep(2)} />
+          <Button label={t("Continue")} variant="sage" iconRight="arrowRight" disabled={!bodyReady} onPress={() => setStep(2)} />
         </Animated.View>
       ) : null}
 
@@ -192,7 +207,7 @@ export function FoodWelcome() {
             {t("And the goal")}
           </Txt>
           <View style={{ gap: 8 }}>{goals.map((g) => option(goal === g.key, g.icon, g.label, g.sub, () => setGoal(g.key)))}</View>
-          <Button label={t("Work out my need")} iconRight="arrowRight" disabled={!activity || !goal} onPress={propose} />
+          <Button label={t("Work out my need")} variant="sage" iconRight="arrowRight" disabled={!activity || !goal} onPress={propose} />
         </Animated.View>
       ) : null}
 
@@ -209,7 +224,7 @@ export function FoodWelcome() {
           </View>
           <MacroTargets initial={proposal} onChange={setDraft} />
           <View style={{ gap: 8 }}>
-            <Button label={t("Save and start")} disabled={!draftReady} onPress={() => finish(true)} />
+            <Button label={t("Save and start")} variant="sage" disabled={!draftReady} onPress={() => finish(true)} />
             <Button label={t("Start without targets")} variant="tertiary" size="M" onPress={() => finish(false)} />
           </View>
         </Animated.View>

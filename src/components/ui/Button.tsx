@@ -10,9 +10,10 @@ import { Icon, type IconName } from "./Icon";
  *   secondary – a filled, quiet alternative (surface). No outline.
  *   tertiary  – text only. For "not now", "see all", links inside copy.
  * inverse and gold are reserved: inverse for Finish/Connect pills, gold for record moments.
+ * sage is primary's twin for the food world, where ember would say "training".
  * Feedback is instant and physical: colour on touch-down, a 3 % settle, a spring back.
  */
-type Variant = "primary" | "secondary" | "tertiary" | "inverse" | "danger" | "gold";
+type Variant = "primary" | "secondary" | "tertiary" | "inverse" | "danger" | "gold" | "sage";
 type Size = "L" | "M" | "S";
 
 export type ButtonProps = Omit<PressableProps, "style" | "children"> & {
@@ -37,6 +38,7 @@ export function Button({ label, variant = "primary", size = "L", icon, iconRight
     inverse: { bg: colors.bg.inverse, fg: colors.text.inverse, pressed: colors.text.secondary },
     danger: { bg: "transparent", fg: colors.status.danger, pressed: colors.bg.surface },
     gold: { bg: colors.pr.gold, fg: colors.accent.on, pressed: colors.status.warning },
+    sage: { bg: colors.fuel.sage, fg: colors.fuel.on, pressed: colors.fuel.pressed },
   };
   const p = palette[variant];
   const height = size === "L" ? 56 : size === "M" ? 48 : 40;
