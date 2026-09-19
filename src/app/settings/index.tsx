@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, View, useColorScheme } from "react-native";
 import { useNav } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useDb } from "@/db/DbProvider";
@@ -17,6 +17,7 @@ import { BottomSheet } from "@/components/ui/BottomSheet";
 /** Settings. Small on purpose: what the app needs today, nothing speculative. */
 export default function Settings() {
   const { colors } = useTheme();
+  const phone = useColorScheme();
   const router = useNav();
   const t = useT();
   const plural = usePlural();
@@ -58,7 +59,7 @@ export default function Settings() {
       <Section title={t("Appearance")}>
         <Segmented size="M" value={db.profile.theme ?? "system"} onChange={(v) => update((d) => ({ ...d, profile: { ...d.profile, theme: v as "system" | "dark" | "light" } }))} segments={[{ key: "system", label: t("System") }, { key: "dark", label: t("Dark") }, { key: "light", label: t("Light") }]} />
         <Txt variant="bodyS" tone="tertiary">
-          {t("System follows your phone. Dark is how CresQ was drawn; light is the same app on paper.")}
+          {phone === "light" ? t("System follows your phone, which is set to light right now. Dark is how CresQ was drawn; light is the same app on paper.") : t("System follows your phone, which is set to dark right now, so the two look alike. Dark is how CresQ was drawn; light is the same app on paper.")}
         </Txt>
       </Section>
 

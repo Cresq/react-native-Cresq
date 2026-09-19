@@ -1,66 +1,95 @@
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, ScrollView, TextInput, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
+import Animated from "react-native-reanimated";
 import { useNav, useOnce } from "@/nav";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useT } from "@/i18n";
 import { haptic } from "@/haptics";
+import { layouts, opacity } from "@/motion";
 import { useFood } from "@/store/food";
 import { useDb } from "@/db/DbProvider";
 import { setDraft } from "@/nutrition/draft";
 import { MEALS, MEAL_NAME, fmtG, fmtKcal, mealAt, portion } from "@/nutrition/derive";
-import type { Meal } from "@/db/types";
-import { Screen, Row, Section, Header } from "@/components/ui/Screen";
+import type { Food, Meal } from "@/db/types";
+import { Screen, Row, Header } from "@/components/ui/Screen";
 import { Txt } from "@/components/ui/Text";
 import { Card, Divider } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { Chip } from "@/components/ui/Chip";
-import { Icon } from "@/components/ui/Icon";
-import { Field } from "@/components/ui/Field";
-import { PhotoSlot } from "@/components/ui/PhotoSlot";
+import { Icon, type IconName } from "@/components/ui/Icon";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { PhotoViewer } from "@/components/PhotoViewer";
+import { FoodMark } from "@/components/FoodMark";
 import { pickPhoto } from "@/photo";
+import { fontFamily } from "../../../constants/theme";
 
 const num = (s: string) => {
   const n = Number(s.replace(",", ".").trim());
   return Number.isFinite(n) && n > 0 ? n : 0;
 };
 
+/** What one press on minus or plus moves the amount by. */
+const STEP = 10;
+const MEAL_ICON: Record<Meal, IconName> = { breakfast: "sun", lunch: "leaf", pre: "dumbbell", post: "dumbbell", dinner: "leaf", snack: "leaf" };
+
 /**
- * One product: its figures per 100, where they came from and whether anyone
- * has checked them, and the portion about to be logged.
+ * One product, laid out for the thing people come here to do: log a portion.
+ *
+ * Top to bottom: what it is (name, brand, a thumbnail that takes the photo,
+ * and whether anyone has checked the figures), then one card that holds the
+ * whole decision, what this portion comes to, how much, and at which meal,
+ * and under it the pack's own table, folded away until it is asked for. One
+ * button at the bottom. Arriving to log starts with the table folded; arriving
+ * to look at the product starts with it open.
+ *
+ * The page itself only finds the product. What it shows lives in `Product`,
+ * which is built once the product is known, so the amount starts from that
+ * product's own portion even when the log was still loading a moment before.
  */
 export default function FoodDetail() {
-  const { colors } = useTheme();
   const router = useNav();
-  const once = useOnce();
   const t = useT();
-  const { id, meal: wantedMeal } = useLocalSearchParams<{ id: string; log?: string; meal?: string }>();
-  const { byId, logFood, updateFood } = useFood();
-  const { db } = useDb();
-  const lastFinished = db.sessions.reduce((m, x) => Math.max(m, x.finishedAt ?? 0), 0);
-  const [photoSheet, setPhotoSheet] = useState(false);
-  const [afterSheet, setAfterSheet] = useState<(() => void) | null>(null);
-  const [zoom, setZoom] = useState(false);
+  const { id, log: toLog, meal: wantedMeal } = useLocalSearchParams<{ id: string; log?: string; meal?: string }>();
+  const { byId } = useFood();
+  const { ready } = useDb();
   const food = byId.get(id);
-  const [amount, setAmount] = useState(() => String(food?.serving ?? 100));
-  // The meal the person came from, when they came from one; otherwise the clock's guess.
-  const [meal, setMeal] = useState<Meal>(() => (wantedMeal && (MEALS as string[]).includes(wantedMeal) ? (wantedMeal as Meal) : mealAt(Date.now(), lastFinished)));
-
   const leave = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)/food"));
 
   if (!food) {
     return (
       <Screen>
         <Header left={<IconButton name="chevronLeft" onPress={leave} accessibilityLabel={t("Back")} />} title={t("Product")} />
-        <Txt variant="bodyM" tone="secondary">
-          {t("This product is no longer in your list.")}
-        </Txt>
+        {ready ? (
+          <Txt variant="bodyM" tone="secondary">
+            {t("This product is no longer in your list.")}
+          </Txt>
+        ) : null}
       </Screen>
     );
   }
+  return <Product key={food.id} food={food} toLog={!!toLog} wantedMeal={wantedMeal} />;
+}
+
+function Product({ food, toLog, wantedMeal }: { food: Food; toLog: boolean; wantedMeal?: string }) {
+  const { colors, radius } = useTheme();
+  const router = useNav();
+  const once = useOnce();
+  const t = useT();
+  const { logFood, updateFood } = useFood();
+  const { db } = useDb();
+  const lastFinished = db.sessions.reduce((m, x) => Math.max(m, x.finishedAt ?? 0), 0);
+  const [photoSheet, setPhotoSheet] = useState(false);
+  const [mealSheet, setMealSheet] = useState(false);
+  const [afterSheet, setAfterSheet] = useState<(() => void) | null>(null);
+  const [zoom, setZoom] = useState(false);
+  const [table, setTable] = useState(!toLog);
+  const [amount, setAmount] = useState(() => String(food.serving ?? 100));
+  // The meal the person came from, when they came from one; otherwise the clock's guess.
+  const [meal, setMeal] = useState<Meal>(() => (wantedMeal && (MEALS as string[]).includes(wantedMeal) ? (wantedMeal as Meal) : mealAt(Date.now(), lastFinished)));
+
+  const leave = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)/food"));
 
   const grams = num(amount);
   const p = portion(food, grams);
@@ -83,6 +112,11 @@ export default function FoodDetail() {
     setAfterSheet(() => () => void takePhoto(source));
     setPhotoSheet(false);
   };
+  const step = (by: number) => {
+    haptic("tap");
+    // From the amount as it is now, not as it was when this was drawn: two quick presses are two steps.
+    setAmount((was) => String(Math.max(0, Math.round(num(was) + by))));
+  };
 
   const log = once(() => {
     if (!grams) return;
@@ -101,105 +135,168 @@ export default function FoodDetail() {
     [t("Protein"), `${fmtG(food.protein)} g`],
     [t("Salt"), food.salt === undefined ? "" : `${fmtG(food.salt)} g`],
   ];
+  const macros: [string, string, string][] = [
+    [colors.macro.protein, t("Protein"), fmtG(p.protein)],
+    [colors.macro.carbs, t("Carbs"), fmtG(p.carbs)],
+    [colors.macro.fat, t("Fat"), fmtG(p.fat)],
+  ];
 
   return (
-    <Screen
-      bottom={150}
-      footer={
-        <>
-          <Button label={grams ? t("Add {amount} {unit} to {meal}", { amount: fmtG(grams), unit, meal: t(MEAL_NAME[meal]).toLowerCase() }) : t("Enter an amount")} variant="sage" disabled={!grams} onPress={log} />
-          <Button label={food.verified ? t("Correct the figures") : t("Check against the pack")} variant="tertiary" size="M" onPress={correct} />
-        </>
-      }
-    >
-      <Header left={<IconButton name="chevronLeft" onPress={leave} accessibilityLabel={t("Back")} />} title={food.name} subtitle={food.brand} />
+    <Screen bottom={90} contentStyle={{ gap: 16 }} footer={<Button label={grams ? t("Add {amount} {unit} to {meal}", { amount: fmtG(grams), unit, meal: t(MEAL_NAME[meal]).toLowerCase() }) : t("Enter an amount")} variant="sage" disabled={!grams} onPress={log} />}>
+      <Header left={<IconButton name="chevronLeft" onPress={leave} accessibilityLabel={t("Back")} />} />
 
-      <View style={{ gap: 6 }}>
-        <Txt variant="displayL">{food.name}</Txt>
-        <Row gap={8}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: food.verified ? colors.fuel.sage : colors.status.warning }} />
-          <Txt variant="labelM" tone="secondary">
-            {origin}
+      {/* What it is. The thumbnail is the photo, and the way to add or change it. */}
+      <Row gap={14} align="flex-start">
+        <View style={{ flex: 1, gap: 4 }}>
+          <Txt variant="displayM" numberOfLines={2}>
+            {food.name}
           </Txt>
-        </Row>
-      </View>
-
-      {/* The pack, the plate or the label: whatever helps the person recognise it in a list. */}
-      {food.photo ? (
-        <View style={{ gap: 8 }}>
-          <Pressable accessibilityRole="button" accessibilityLabel={t("See the photo")} onPress={() => setZoom(true)}>
-            <PhotoSlot source={{ uri: food.photo }} height={200} radius={18} />
-          </Pressable>
-          <Button label={t("Change photo")} variant="tertiary" size="M" full={false} onPress={() => setPhotoSheet(true)} />
-        </View>
-      ) : (
-        <Pressable accessibilityRole="button" accessibilityLabel={t("Add a photo")} onPress={() => setPhotoSheet(true)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 16, borderWidth: 1, borderStyle: "dashed", borderColor: colors.border.strong, opacity: pressed ? 0.7 : 1 })}>
-          <Icon name="camera" size={18} color={colors.text.secondary} strokeWidth={1.9} />
-          <View style={{ flex: 1, gap: 1 }}>
-            <Txt variant="labelL">{t("Add a photo")}</Txt>
-            <Txt variant="bodyS" tone="tertiary">
-              {t("The pack, the label or the plate, so you know it at a glance")}
+          {food.brand ? (
+            <Txt variant="bodyS" tone="tertiary" numberOfLines={1}>
+              {food.brand}
             </Txt>
+          ) : null}
+          <Pressable accessibilityRole="button" accessibilityLabel={food.verified ? t("Correct the figures") : t("Check against the pack")} onPress={correct} hitSlop={8} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 2, opacity: pressed ? opacity.pressed : 1 })}>
+            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: food.verified ? colors.fuel.sage : colors.status.warning }} />
+            <Txt variant="labelS" tone="secondary" numberOfLines={1} style={{ flexShrink: 1 }}>
+              {origin}
+            </Txt>
+            <Txt variant="labelS" tone="sage">
+              {food.verified ? t("Correct") : t("Check")}
+            </Txt>
+          </Pressable>
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel={food.photo ? t("Change photo") : t("Add a photo")} onPress={() => setPhotoSheet(true)} style={({ pressed }) => ({ opacity: pressed ? opacity.pressed : 1 })}>
+          <FoodMark photo={food.photo} size={56} />
+          <View style={{ position: "absolute", right: -2, bottom: -2, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.bg.raised, borderWidth: 2, borderColor: colors.bg.ground, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="camera" size={11} color={colors.text.secondary} strokeWidth={2.2} />
           </View>
         </Pressable>
-      )}
+      </Row>
+
+      {/* The whole decision in one card: what it comes to, how much, and when. */}
+      <Card padding={16} gap={14}>
+        <View style={{ gap: 10 }}>
+          <Row gap={6} align="baseline">
+            <Txt variant="numberL" tabular>
+              {fmtKcal(p.kcal)}
+            </Txt>
+            <Txt variant="labelM" tone="secondary">
+              kcal
+            </Txt>
+          </Row>
+          <Row gap={12}>
+            {macros.map(([hue, name, value]) => (
+              <View key={name} style={{ flex: 1, gap: 1 }}>
+                <Txt variant="labelL" tabular>
+                  {value} g
+                </Txt>
+                <Row gap={5}>
+                  <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: hue }} />
+                  <Txt variant="labelS" tone="tertiary" numberOfLines={1}>
+                    {name}
+                  </Txt>
+                </Row>
+              </View>
+            ))}
+          </Row>
+        </View>
+
+        <Divider />
+
+        <View style={{ gap: 10 }}>
+          <Row gap={10}>
+            <Txt variant="labelM" tone="secondary" style={{ flex: 1 }}>
+              {t("Amount")}
+            </Txt>
+            <IconButton name="minus" size={34} iconSize={16} tone="raised" onPress={() => step(-STEP)} accessibilityLabel={t("{n} {unit} less", { n: STEP, unit })} />
+            <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "center", gap: 4, minWidth: 92, height: 40, paddingHorizontal: 10, borderRadius: radius.input, backgroundColor: colors.bg.raised }}>
+              <TextInput
+                value={amount}
+                onChangeText={(v) => setAmount(v.replace(/[^0-9.,]/g, ""))}
+                keyboardType="decimal-pad"
+                inputMode="decimal"
+                selectTextOnFocus
+                selectionColor={colors.fuel.sage}
+                accessibilityLabel={unit === "g" ? t("Amount (g)") : t("Amount (ml)")}
+                style={{ minWidth: 44, height: 40, textAlign: "right", color: colors.text.primary, fontFamily: fontFamily.displaySemi, fontSize: 18, paddingVertical: 0 }}
+              />
+              <Txt variant="labelM" tone="secondary">
+                {unit}
+              </Txt>
+            </View>
+            <IconButton name="addPlus" size={34} iconSize={16} tone="raised" onPress={() => step(STEP)} accessibilityLabel={t("{n} {unit} more", { n: STEP, unit })} />
+          </Row>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 8 }}>
+            {food.serving ? <Chip label={t("1 portion, {n} {unit}", { n: fmtG(food.serving), unit })} selected={grams === food.serving} onPress={() => setAmount(String(food.serving))} /> : null}
+            {[50, 100, 200].map((n) => (
+              <Chip key={n} label={`${n} ${unit}`} selected={grams === n && grams !== food.serving} onPress={() => setAmount(String(n))} />
+            ))}
+          </ScrollView>
+        </View>
+
+        <Divider />
+
+        <Pressable accessibilityRole="button" accessibilityLabel={`${t("Meal")}, ${t(MEAL_NAME[meal])}`} onPress={() => setMealSheet(true)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, opacity: pressed ? opacity.pressed : 1 })}>
+          <Txt variant="labelM" tone="secondary" style={{ flex: 1 }}>
+            {t("Meal")}
+          </Txt>
+          <Txt variant="labelL">{t(MEAL_NAME[meal])}</Txt>
+          <Icon name="chevronDown" size={16} color={colors.text.tertiary} strokeWidth={2} />
+        </Pressable>
+      </Card>
+
+      {/* The pack's own table: a line until it is asked for. */}
+      <Card padding={16} gap={0}>
+        <Pressable accessibilityRole="button" accessibilityState={{ expanded: table }} accessibilityLabel={unit === "g" ? t("Per 100 g") : t("Per 100 ml")} onPress={() => setTable((v) => !v)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, opacity: pressed ? opacity.pressed : 1 })}>
+          <Txt variant="labelL" style={{ flex: 1 }}>
+            {unit === "g" ? t("Per 100 g") : t("Per 100 ml")}
+          </Txt>
+          <Txt variant="labelM" tone="secondary" tabular>
+            {fmtKcal(food.kcal)} kcal
+          </Txt>
+          <View style={{ transform: [{ rotate: table ? "180deg" : "0deg" }] }}>
+            <Icon name="chevronDown" size={16} color={colors.text.tertiary} strokeWidth={2} />
+          </View>
+        </Pressable>
+        {table ? (
+          <Animated.View entering={layouts.enter} exiting={layouts.exit} style={{ paddingTop: 8 }}>
+            {rows.map(([label, value, sub]) => (
+              <View key={label}>
+                <Divider />
+                <Row justify="space-between" style={{ paddingVertical: 7, paddingLeft: sub ? 12 : 0 }}>
+                  <Txt variant="bodyS" tone={sub ? "tertiary" : "secondary"}>
+                    {label}
+                  </Txt>
+                  <Txt variant={sub ? "bodyS" : "labelM"} tone={value ? (sub ? "secondary" : "primary") : "tertiary"} tabular>
+                    {value || t("not stated")}
+                  </Txt>
+                </Row>
+              </View>
+            ))}
+            {food.barcode ? (
+              <Txt variant="labelS" tone="tertiary" style={{ paddingTop: 8 }}>
+                {t("Barcode {code}", { code: food.barcode })}
+              </Txt>
+            ) : null}
+          </Animated.View>
+        ) : null}
+      </Card>
+
       <PhotoViewer source={food.photo ? { uri: food.photo } : undefined} visible={zoom} onClose={() => setZoom(false)} />
 
       <BottomSheet visible={photoSheet} onClose={() => setPhotoSheet(false)} onClosed={() => { const go = afterSheet; setAfterSheet(null); go?.(); }} title={t("Photo of this product")}>
+        {food.photo ? <SheetOption icon="search" label={t("See the photo")} onPress={() => { setAfterSheet(() => () => setZoom(true)); setPhotoSheet(false); }} /> : null}
         <SheetOption icon="camera" label={t("Take a photo")} onPress={() => choosePhoto("camera")} />
         <SheetOption icon="rows" label={t("Choose from your library")} onPress={() => choosePhoto("library")} />
         {food.photo ? <SheetOption icon="trash" label={t("Remove photo")} danger onPress={() => { updateFood(food.id, { photo: undefined }); setPhotoSheet(false); }} /> : null}
       </BottomSheet>
 
-      <Section title={unit === "g" ? t("Per 100 g") : t("Per 100 ml")}>
-        <Card padding={16} gap={0}>
-          {rows.map(([label, value, sub], i) => (
-            <View key={label}>
-              {i > 0 ? <Divider /> : null}
-              <Row justify="space-between" style={{ paddingVertical: 9, paddingLeft: sub ? 14 : 0 }}>
-                <Txt variant={sub ? "bodyS" : "bodyM"} tone={sub ? "tertiary" : "primary"}>
-                  {label}
-                </Txt>
-                <Txt variant={sub ? "bodyS" : "labelL"} tone={value ? (sub ? "secondary" : "primary") : "tertiary"} tabular>
-                  {value || t("not stated")}
-                </Txt>
-              </Row>
-            </View>
-          ))}
-        </Card>
-      </Section>
-
-      <Section title={t("This portion")}>
-        <Field label={unit === "g" ? t("Amount (g)") : t("Amount (ml)")} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" inputMode="decimal" selectTextOnFocus />
-        <Row gap={8} style={{ flexWrap: "wrap" }}>
-          {food.serving ? <Chip label={t("1 portion, {n} {unit}", { n: fmtG(food.serving), unit })} selected={grams === food.serving} onPress={() => setAmount(String(food.serving))} /> : null}
-          {[50, 100, 200].map((n) => (
-            <Chip key={n} label={`${n} ${unit}`} selected={grams === n && grams !== food.serving} onPress={() => setAmount(String(n))} />
-          ))}
-        </Row>
-        <Row gap={8} style={{ flexWrap: "wrap" }}>
-          {MEALS.map((m) => (
-            <Chip key={m} label={t(MEAL_NAME[m])} selected={meal === m} onPress={() => setMeal(m)} />
-          ))}
-        </Row>
-        <Row gap={16} align="baseline">
-          <Txt variant="numberL" tabular>
-            {fmtKcal(p.kcal)}
-          </Txt>
-          <Txt variant="labelM" tone="secondary">
-            kcal
-          </Txt>
-          <Txt variant="bodyS" tone="tertiary" style={{ flex: 1 }}>
-            {t("{p} g protein, {c} g carbs, {f} g fat", { p: fmtG(p.protein), c: fmtG(p.carbs), f: fmtG(p.fat) })}
-          </Txt>
-        </Row>
-      </Section>
-
-      {food.barcode ? (
-        <Txt variant="labelS" tone="tertiary">
-          {t("Barcode {code}", { code: food.barcode })}
-        </Txt>
-      ) : null}
+      <BottomSheet visible={mealSheet} onClose={() => setMealSheet(false)} title={t("Meal")}>
+        {MEALS.map((m) => (
+          <SheetOption key={m} icon={MEAL_ICON[m]} label={t(MEAL_NAME[m])} selected={meal === m} onPress={() => { setMeal(m); haptic("select"); setMealSheet(false); }} />
+        ))}
+      </BottomSheet>
     </Screen>
   );
 }

@@ -154,7 +154,7 @@ export default function Summary() {
           </Pressable>
         )}
         <Field label={t("Caption")} value={session?.caption ?? ""} onChangeText={setCaption} placeholder={t("How did it go?")} multiline />
-        <Pressable accessibilityRole="button" accessibilityLabel={t("Where did you train?")} onPress={() => { setGymText(session?.gym ?? ""); setGymSheet(true); }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t("Where did you train?")} onPress={() => { setGymText(session?.gym ?? db.profile.homeGym ?? ""); setGymSheet(true); }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
           <Icon name="mapPin" size={16} color={session?.gym ? colors.accent.ember : colors.text.tertiary} strokeWidth={1.9} />
           <Txt variant="labelL" tone={session?.gym ? "primary" : "tertiary"} style={{ flex: 1 }}>
             {session?.gym || t("Add the gym")}

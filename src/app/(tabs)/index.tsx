@@ -27,6 +27,7 @@ import { LineChart } from "@/components/LineChart";
 import { BottomSheet, SheetOption } from "@/components/ui/BottomSheet";
 import { useSocial } from "@/store/social";
 import { useWeight } from "@/store/weight";
+import { GymCard } from "@/components/GymCard";
 import { otherPosts } from "@/data/mock";
 import { person } from "@/data/people";
 
@@ -271,6 +272,9 @@ export default function Home() {
           </Row>
         </Card>
       </Section>
+
+      {/* Where you train, and how busy it is there. */}
+      <GymCard />
 
       <BottomSheet visible={choosing} onClose={() => setChoosing(false)} title={t("Today's workout")} subtitle={t("Your split says {name}. Pick something else for today; the split keeps its order.", { name: nextDay?.rest ? t("Rest day") : (nextDay?.name ?? "") })}>
         {db.plans.map((p) => (

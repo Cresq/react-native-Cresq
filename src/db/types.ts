@@ -88,6 +88,8 @@ export type Profile = {
   theme?: "system" | "dark" | "light";
   /** Gyms you have trained at, most recent first, offered when a session asks where you were. */
   gyms?: string[];
+  /** The gym the person usually trains at: offered first after a session, and the one whose busyness Home shows. */
+  homeGym?: string;
   /** When the feed was last opened; Home lists what followed people did since. */
   lastFeedSeen?: number;
   /** When the notifications screen was last opened; anything newer carries a dot. */
@@ -262,6 +264,8 @@ export type Db = {
   burns: Burn[];
   /** Body weight, one figure a day. */
   weights: WeightEntry[];
+  /** Busyness reports this phone sent, by gym key: enough to know when it last did. The shared copy carries no name. */
+  gymReports?: { gym: string; level: 1 | 2 | 3; at: number }[];
   /**
    * Comments this device has written, by post id. Only the words and the time:
    * the name and the face are read from the profile when they are shown, so a
